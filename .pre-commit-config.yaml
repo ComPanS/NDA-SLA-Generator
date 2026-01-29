@@ -1,0 +1,26 @@
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: black
+        language: system
+        types: [python]
+
+      - id: ruff
+        name: ruff
+        entry: ruff
+        language: system
+        types: [python]
+
+      - id: eslint
+        name: eslint
+        entry: eslint
+        language: system
+        files: "\\.(js|jsx|ts|tsx)$"
+
+      - id: prettier
+        name: prettier
+        entry: prettier --check
+        language: system
+        files: "\\.(js|jsx|ts|tsx|json|css|md|yml|yaml)$"

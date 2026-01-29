@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-nda_sla}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: python:3.11-slim
+    command: ["sleep", "infinity"]
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgres:5432/nda_sla}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      YANDEX_GPT_API_KEY: ${YANDEX_GPT_API_KEY:-}
+    depends_on:
+      - postgres
+
+  frontend:
+    image: node:18-alpine
+    command: ["sleep", "infinity"]
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
