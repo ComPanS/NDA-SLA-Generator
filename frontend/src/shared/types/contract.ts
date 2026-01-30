@@ -13,6 +13,7 @@ export interface Document {
   title: string;
   owner_id: string;
   template_id: string | null;
+  template_name?: string | null;
   status: DocumentStatus;
   created_at: string;
   updated_at: string;

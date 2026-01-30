@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { Download, Edit, ArrowBack } from '@mui/icons-material';
 import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage } from '@/shared/components';
-import { useContract, useRefineContract, useExportContract, useUpdateContractFields, useUpdateContractSections } from '@/features/contracts/hooks/useContracts';
+import { useContract, useRefineContract, useExportContract, useUpdateContractFields, useUpdateContractSections, useRenameContract, useDeleteContract } from '@/features/contracts/hooks/useContracts';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
 import { ContractFieldInput, ContractSectionInput } from '@/shared/types';
@@ -27,6 +27,7 @@ export const ContractView = () => {
   const [showRefineForm, setShowRefineForm] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [titleDraft, setTitleDraft] = useState('');
 
   // Загружаем документ
   const { data, isLoading, error } = useContract(id || '');
@@ -36,6 +37,8 @@ export const ContractView = () => {
   const { mutate: exportContract, isPending: isExporting } = useExportContract();
   const { mutate: updateFields, isPending: isUpdatingFields } = useUpdateContractFields(id || '');
   const { mutate: updateSections, isPending: isUpdatingSections } = useUpdateContractSections(id || '');
+  const { mutate: renameContract, isPending: isRenaming } = useRenameContract();
+  const { mutate: deleteContract, isPending: isDeleting } = useDeleteContract();
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
   const [sections, setSections] = useState<ContractSectionInput[]>([]);
 
@@ -44,6 +47,9 @@ export const ContractView = () => {
     if (document?.versions && document.versions.length > 0) {
       const latestVersion = document.versions[document.versions.length - 1];
       setCurrentContent(latestVersion?.content || '');
+    }
+    if (document?.title) {
+      setTitleDraft(document.title);
     }
     if (document?.fields) {
       setFields(
@@ -91,6 +97,27 @@ export const ContractView = () => {
         },
       }
     );
+  };
+
+  const handleRename = () => {
+    if (!id || !titleDraft.trim() || titleDraft === document?.title) return;
+    renameContract(
+      { documentId: id, title: titleDraft.trim() },
+      {
+        onSuccess: () => showSnackbar('Название договора обновлено'),
+        onError: () => showSnackbar('Не удалось обновить название'),
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    if (!id) return;
+    if (confirm('Удалить договор? Это действие нельзя отменить.')) {
+      deleteContract(id, {
+        onSuccess: () => navigate('/dashboard'),
+        onError: () => showSnackbar('Не удалось удалить договор'),
+      });
+    }
   };
 
   const handleExport = (format: 'docx' | 'pdf') => {
@@ -181,6 +208,14 @@ export const ContractView = () => {
             </Button>
             <Box sx={{ flexGrow: 1 }} />
             <Button
+              color="error"
+              variant="outlined"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              Удалить договор
+            </Button>
+            <Button
               variant="outlined"
               startIcon={<Edit />}
               onClick={() => setShowRefineForm(!showRefineForm)}
@@ -206,14 +241,24 @@ export const ContractView = () => {
             </Button>
           </Stack>
 
-          <Typography variant="h4" gutterBottom>
-            {document.title}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+            <TextField
+              label="Название договора"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              sx={{ minWidth: 320 }}
+              disabled={isRenaming}
+            />
+            <Button variant="contained" onClick={handleRename} disabled={isRenaming || !titleDraft.trim()}>
+              {isRenaming ? 'Сохранение...' : 'Сохранить название'}
+            </Button>
+          </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Создан: {new Date(document.created_at).toLocaleString('ru-RU')} | 
             Версия: {currentVersion?.version || 1} | 
-            Статус: {document.status === 'draft' ? 'Черновик' : 'Финальный'}
+            Статус: {document.status === 'draft' ? 'Черновик' : 'Финальный'} | 
+            Шаблон: {document.template_name || (document.template_id ? 'Без названия' : 'Без шаблона')}
           </Typography>
 
           {showRefineForm && (

@@ -241,4 +241,35 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
+
+  const templateId = String(req.params.id);
+  const existing = await prisma.template.findUnique({ where: { id: templateId } });
+  if (!existing) {
+    return res.status(404).json({ detail: 'Template not found' });
+  }
+
+  if (existing.createdById && existing.createdById !== req.userId) {
+    return res.status(403).json({ detail: 'Forbidden' });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.document.updateMany({
+        where: { templateId },
+        data: { templateId: null },
+      });
+      await tx.template.delete({ where: { id: templateId } });
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Delete template error', error);
+    return res.status(500).json({ detail: 'Failed to delete template' });
+  }
+});
+
 export default router;

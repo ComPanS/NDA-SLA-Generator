@@ -8,8 +8,9 @@ import {
   Stack,
   TextField,
   Typography,
+  Tooltip,
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import { Add, Delete, HelpOutline } from '@mui/icons-material';
 import { ContractFieldInput } from '@/shared/types';
 
 interface ContractFieldsEditorProps {
@@ -65,7 +66,12 @@ export const ContractFieldsEditor = ({ fields, onChange, title }: ContractFields
       <CardContent>
         <Stack spacing={2}>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">{title || 'Поля договора'}</Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography variant="h6">{title || 'Поля договора'}</Typography>
+              <Tooltip title="Заполните фактические значения полей — они попадут в итоговый договор и в экспорт.">
+                <HelpOutline fontSize="small" color="action" />
+              </Tooltip>
+            </Stack>
             <Button startIcon={<Add />} onClick={handleAddField}>
               Добавить поле
             </Button>

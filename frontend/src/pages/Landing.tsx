@@ -1,10 +1,19 @@
+import { useEffect } from 'react';
 import { Box, Button, Container, Typography, Stack, Card, CardContent, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Description, Speed, Security } from '@mui/icons-material';
 import { Layout } from '@/shared/components';
+import { useAuthStore } from '@/features/auth/hooks/useAuth';
 
 export const Landing = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <Layout>

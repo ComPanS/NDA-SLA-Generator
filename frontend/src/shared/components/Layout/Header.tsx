@@ -29,7 +29,7 @@ export const Header = () => {
         <Typography
           variant="h6"
           component={Link}
-          to="/"
+          to={isAuthenticated ? '/dashboard' : '/'}
           sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
         >
           NDA / SLA Generator

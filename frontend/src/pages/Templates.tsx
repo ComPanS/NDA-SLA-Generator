@@ -12,15 +12,18 @@ import {
   Chip,
   Stack,
   Button,
+  IconButton,
 } from '@mui/material';
 import { ProtectedRoute, Layout, LoadingSpinner, ErrorMessage } from '@/shared/components';
-import { useTemplate, useTemplates } from '@/features/templates/hooks/useTemplates';
+import { useTemplate, useTemplates, useDeleteTemplate } from '@/features/templates/hooks/useTemplates';
 import { TemplateBuilder } from '@/features/templates/components/TemplateBuilder';
+import { Delete } from '@mui/icons-material';
 
 export const Templates = () => {
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const { data: templates, isLoading, error } = useTemplates();
   const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(selectedId);
+  const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteTemplate();
 
   if (isLoading) {
     return (
@@ -72,6 +75,25 @@ export const Templates = () => {
                             : 'Без полей'
                         }
                       />
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        disabled={isDeleting}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Удалить шаблон? Договоры останутся без привязки.')) {
+                            deleteTemplate(tpl.id, {
+                              onSuccess: () => {
+                                if (selectedId === tpl.id) {
+                                  setSelectedId(undefined);
+                                }
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
                     </ListItemButton>
                   </ListItem>
                 ))}

@@ -41,3 +41,14 @@ export const useUpdateTemplate = () => {
     },
   });
 };
+
+export const useDeleteTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => templatesApi.delete(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      queryClient.removeQueries({ queryKey: ['template', id] });
+    },
+  });
+};

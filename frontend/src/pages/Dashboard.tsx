@@ -2,11 +2,13 @@ import { Box, Typography, Button, Card, CardContent, Stack, Chip, Divider } from
 import { Add, Description } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Layout, ProtectedRoute } from '@/shared/components';
-import { useContractsList } from '@/features/contracts/hooks/useContracts';
+import { useContractsList, useDeleteContract, useRenameContract } from '@/features/contracts/hooks/useContracts';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
   const { data: documents, isLoading, error } = useContractsList();
+  const { mutate: deleteContract, isPending: isDeleting } = useDeleteContract();
+  const { mutate: renameContract, isPending: isRenaming } = useRenameContract();
 
   return (
     <ProtectedRoute>
@@ -43,15 +45,41 @@ export const Dashboard = () => {
                       <Chip label={doc.status === 'draft' ? 'Черновик' : 'Финальный'} size="small" />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
-                      Из шаблона: {doc.template_id ? doc.template_id : 'Без шаблона'}
+                      Из шаблона: {doc.template_name || (doc.template_id ? doc.template_id : 'Без шаблона')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Обновлён: {new Date(doc.updated_at).toLocaleString('ru-RU')}
                     </Typography>
                     <Divider sx={{ my: 1 }} />
-                    <Stack direction="row" spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
                       <Button size="small" variant="contained" onClick={() => navigate(`/contract/${doc.id}`)}>
                         Открыть
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        disabled={isRenaming}
+                        onClick={() => {
+                          const nextTitle = prompt('Новое название договора', doc.title);
+                          if (nextTitle && nextTitle.trim()) {
+                            renameContract({ documentId: doc.id, title: nextTitle.trim() });
+                          }
+                        }}
+                      >
+                        Переименовать
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        variant="text"
+                        disabled={isDeleting}
+                        onClick={() => {
+                          if (confirm('Удалить договор? Это действие необратимо.')) {
+                            deleteContract(doc.id);
+                          }
+                        }}
+                      >
+                        Удалить
                       </Button>
                       {latest && (
                         <Typography variant="body2" color="text.secondary">

@@ -5,6 +5,8 @@ import {
   RefineContractRequest,
   ExportContractResponse,
   ContractFieldInput,
+  ContractSectionInput,
+  Document as ContractDocument,
 } from '@/shared/types';
 
 export const contractsApi = {
@@ -13,8 +15,8 @@ export const contractsApi = {
     return response.data;
   },
 
-  getAll: async (): Promise<{ documents: Document[] }> => {
-    const response = await apiClient.get<{ documents: Document[] }>('/contracts');
+  getAll: async (): Promise<{ documents: ContractDocument[] }> => {
+    const response = await apiClient.get<{ documents: ContractDocument[] }>('/contracts');
     return response.data;
   },
 
@@ -46,6 +48,15 @@ export const contractsApi = {
       sections,
     });
     return response.data;
+  },
+
+  rename: async (documentId: string, title: string): Promise<GenerateContractResponse> => {
+    const response = await apiClient.patch<GenerateContractResponse>(`/contracts/${documentId}`, { title });
+    return response.data;
+  },
+
+  delete: async (documentId: string): Promise<void> => {
+    await apiClient.delete(`/contracts/${documentId}`);
   },
 
   export: async (documentId: string, format: 'docx' | 'pdf'): Promise<Blob> => {

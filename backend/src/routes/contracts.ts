@@ -9,7 +9,12 @@ import { generateText } from '../lib/yandex';
 const router = Router();
 
 type DocWithRelations = Prisma.DocumentGetPayload<{
-  include: { versions: true; fields: true; sections: true };
+  include: {
+    template: { select: { id: true; name: true } };
+    versions: true;
+    fields: true;
+    sections: true;
+  };
 }>;
 
 type DocWithVersions = Prisma.DocumentGetPayload<{ include: { versions: true } }>;
@@ -45,7 +50,7 @@ function contractFieldsFromTemplate(template: TemplateWithFields): ContractField
       key: field.key,
       value: field.defaultValue ?? '',
       order: field.order ?? fieldIdx,
-    }))
+    })),
   );
 }
 
@@ -58,17 +63,18 @@ function contractSectionsFromTemplate(template: TemplateWithFields): ContractSec
 }
 
 function buildFieldsPrompt(fields: ContractFieldDraft[]) {
-  const grouped = fields.reduce<
-    Array<{ label: string; order: number; fields: typeof fields }>
-  >((acc, field) => {
-    const existing = acc.find((g) => g.label === field.groupLabel);
-    if (existing) {
-      existing.fields.push(field);
-    } else {
-      acc.push({ label: field.groupLabel, order: field.groupOrder ?? 0, fields: [field] });
-    }
-    return acc;
-  }, []);
+  const grouped = fields.reduce<Array<{ label: string; order: number; fields: typeof fields }>>(
+    (acc, field) => {
+      const existing = acc.find((g) => g.label === field.groupLabel);
+      if (existing) {
+        existing.fields.push(field);
+      } else {
+        acc.push({ label: field.groupLabel, order: field.groupOrder ?? 0, fields: [field] });
+      }
+      return acc;
+    },
+    [],
+  );
 
   return grouped
     .sort((a, b) => a.order - b.order)
@@ -87,7 +93,10 @@ function sanitizeGeneratedHtml(raw: string, title: string): string {
 
   // Убираем обёртку ```html ... ```
   if (content.startsWith('```')) {
-    content = content.replace(/^```[a-zA-Z]*\s*/, '').replace(/```$/, '').trim();
+    content = content
+      .replace(/^```[a-zA-Z]*\s*/, '')
+      .replace(/```$/, '')
+      .trim();
   }
 
   // Если модель вернула лишние бэктики в конце
@@ -113,6 +122,18 @@ function sanitizeGeneratedHtml(raw: string, title: string): string {
   // Если сразу после h1 идёт тот же заголовок текстом — уберём дубль
   content = content.replace(new RegExp(`</h1>\\s*${escapedTitle}`, 'i'), '</h1>');
 
+  // Убираем параграф сразу после заголовка, если он повторяет название
+  content = content.replace(new RegExp(`</h1>\\s*<p>\\s*${escapedTitle}\\s*</p>`, 'i'), '</h1>');
+
+  // Удаляем явный дубликат названия на первой строке без тегов
+  content = content.replace(new RegExp(`^\\s*${escapedTitle}\\s*\\n`, 'i'), '');
+
+  // Нормализуем первый <h1>: если он есть — переписываем текст на точное название договора
+  content = content.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, (match) => {
+    const attrs = match.match(/<h1([^>]*)>/i)?.[1] ?? '';
+    return `<h1${attrs}>${title.trim()}</h1>`;
+  });
+
   return content.trim();
 }
 
@@ -121,7 +142,10 @@ function escapeRegExp(value: string) {
 }
 
 function sanitizeFilename(title: string) {
-  const slug = title.replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+  const slug = title
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
   return slug.length ? slug.slice(0, 100) : 'document';
 }
 
@@ -178,16 +202,17 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   const doc = (await prisma.document.findUnique({
     where: { id: docId },
     include: {
+      template: { select: { id: true, name: true } },
       versions: { orderBy: { version: 'asc' } },
       fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       sections: { orderBy: { order: 'asc' } },
     },
   })) as DocWithRelations | null;
-  
+
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
   }
-  
+
   return res.json({ document: toDocument(doc) });
 });
 
@@ -200,6 +225,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     where: { ownerId: req.userId },
     orderBy: { updatedAt: 'desc' },
     include: {
+      template: { select: { id: true, name: true } },
       versions: { orderBy: { version: 'asc' } },
       fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       sections: { orderBy: { order: 'asc' } },
@@ -217,7 +243,13 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
-  const { title, prompt, template_id, fields: incomingFields, sections: incomingSections } = parsed.data;
+  const {
+    title,
+    prompt,
+    template_id,
+    fields: incomingFields,
+    sections: incomingSections,
+  } = parsed.data;
 
   const template = template_id
     ? await prisma.template.findUnique({
@@ -254,19 +286,20 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     'Избегай двусмысленностей, разговорных выражений и воды.',
     'При необходимости используй нумерацию пунктов внутри разделов.',
     'Если данные сторон не указаны — используй нейтральные плейсхолдеры (например, «Заказчик», «Исполнитель»).',
-    `Название договора: ${title}`
+    `Название договора: ${title}`,
   ].join('\n');
-  
 
   const fieldCopies: ContractFieldDraft[] = template ? contractFieldsFromTemplate(template) : [];
-  const sectionCopies: ContractSectionDraft[] = template ? contractSectionsFromTemplate(template) : [];
+  const sectionCopies: ContractSectionDraft[] = template
+    ? contractSectionsFromTemplate(template)
+    : [];
 
   if (incomingFields && incomingFields.length) {
     for (const [idx, field] of incomingFields.entries()) {
       const existingIdx = fieldCopies.findIndex(
         (f) =>
           (field.template_field_id && f.templateFieldId === field.template_field_id) ||
-          f.key === field.key
+          f.key === field.key,
       );
 
       const normalized = {
@@ -292,7 +325,7 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
       const existingIdx = sectionCopies.findIndex(
         (s) =>
           (section.template_section_id && s.templateSectionId === section.template_section_id) ||
-          s.title === section.title
+          s.title === section.title,
       );
       const normalized = {
         templateSectionId: section.template_section_id,
@@ -317,46 +350,45 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   //         .join('\n')}`
   //     : `Сформируй логичную структуру разделов для данного договора: начни с Преамбулы, укажи предмет, права/обязанности, цену/расчёты, сроки и приёмку (если применимо), ответственность, конфиденциальность, форс-мажор, порядок споров, условия действия/расторжения, заключительные положения, реквизиты/подписи. Используй нумерацию разделов и подзаголовки <h2>.`;
 
-// const sectionsPrompt =
-//   sectionsSource.length > 0
-//     ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
-//         .sort((a, b) => a.order - b.order)
-//         .map((s, idx) => `${idx + 1}. ${s.title}`)
-//         .join('\n')}`
-//     : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора с названием «${title}».
+  // const sectionsPrompt =
+  //   sectionsSource.length > 0
+  //     ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
+  //         .sort((a, b) => a.order - b.order)
+  //         .map((s, idx) => `${idx + 1}. ${s.title}`)
+  //         .join('\n')}`
+  //     : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора с названием «${title}».
 
-// Требования к структуре и содержанию:
-// • Определи состав, последовательность и глубину разделов, исходя из:
-//   - сути регулируемых гражданско-правовых отношений,
-//   - положений Гражданского кодекса РФ (особенной части),
-//   - специального законодательства (если применимо к данному виду договора),
-//   - сложившейся договорной и судебной практики 2024–2026 годов,
-//   - типичных рисков, интересов и потребностей сторон именно для данного вида договора.
-// • Не используй упрощённые, шаблонные или усечённые перечни разделов.
-// • Каждый раздел должен быть детализированным, содержать все логически необходимые подразделы (нумерация 1.1., 1.2., 1.2.1. и т.д.) и исключать двусмысленности.
-// • Не оставляй разделы пустыми или состоящими из 1–2 общих фраз — каждый пункт должен нести конкретную юридическую нагрузку и минимизировать риски сторон.
-// • Обязательно включи:
-//   - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами: наименование, ИНН, ОГРН, адрес, в лице ___________, действующего на основании ___________),
-//   - Финальный раздел «Реквизиты и подписи сторон» (или аналогичное название).
-// • В разделе с подписями сторон обязательно предусмотри чётко оформленные поля:
-//   - дата (««___» _________ 20__ г.»),
-//   - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны,
-//   - расшифровки подписей под линиями,
-//   - место для оттиска печати (при необходимости).
-// • Используй тег <h2> для названий основных разделов, нумеруй их арабскими цифрами (1., 2., …).
-// • Подразделы внутри разделов нумеруй последовательно (1.1., 1.2., 1.2.1. и т.д.).
-// • Порядок разделов должен быть логичным, последовательным и удобным для восприятия сторонами и в случае судебного разбирательства.
+  // Требования к структуре и содержанию:
+  // • Определи состав, последовательность и глубину разделов, исходя из:
+  //   - сути регулируемых гражданско-правовых отношений,
+  //   - положений Гражданского кодекса РФ (особенной части),
+  //   - специального законодательства (если применимо к данному виду договора),
+  //   - сложившейся договорной и судебной практики 2024–2026 годов,
+  //   - типичных рисков, интересов и потребностей сторон именно для данного вида договора.
+  // • Не используй упрощённые, шаблонные или усечённые перечни разделов.
+  // • Каждый раздел должен быть детализированным, содержать все логически необходимые подразделы (нумерация 1.1., 1.2., 1.2.1. и т.д.) и исключать двусмысленности.
+  // • Не оставляй разделы пустыми или состоящими из 1–2 общих фраз — каждый пункт должен нести конкретную юридическую нагрузку и минимизировать риски сторон.
+  // • Обязательно включи:
+  //   - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами: наименование, ИНН, ОГРН, адрес, в лице ___________, действующего на основании ___________),
+  //   - Финальный раздел «Реквизиты и подписи сторон» (или аналогичное название).
+  // • В разделе с подписями сторон обязательно предусмотри чётко оформленные поля:
+  //   - дата (««___» _________ 20__ г.»),
+  //   - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны,
+  //   - расшифровки подписей под линиями,
+  //   - место для оттиска печати (при необходимости).
+  // • Используй тег <h2> для названий основных разделов, нумеруй их арабскими цифрами (1., 2., …).
+  // • Подразделы внутри разделов нумеруй последовательно (1.1., 1.2., 1.2.1. и т.д.).
+  // • Порядок разделов должен быть логичным, последовательным и удобным для восприятия сторонами и в случае судебного разбирательства.
 
-// Генерируй структуру, максимально соответствующую качественным гражданско-правовым договорам, используемым в российском деловом обороте на текущий момент.`;
+  // Генерируй структуру, максимально соответствующую качественным гражданско-правовым договорам, используемым в российском деловом обороте на текущий момент.`;
 
-
-const sectionsPrompt =
-  sectionsSource.length > 0
-    ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
-        .sort((a, b) => a.order - b.order)
-        .map((s, idx) => `${idx + 1}. ${s.title}`)
-        .join('\n')}`
-    : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора с названием «${title}».
+  const sectionsPrompt =
+    sectionsSource.length > 0
+      ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
+          .sort((a, b) => a.order - b.order)
+          .map((s, idx) => `${idx + 1}. ${s.title}`)
+          .join('\n')}`
+      : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора с названием «${title}».
 
 Требования к структуре и содержанию:
 • Определи состав, последовательность и глубину разделов, исходя из:
@@ -417,7 +449,12 @@ const sectionsPrompt =
           }
         : undefined,
     },
-    include: { versions: true, fields: true, sections: true },
+    include: {
+      template: { select: { id: true, name: true } },
+      versions: true,
+      fields: true,
+      sections: true,
+    },
   });
 
   return res.json({ document: toDocument(document) });
@@ -434,7 +471,12 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   const docId = String(req.params.id);
   const doc = (await prisma.document.findUnique({
     where: { id: docId },
-    include: { versions: { orderBy: { version: 'asc' } }, fields: true, sections: true },
+    include: {
+      template: { select: { id: true, name: true } },
+      versions: { orderBy: { version: 'asc' } },
+      fields: true,
+      sections: true,
+    },
   })) as DocWithRelations | null;
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
@@ -465,7 +507,7 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
         },
       },
     },
-    include: { versions: true },
+    include: { template: { select: { id: true, name: true } }, versions: true },
   })) as DocWithRelations;
 
   return res.json({ document: toDocument(updated) });
@@ -520,6 +562,7 @@ router.put('/:id/fields', requireAuth, async (req: AuthRequest, res) => {
     const updated = (await prisma.document.findUnique({
       where: { id: docId },
       include: {
+        template: { select: { id: true, name: true } },
         versions: { orderBy: { version: 'desc' } },
         fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       },
@@ -563,6 +606,7 @@ router.put('/:id/sections', requireAuth, async (req: AuthRequest, res) => {
     const updated = (await prisma.document.findUnique({
       where: { id: docId },
       include: {
+        template: { select: { id: true, name: true } },
         versions: { orderBy: { version: 'asc' } },
         fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
         sections: { orderBy: { order: 'asc' } },
@@ -573,6 +617,64 @@ router.put('/:id/sections', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Update contract sections error:', error);
     return res.status(500).json({ detail: 'Failed to update sections' });
+  }
+});
+
+router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
+
+  const schema = z.object({ title: z.string().min(1) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: parsed.error.flatten() });
+  }
+
+  const docId = String(req.params.id);
+  const existing = await prisma.document.findUnique({ where: { id: docId } });
+  if (!existing || existing.ownerId !== req.userId) {
+    return res.status(404).json({ detail: 'Document not found' });
+  }
+
+  const updated = (await prisma.document.update({
+    where: { id: docId },
+    data: { title: parsed.data.title },
+    include: {
+      template: { select: { id: true, name: true } },
+      versions: { orderBy: { version: 'asc' } },
+      fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
+      sections: { orderBy: { order: 'asc' } },
+    },
+  })) as DocWithRelations;
+
+  return res.json({ document: toDocument(updated) });
+});
+
+router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
+  const docId = String(req.params.id);
+  const existing = await prisma.document.findUnique({ where: { id: docId } });
+  if (!existing || existing.ownerId !== req.userId) {
+    return res.status(404).json({ detail: 'Document not found' });
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.contractField.deleteMany({ where: { documentId: docId } });
+      await tx.contractSection.deleteMany({ where: { documentId: docId } });
+      await tx.documentVersion.deleteMany({ where: { documentId: docId } });
+      await tx.document.delete({ where: { id: docId } });
+    });
+    return res.status(204).send();
+  } catch (error: any) {
+    console.error('Delete document error:', error);
+    if (error?.code === 'P2003') {
+      return res.status(409).json({ detail: 'Cannot delete document due to linked records' });
+    }
+    return res.status(500).json({ detail: 'Failed to delete document' });
   }
 });
 
@@ -592,14 +694,14 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
   }
-  
+
   const content = doc.versions[0]?.content || '';
   const title = doc.title;
 
   try {
     // Динамический импорт для избежания проблем с ESM
     const { exportToDocx, exportToPdf } = await import('../lib/export');
-    
+
     let buffer: Buffer;
     let contentType: string;
     let filename: string;
@@ -619,7 +721,7 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
     res.setHeader('Content-Length', buffer.length);
-    
+
     return res.send(buffer);
   } catch (error) {
     console.error('Export error:', error);

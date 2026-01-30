@@ -90,3 +90,25 @@ export const useExportContract = () => {
     },
   });
 };
+
+export const useRenameContract = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, title }: { documentId: string; title: string }) =>
+      contractsApi.rename(documentId, title),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['contracts', variables.documentId] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+};
+
+export const useDeleteContract = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => contractsApi.delete(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+};

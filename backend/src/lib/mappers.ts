@@ -106,6 +106,7 @@ export function toDocument(api: DocumentWithRelations) {
     status: api.status,
     created_at: api.createdAt.toISOString(),
     updated_at: api.updatedAt.toISOString(),
+    template_name: (api as any).template?.name,
     versions: versionsSorted.map(toVersion),
     fields: (api.fields || []).map(toContractField).sort((a, b) => {
       if (a.group_order === b.group_order) {

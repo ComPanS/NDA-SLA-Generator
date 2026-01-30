@@ -1,5 +1,5 @@
-import { Card, CardContent, Stack, TextField, Button, Grid, IconButton, Typography } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import { Card, CardContent, Stack, TextField, Button, Grid, IconButton, Typography, Tooltip } from '@mui/material';
+import { Add, Delete, HelpOutline } from '@mui/icons-material';
 import { ContractSectionInput } from '@/shared/types';
 
 interface Props {
@@ -32,7 +32,12 @@ export const ContractSectionsEditor = ({ sections, onChange, title }: Props) => 
       <CardContent>
         <Stack spacing={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6">{title || 'Разделы договора'}</Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="h6">{title || 'Разделы договора'}</Typography>
+              <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт.">
+                <HelpOutline fontSize="small" color="action" />
+              </Tooltip>
+            </Stack>
             <Button startIcon={<Add />} onClick={handleAdd}>
               Добавить раздел
             </Button>
