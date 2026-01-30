@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentStatus {
+  draft
+  final
+}
+
+enum TemplateFieldType {
+  text
+}
+enum SubscriptionPlan {
+  free
+  pro
+  pay_per_use
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  past_due
+}
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  hashedPassword String
+  isActive       Boolean        @default(true)
+  isAdmin        Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  templates      Template[]
+  subscriptions  Subscription[]
+  documents      Document[]     @relation("UserDocuments")
+}
+
+model Template {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  content     String
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdById String?
+  createdBy   User?      @relation(fields: [createdById], references: [id])
+  documents   Document[]
+  groups      TemplateGroup[]
+  fields      TemplateField[]
+  sections    TemplateSection[]
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  userId    String
+  plan      SubscriptionPlan
+  status    SubscriptionStatus
+  expiresAt DateTime?
+  user      User               @relation(fields: [userId], references: [id])
+}
+
+model Document {
+  id         String            @id @default(uuid())
+  title      String
+  ownerId    String
+  templateId String?
+  status     DocumentStatus
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  owner      User              @relation("UserDocuments", fields: [ownerId], references: [id])
+  template   Template?         @relation(fields: [templateId], references: [id])
+  versions   DocumentVersion[]
+  fields     ContractField[]
+  sections   ContractSection[]
+}
+
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  version    Int
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+
+  @@unique([documentId, version])
+}
+
+model TemplateGroup {
+  id         String       @id @default(uuid())
+  templateId String
+  label      String
+  order      Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  template   Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields     TemplateField[]
+}
+
+model TemplateField {
+  id             String            @id @default(uuid())
+  templateId     String
+  groupId        String
+  label          String
+  key            String
+  type           TemplateFieldType @default(text)
+  defaultValue   String?
+  order          Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  template       Template          @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  group          TemplateGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  contractFields ContractField[]
+
+  @@unique([templateId, key])
+}
+
+model ContractField {
+  id              String         @id @default(uuid())
+  documentId      String
+  templateFieldId String?
+  groupLabel      String
+  groupOrder      Int            @default(0)
+  label           String
+  key             String
+  value           String?
+  order           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  templateField   TemplateField? @relation(fields: [templateFieldId], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, key])
+}
+
+model TemplateSection {
+  id         String   @id @default(uuid())
+  templateId String
+  title      String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  contracts  ContractSection[]
+}
+
+model ContractSection {
+  id               String          @id @default(uuid())
+  documentId       String
+  templateSectionId String?
+  title            String
+  order            Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  document         Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  templateSection  TemplateSection? @relation(fields: [templateSectionId], references: [id], onDelete: SetNull)
+}

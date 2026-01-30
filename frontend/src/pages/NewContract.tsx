@@ -1,107 +1,248 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Button,
-  FormControlLabel,
-  Paper,
-  Stack,
-  Switch,
+  Box,
+  Card,
+  CardContent,
   TextField,
+  Button,
   Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Controller, useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage } from '@/shared/components';
+import { useTemplate, useTemplates } from '@/features/templates/hooks/useTemplates';
+import { useGenerateContract } from '@/features/contracts/hooks/useContracts';
+import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
+import { ContractFieldInput, ContractSectionInput } from '@/shared/types';
+import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 
-import { generateContract } from '../services/contracts';
-import { listTemplates } from '../services/templates';
-import { ContractGeneratePayload } from '../types/contract';
-import { FormatMode } from '../types/format';
-import TemplateSelect from '../components/TemplateSelect';
-import ContractViewer from '../components/ContractViewer';
+export const NewContract = () => {
+  const defaultSections: ContractSectionInput[] = [
+    { title: 'Преамбула', order: 0 },
+    { title: 'Предмет договора', order: 1 },
+    { title: 'Права и обязанности сторон', order: 2 },
+    { title: 'Стоимость и порядок расчетов', order: 3 },
+    { title: 'Сроки выполнения и приемка', order: 4 },
+    { title: 'Ответственность сторон', order: 5 },
+    { title: 'Конфиденциальность', order: 6 },
+    { title: 'Форс-мажор', order: 7 },
+    { title: 'Порядок разрешения споров', order: 8 },
+    { title: 'Срок действия, изменение и расторжение', order: 9 },
+    { title: 'Заключительные положения', order: 10 },
+    { title: 'Реквизиты и подписи сторон', order: 11 },
+  ];
 
-export default function NewContract() {
-  const { data: templates } = useQuery({ queryKey: ['templates'], queryFn: listTemplates });
-  const [content, setContent] = useState<string>('');
-  const [riskReport, setRiskReport] = useState<string[] | undefined>(undefined);
+  const navigate = useNavigate();
+  const [title, setTitle] = useState('');
+  const [templateId, setTemplateId] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [riskCheck, setRiskCheck] = useState(false);
+  const [fields, setFields] = useState<ContractFieldInput[]>([]);
+  const [sections, setSections] = useState<ContractSectionInput[]>(defaultSections);
 
+  const { data: templates, isLoading: templatesLoading, error: templatesError } = useTemplates();
+  const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(
+    templateId || undefined
+  );
   const {
-    control,
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ContractGeneratePayload>({
-    defaultValues: {
-      title: '',
-      prompt: '',
-      format_mode: FormatMode.FLEX,
-      risk_check: true,
-    },
-  });
+    mutate: generateContract,
+    isPending: isGenerating,
+    error: generateError,
+  } = useGenerateContract();
 
-  const mutation = useMutation({
-    mutationFn: generateContract,
-    onSuccess: (res) => {
-      setContent(res.document.versions.at(-1)?.content ?? '');
-      setRiskReport(res.risk_report);
-    },
-  });
+  useEffect(() => {
+    if (selectedTemplate) {
+      const nextFields: ContractFieldInput[] = selectedTemplate.groups.flatMap((group) =>
+        group.fields.map((field) => ({
+          template_field_id: field.id,
+          group_label: group.label,
+          group_order: group.order,
+          label: field.label,
+          key: field.key,
+          value: field.default_value || '',
+          order: field.order,
+        }))
+      );
+      setFields(nextFields);
+      setPrompt((prev) => (prev.trim().length ? prev : selectedTemplate.content));
+      const nextSections: ContractSectionInput[] = selectedTemplate.sections.map((s) => ({
+        template_section_id: s.id,
+        title: s.title,
+        order: s.order,
+      }));
+      setSections(nextSections);
+    } else {
+      setFields([]);
+      setSections(defaultSections);
+    }
+  }, [selectedTemplate]);
+
+  const canSubmit = useMemo(() => !!title.trim() && !!prompt.trim(), [title, prompt]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    generateContract(
+      {
+        title,
+        template_id: templateId || undefined,
+        prompt,
+        risk_check: riskCheck,
+        fields,
+        sections,
+      },
+      {
+        onSuccess: (data) => {
+          navigate(`/contract/${data.document.id}`);
+        },
+      }
+    );
+  };
+
+  if (templatesLoading) {
+    return (
+      <ProtectedRoute>
+        <Layout>
+          <LoadingSpinner message="Загрузка шаблонов..." />
+        </Layout>
+      </ProtectedRoute>
+    );
+  }
+
+  if (templatesError) {
+    return (
+      <ProtectedRoute>
+        <Layout>
+          <ErrorMessage message="Не удалось загрузить шаблоны" />
+        </Layout>
+      </ProtectedRoute>
+    );
+  }
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h5">Новый контракт</Typography>
-      <Paper sx={{ p: 2 }}>
-        <Stack
-          spacing={2}
-          component="form"
-          onSubmit={handleSubmit((data) => mutation.mutate(data))}
-        >
-          <TextField
-            label="Название"
-            {...register('title', { required: 'Укажите название' })}
-            error={Boolean(errors.title)}
-            helperText={errors.title?.message}
-          />
-          <TextField
-            label="Промпт для генерации"
-            multiline
-            minRows={3}
-            {...register('prompt', { required: 'Опишите пожелания' })}
-            error={Boolean(errors.prompt)}
-            helperText={errors.prompt?.message}
-          />
-          <TemplateSelect control={control} name="template_id" templates={templates ?? []} />
-          <Controller
-            name="format_mode"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                select
-                label="Формат"
-                SelectProps={{ native: true }}
-                {...field}
-                value={field.value ?? FormatMode.FLEX}
-              >
-                <option value={FormatMode.FLEX}>Гибкий</option>
-                <option value={FormatMode.SKELETON}>Каркас</option>
-              </TextField>
-            )}
-          />
-          <FormControlLabel
-            control={
-              <Controller
-                name="risk_check"
-                control={control}
-                render={({ field }) => <Switch {...field} checked={field.value} />}
-              />
-            }
-            label="Проверить риски"
-          />
-          <Button variant="contained" type="submit" disabled={mutation.isPending}>
-            Сгенерировать
-          </Button>
-        </Stack>
-      </Paper>
+    <ProtectedRoute>
+      <Layout maxWidth="md">
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Создать новый договор
+          </Typography>
 
-      <ContractViewer content={content} riskReport={riskReport} />
-    </Stack>
+          <Card sx={{ mt: 3 }}>
+            <CardContent>
+              {generateError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  Не удалось создать договор. Попробуйте еще раз.
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <TextField
+                  fullWidth
+                  label="Название договора"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  margin="normal"
+                  required
+                  placeholder="Например: NDA с ООО Компания"
+                />
+
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Шаблон</InputLabel>
+                  <Select
+                    value={templateId}
+                    label="Шаблон"
+                    onChange={(e) => setTemplateId(e.target.value)}
+                  >
+                    <MenuItem value="">
+                      <em>Без шаблона</em>
+                    </MenuItem>
+                    {templates?.map((template) => (
+                      <MenuItem key={template.id} value={template.id}>
+                        {template.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  label="Описание / Параметры"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  margin="normal"
+                  multiline
+                  rows={6}
+                  required
+                  placeholder="Опишите детали договора: стороны, предмет, сроки, условия..."
+                  helperText="Чем подробнее описание, тем точнее будет сгенерирован документ"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={riskCheck}
+                      onChange={(e) => setRiskCheck(e.target.checked)}
+                    />
+                  }
+                  label="Проверить на юридические риски"
+                  sx={{ mt: 1 }}
+                />
+
+                {(loadingTemplate && templateId) && (
+                  <Box sx={{ mt: 2 }}>
+                    <LoadingSpinner message="Загрузка полей шаблона..." />
+                  </Box>
+                )}
+
+                {!loadingTemplate && (
+                  <Box sx={{ mt: 2 }}>
+                    <ContractFieldsEditor fields={fields} onChange={setFields} />
+                  </Box>
+                )}
+
+                {!loadingTemplate && (
+                  <Box sx={{ mt: 2 }}>
+                    <ContractSectionsEditor sections={sections} onChange={setSections} />
+                  </Box>
+                )}
+
+                <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    disabled={isGenerating || !canSubmit}
+                    fullWidth
+                  >
+                    {isGenerating ? 'Генерация документа...' : 'Сгенерировать договор'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    onClick={() => navigate('/dashboard')}
+                    disabled={isGenerating}
+                  >
+                    Отмена
+                  </Button>
+                </Box>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Alert severity="info" sx={{ mt: 3 }}>
+            <Typography variant="body2">
+              Документ создается автоматически с помощью AI. Рекомендуется проверка
+              квалифицированным юристом перед использованием.
+            </Typography>
+          </Alert>
+        </Box>
+      </Layout>
+    </ProtectedRoute>
   );
-}
+};

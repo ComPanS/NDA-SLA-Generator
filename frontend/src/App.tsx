@@ -1,15 +1,12 @@
-import { Outlet } from 'react-router-dom';
-import { Container, Stack } from '@mui/material';
+import { Providers } from './app/providers';
+import { AppRouter } from './app/router';
 
-import Header from './components/Header';
-
-export default function App() {
+function App() {
   return (
-    <Stack minHeight="100vh">
-      <Header />
-      <Container sx={{ py: 3, flex: 1 }}>
-        <Outlet />
-      </Container>
-    </Stack>
+    <Providers>
+      <AppRouter />
+    </Providers>
   );
 }
+
+export default App;

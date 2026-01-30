@@ -1,0 +1,143 @@
+import {
+  ContractField,
+  Document,
+  DocumentStatus,
+  DocumentVersion,
+  Subscription,
+  Template,
+  TemplateField,
+  TemplateGroup,
+  TemplateSection,
+  ContractSection,
+} from '@prisma/client';
+
+type TemplateWithRelations = Template & {
+  groups?: Array<TemplateGroup & { fields?: TemplateField[] }>;
+  sections?: TemplateSection[];
+};
+type DocumentWithRelations = Document & {
+  versions?: DocumentVersion[];
+  fields?: ContractField[];
+  sections?: ContractSection[];
+};
+
+export function toTemplateField(api: TemplateField) {
+  return {
+    id: api.id,
+    template_id: api.templateId,
+    group_id: api.groupId,
+    label: api.label,
+    key: api.key,
+    type: api.type,
+    default_value: api.defaultValue ?? '',
+    order: api.order,
+    created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+  };
+}
+
+export function toTemplateGroup(api: TemplateGroup & { fields?: TemplateField[] }) {
+  return {
+    id: api.id,
+    template_id: api.templateId,
+    label: api.label,
+    order: api.order,
+    created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+    fields: (api.fields || []).map(toTemplateField).sort((a, b) => a.order - b.order),
+  };
+}
+
+export function toTemplate(api: TemplateWithRelations) {
+  return {
+    id: api.id,
+    name: api.name,
+    description: api.description || undefined,
+    content: api.content,
+    is_active: api.isActive,
+    created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+    groups: (api.groups || []).map(toTemplateGroup).sort((a, b) => a.order - b.order),
+    sections: (api.sections || [])
+      .map((s) => ({
+        id: s.id,
+        template_id: s.templateId,
+        title: s.title,
+        order: s.order,
+        created_at: s.createdAt.toISOString(),
+        updated_at: s.updatedAt.toISOString(),
+      }))
+      .sort((a, b) => a.order - b.order),
+  };
+}
+
+export function toVersion(api: DocumentVersion) {
+  return {
+    id: api.id,
+    version: api.version,
+    content: api.content,
+    created_at: api.createdAt.toISOString(),
+  };
+}
+
+export function toContractField(api: ContractField) {
+  return {
+    id: api.id,
+    document_id: api.documentId,
+    template_field_id: api.templateFieldId || undefined,
+    group_label: api.groupLabel,
+    group_order: api.groupOrder,
+    label: api.label,
+    key: api.key,
+    value: api.value ?? '',
+    order: api.order,
+    created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+  };
+}
+
+export function toDocument(api: DocumentWithRelations) {
+  const versionsSorted = (api.versions || []).slice().sort((a, b) => a.version - b.version);
+  return {
+    id: api.id,
+    title: api.title,
+    owner_id: api.ownerId,
+    template_id: api.templateId,
+    status: api.status,
+    created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+    versions: versionsSorted.map(toVersion),
+    fields: (api.fields || []).map(toContractField).sort((a, b) => {
+      if (a.group_order === b.group_order) {
+        return a.order - b.order;
+      }
+      return a.group_order - b.group_order;
+    }),
+    sections: (api.sections || [])
+      .map((s) => ({
+        id: s.id,
+        document_id: s.documentId,
+        template_section_id: s.templateSectionId || undefined,
+        title: s.title,
+        order: s.order,
+        created_at: s.createdAt.toISOString(),
+        updated_at: s.updatedAt.toISOString(),
+      }))
+      .sort((a, b) => a.order - b.order),
+  };
+}
+
+export function toBilling(sub?: Subscription | null) {
+  if (!sub) {
+    return { plan: 'free', status: 'inactive' };
+  }
+  return {
+    plan: sub.plan,
+    status: sub.status,
+    expires_at: sub.expiresAt?.toISOString(),
+  };
+}
+
+export function defaultDocumentStatus(): DocumentStatus {
+  return 'draft';
+}

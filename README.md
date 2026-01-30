@@ -2,6 +2,30 @@
 
 Автоматический генератор и менеджер договоров NDA и SLA с AI-поддержкой для российского рынка
 
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.0+-blue.svg)](https://reactjs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 🚀 Быстрый старт
+
+**За 5 минут:**
+
+```bash
+# 1. Клонировать репозиторий
+git clone https://github.com/your-username/NDA-SLA-Generator.git
+cd NDA-SLA-Generator
+
+# 2. Docker способ (рекомендуется)
+docker-compose up -d
+
+# Или локальная установка
+make install
+make dev
+```
+
+📖 Подробнее: [QUICKSTART.md](./QUICKSTART.md)
+
 ## О проекте
 
 **NDA/SLA Generator** — веб-сервис, который позволяет:
@@ -20,15 +44,15 @@
 
 - (в будущем) отправлять на подписание через системы ЭДО (Диадок, Контур и др.)
 
-**Целевая аудитория**  
+**Целевая аудитория**
 
-IT-агентства, фриланс-команды, B2B-поставщики услуг, SaaS-компании  
+IT-агентства, фриланс-команды, B2B-поставщики услуг, SaaS-компании
 
 Основные пользователи: sales-менеджеры, аккаунт-менеджеры, юристы, фаундеры
 
-**Основная ценность**  
+**Основная ценность**
 
-Сократить время на подготовку и согласование типовых договоров с 2–10 дней до 5–15 минут  
+Сократить время на подготовку и согласование типовых договоров с 2–10 дней до 5–15 минут
 
 Минимизировать типовые юридические ошибки в шаблонах
 
@@ -52,117 +76,188 @@ IT-агентства, фриланс-команды, B2B-поставщики �
 
 ## Технологический стек
 
-| Компонент       | Технология                          | Примечание                                      |
+| Компонент | Технология | Примечание |
 
 |-----------------|-------------------------------------|-------------------------------------------------|
 
-| Frontend        | React 18 + TypeScript               | Vite                                            |
+| Frontend | React 18 + TypeScript | Vite |
 
-| UI-компоненты   | @mui/material                       | —                                               |
+| UI-компоненты | @mui/material | — |
 
-| Редактор текста | Quill.js                            | с кастомными блендами для юридической структуры |
+| Редактор текста | Quill.js | с кастомными блендами для юридической структуры |
 
-| Backend         | Python 3.11+ / FastAPI              | —                                               |
+| Backend | Python 3.11+ / FastAPI | — |
 
-| ORM             | SQLAlchemy 2 + Alembic              | —                                               |
+| ORM | SQLAlchemy 2 + Alembic | — |
 
-| База данных     | PostgreSQL 15+                      | —                                               |
+| База данных | PostgreSQL 15+ | — |
 
-| LLM             | YandexGPT (через Yandex Cloud API)  | альтернатива: GigaChat, OpenAI                  |
+| LLM | YandexGPT (через Yandex Cloud API) | альтернатива: GigaChat, OpenAI |
 
-| Экспорт DOCX    | python-docx / docxtemplater         | —                                               |
+| Экспорт DOCX | python-docx / docxtemplater | — |
 
-| Экспорт PDF     | WeasyPrint / pdfkit / pdfmake       | —                                               |
+| Экспорт PDF | WeasyPrint / pdfkit / pdfmake | — |
 
-| Аутентификация  | JWT (PyJWT)                         | refresh-токены                                  |
+| Аутентификация | JWT (PyJWT) | refresh-токены |
 
-| Платежи         | ЮKassa (Yandex Kassa)               | —                                               |
+| Платежи | ЮKassa (Yandex Kassa) | — |
 
-| Контейнеризация | Docker + docker-compose             | —                                               |
+| Контейнеризация | Docker + docker-compose | — |
 
-| Хостинг         | Yandex Cloud / VK Cloud / Selectel  | —                                               |
+| Хостинг | Yandex Cloud / VK Cloud / Selectel | — |
+
+### Backend (Express + Prisma)
+
+- Код: `backend/` (Express, Prisma, JWT, bcrypt, Zod).
+- Настройка:
+  1. Скопируйте `.env.example` в `.env` и задайте `DATABASE_URL` и другие переменные.
+  2. Установите зависимости: `cd backend && npm install`.
+  3. Примените миграции: `npx prisma migrate dev`.
+- Запуск dev: `npm run dev` (порт по умолчанию 8001).
+- Сборка/прод: `npm run build && npm start`.
+- Тесты: `npm test` (vitest + supertest).
+
+### Frontend (React + TypeScript)
+
+- Код: `frontend/` (React 18, TypeScript, Vite, MUI, React Query, Zustand).
+- Настройка:
+  1. Установите зависимости: `cd frontend && npm install`.
+  2. (Опционально) Создайте `.env` на основе `.env.example`.
+- Запуск dev: `npm run dev` (порт по умолчанию 5173).
+- Сборка/прод: `npm run build` и `npm run preview`.
+- Тесты: `npm test` (vitest).
 
 ## Быстрый старт
 
 ### Предварительные требования
 
-- Python 3.11+
-
-- Node.js 18+ / pnpm 8+
-
+- Node.js 18+
 - PostgreSQL 15+
+- Аккаунт в Yandex Cloud с доступом к YandexGPT (для AI генерации)
+- ЮKassa аккаунт (для платежей, опционально)
 
-- Аккаунт в Yandex Cloud с доступом к YandexGPT и ЮKassa
+### Установка и запуск
 
+#### 1. Клонирование репозитория
 
+```bash
+git clone https://github.com/your-username/NDA-SLA-Generator.git
+cd NDA-SLA-Generator
+```
 
+#### 2. Настройка базы данных
 
+Создайте базу данных PostgreSQL:
 
-Структура проекта
+```bash
+createdb nda_sla_generator
+```
 
+#### 3. Настройка Backend
+
+```bash
+cd backend
+
+# Установка зависимостей
+npm install
+
+# Создайте .env файл
+cp .env.example .env
+
+# Отредактируйте .env и укажите:
+# DATABASE_URL=postgresql://user:password@localhost:5432/nda_sla_generator
+# JWT_SECRET=ваш-секретный-ключ
+# YANDEX_GPT_API_KEY=ваш-ключ-yandex-gpt
+# YANDEX_FOLDER_ID=ваш-folder-id
+
+# Примените миграции
+npx prisma migrate dev
+
+# Запустите backend
+npm run dev
+```
+
+Backend будет доступен на http://localhost:8001
+
+#### 4. Настройка Frontend
+
+В новом терминале:
+
+```bash
+cd frontend
+
+# Установка зависимостей
+npm install
+
+# (Опционально) Создайте .env
+cp .env.example .env
+
+# Запустите frontend
+npm run dev
+```
+
+Frontend будет доступен на http://localhost:5173
+
+#### 5. Готово!
+
+Откройте http://localhost:5173 в браузере и начните работу с приложением.
+
+### Запуск через Docker (альтернатива)
+
+```bash
+# Из корневой директории проекта
+docker-compose up -d
+
+# Backend: http://localhost:8001
+# Frontend: http://localhost:5173
+# PostgreSQL: localhost:5432
+```
+
+## Структура проекта
+
+```
 nda-sla-generator/
-
-├─ backend/
-
-│  ├─ app/
-
-│  │  ├─ api/               ← роутеры FastAPI
-
-│  │  ├─ core/              ← настройки, security, dependencies
-
-│  │  ├─ models/            ← SQLAlchemy модели
-
-│  │  ├─ schemas/           ← Pydantic схемы
-
-│  │  ├─ services/          ← бизнес-логика (generation, export, subscription)
-
-│  │  └─ utils/             ← хелперы (pdf, docx, jwt и т.д.)
-
-│  ├─ templates/            ← Markdown-шаблоны договоров
-
-│  ├─ migrations/
-
-│  ├─ tests/
-
-│  └─ requirements.txt
-
-├─ frontend/
-
+├─ backend/                    # Node.js + Express + Prisma
 │  ├─ src/
-
-│  │  ├─ components/        ← общие компоненты
-
-│  │  ├─ features/          ← feature-sliced: auth, contract, dashboard, billing
-
-│  │  ├─ pages/
-
-│  │  ├─ services/          ← API-клиенты (axios / tanstack-query)
-
-│  │  └─ types/
-
+│  │  ├─ config/              # Конфигурация (env, prisma)
+│  │  ├─ lib/                 # Библиотеки (jwt, yandex, mappers)
+│  │  ├─ middleware/          # Express middleware (auth)
+│  │  ├─ routes/              # API роуты
+│  │  └─ index.ts
+│  ├─ prisma/
+│  │  ├─ schema.prisma
+│  │  └─ migrations/
+│  └─ package.json
+│
+├─ frontend/                   # React 18 + TypeScript
+│  ├─ src/
+│  │  ├─ app/                 # Конфигурация приложения
+│  │  │  ├─ router.tsx
+│  │  │  ├─ providers.tsx
+│  │  │  └─ theme.ts
+│  │  ├─ features/            # Feature-модули
+│  │  │  ├─ auth/
+│  │  │  ├─ contracts/
+│  │  │  ├─ templates/
+│  │  │  └─ billing/
+│  │  ├─ shared/              # Общий код
+│  │  │  ├─ api/              # API клиенты
+│  │  │  ├─ components/       # Переиспользуемые компоненты
+│  │  │  ├─ types/            # TypeScript типы
+│  │  │  └─ utils/
+│  │  └─ pages/               # Страницы
 │  ├─ public/
-
 │  └─ vite.config.ts
-
-├─ docker/
-
-├─ .github/workflows/
-
-└─ docs/                    ← архитектура, промпты, юридические заметки
-
-
-
-
+│
+├─ docker-compose.yml
+└─ README.md
+```
 
 ## Монетизация (на старте)
 
 - Free → 1 документ в месяц
 - Pro → 1990 ₽ / мес → безлимит, история, проверка рисков
 - Pay-per-use → 99 ₽ / документ (для тех, кто не хочет подписку)
-
-
-
-
 
 ## Юридические и compliance аспекты
 
@@ -172,15 +267,9 @@ nda-sla-generator/
 - Хранение персональных данных — в соответствии с ФЗ-152
 - Шифрование документов на уровне базы (pgcrypto) или файловой системы
 
-
-
-
-
 ## Лицензия
 
 MIT © 2026 ComPanS
-
-
 
 Контакты для вопросов по проекту:  
 Telegram / email (указать в issues или в коде)

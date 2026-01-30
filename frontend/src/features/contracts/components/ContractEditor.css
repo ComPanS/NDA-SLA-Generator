@@ -1,0 +1,64 @@
+/* Дополнительные стили для Quill редактора */
+
+.ql-editor {
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.ql-editor h1 {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.ql-editor h2 {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 16px 0 8px 0;
+}
+
+.ql-editor h3 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 12px 0 6px 0;
+}
+
+.ql-editor p {
+  margin-bottom: 12px;
+  text-align: justify;
+}
+
+.ql-editor strong {
+  font-weight: bold;
+}
+
+.ql-editor em {
+  font-style: italic;
+}
+
+.ql-editor ul,
+.ql-editor ol {
+  margin-bottom: 12px;
+  padding-left: 30px;
+}
+
+.ql-editor li {
+  margin-bottom: 6px;
+}
+
+.ql-editor blockquote {
+  border-left: 4px solid #ccc;
+  margin-bottom: 12px;
+  padding-left: 16px;
+  color: #666;
+}
+
+.ql-toolbar.ql-snow {
+  border-color: #e0e0e0;
+}
+
+.ql-container.ql-snow {
+  border-color: #e0e0e0;
+}
