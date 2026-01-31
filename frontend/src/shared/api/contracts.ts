@@ -3,10 +3,10 @@ import {
   GenerateContractRequest,
   GenerateContractResponse,
   RefineContractRequest,
-  ExportContractResponse,
   ContractFieldInput,
   ContractSectionInput,
   Document as ContractDocument,
+  DocumentStatus,
 } from '@/shared/types';
 
 export const contractsApi = {
@@ -52,6 +52,13 @@ export const contractsApi = {
 
   rename: async (documentId: string, title: string): Promise<GenerateContractResponse> => {
     const response = await apiClient.patch<GenerateContractResponse>(`/contracts/${documentId}`, { title });
+    return response.data;
+  },
+
+  updateStatus: async (documentId: string, status: DocumentStatus): Promise<GenerateContractResponse> => {
+    const response = await apiClient.patch<GenerateContractResponse>(`/contracts/${documentId}/status`, {
+      status,
+    });
     return response.data;
   },
 

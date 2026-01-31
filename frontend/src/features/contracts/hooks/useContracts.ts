@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { contractsApi } from '@/shared/api';
-import { ContractFieldInput, ContractSectionInput, Document, GenerateContractRequest, RefineContractRequest } from '@/shared/types';
+import { ContractFieldInput, ContractSectionInput, Document, DocumentStatus, GenerateContractRequest, RefineContractRequest } from '@/shared/types';
 
 export const useContract = (documentId: string) => {
   return useQuery({
@@ -108,6 +108,18 @@ export const useDeleteContract = () => {
   return useMutation({
     mutationFn: (documentId: string) => contractsApi.delete(documentId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+};
+
+export const useUpdateContractStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, status }: { documentId: string; status: DocumentStatus }) =>
+      contractsApi.updateStatus(documentId, status),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['contracts', variables.documentId] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
     },
   });

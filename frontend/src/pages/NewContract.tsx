@@ -13,6 +13,9 @@ import {
   Alert,
   FormControlLabel,
   Checkbox,
+  Switch,
+  Stack,
+  Tooltip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage } from '@/shared/components';
@@ -21,21 +24,22 @@ import { useGenerateContract } from '@/features/contracts/hooks/useContracts';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
 import { ContractFieldInput, ContractSectionInput } from '@/shared/types';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
+import { HelpOutline } from '@mui/icons-material';
 
 export const NewContract = () => {
   const defaultSections: ContractSectionInput[] = [
-    { title: 'Преамбула', order: 0 },
-    { title: 'Предмет договора', order: 1 },
-    { title: 'Права и обязанности сторон', order: 2 },
-    { title: 'Стоимость и порядок расчетов', order: 3 },
-    { title: 'Сроки выполнения и приемка', order: 4 },
-    { title: 'Ответственность сторон', order: 5 },
-    { title: 'Конфиденциальность', order: 6 },
-    { title: 'Форс-мажор', order: 7 },
-    { title: 'Порядок разрешения споров', order: 8 },
-    { title: 'Срок действия, изменение и расторжение', order: 9 },
-    { title: 'Заключительные положения', order: 10 },
-    { title: 'Реквизиты и подписи сторон', order: 11 },
+    { title: 'Преамбула', order: 1 },
+    { title: 'Предмет договора', order: 2 },
+    { title: 'Права и обязанности сторон', order: 3 },
+    { title: 'Стоимость и порядок расчетов', order: 4 },
+    { title: 'Сроки выполнения и приемка', order: 5 },
+    { title: 'Ответственность сторон', order: 6 },
+    { title: 'Конфиденциальность', order: 7 },
+    { title: 'Форс-мажор', order: 8 },
+    { title: 'Порядок разрешения споров', order: 9 },
+    { title: 'Срок действия, изменение и расторжение', order: 10 },
+    { title: 'Заключительные положения', order: 11 },
+    { title: 'Реквизиты и подписи сторон', order: 12 },
   ];
 
   const navigate = useNavigate();
@@ -45,6 +49,7 @@ export const NewContract = () => {
   const [riskCheck, setRiskCheck] = useState(false);
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
   const [sections, setSections] = useState<ContractSectionInput[]>(defaultSections);
+  const [sectionsEnabled, setSectionsEnabled] = useState(false);
 
   const { data: templates, isLoading: templatesLoading, error: templatesError } = useTemplates();
   const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(
@@ -77,9 +82,11 @@ export const NewContract = () => {
         order: s.order,
       }));
       setSections(nextSections);
+      setSectionsEnabled(false);
     } else {
       setFields([]);
       setSections(defaultSections);
+      setSectionsEnabled(false);
     }
   }, [selectedTemplate]);
 
@@ -95,7 +102,7 @@ export const NewContract = () => {
         prompt,
         risk_check: riskCheck,
         fields,
-        sections,
+        sections: sectionsEnabled ? sections : [],
       },
       {
         onSuccess: (data) => {
@@ -190,11 +197,18 @@ export const NewContract = () => {
                       onChange={(e) => setRiskCheck(e.target.checked)}
                     />
                   }
-                  label="Проверить на юридические риски"
+                  label={
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <span>Проверить на юридические риски</span>
+                      <Tooltip title="Включите, чтобы AI оценил текст договора и подсветил потенциальные юридические риски.">
+                        <HelpOutline fontSize="small" color="action" />
+                      </Tooltip>
+                    </Stack>
+                  }
                   sx={{ mt: 1 }}
                 />
 
-                {(loadingTemplate && templateId) && (
+                {loadingTemplate && templateId && (
                   <Box sx={{ mt: 2 }}>
                     <LoadingSpinner message="Загрузка полей шаблона..." />
                   </Box>
@@ -208,7 +222,52 @@ export const NewContract = () => {
 
                 {!loadingTemplate && (
                   <Box sx={{ mt: 2 }}>
-                    <ContractSectionsEditor sections={sections} onChange={setSections} />
+                    {sectionsEnabled ? (
+                      <>
+                        <ContractSectionsEditor
+                          sections={sections}
+                          onChange={setSections}
+                          headerAddon={
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={sectionsEnabled}
+                                  onChange={(e) => setSectionsEnabled(e.target.checked)}
+                                />
+                              }
+                              label="Включить"
+                            />
+                          }
+                        />
+                      </>
+                    ) : (
+                      <Card>
+                        <CardContent>
+                          <Stack spacing={1}>
+                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Typography variant="h6">Разделы договора</Typography>
+                                <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                                  <HelpOutline fontSize="small" color="action" />
+                                </Tooltip>
+                              </Stack>
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    checked={sectionsEnabled}
+                                    onChange={(e) => setSectionsEnabled(e.target.checked)}
+                                  />
+                                }
+                                label="Включить"
+                              />
+                            </Stack>
+                            <Typography variant="body2" color="text.secondary">
+                              Разделы будут пропущены при генерации.
+                            </Typography>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    )}
                   </Box>
                 )}
 

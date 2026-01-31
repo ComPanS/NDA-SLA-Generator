@@ -1,4 +1,4 @@
-import { Box, Container } from '@mui/material';
+import { Box, Container, Typography } from '@mui/material';
 import { Header } from './Header';
 import { ReactNode } from 'react';
 
@@ -20,6 +20,16 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
       >
         {children}
       </Container>
+      <Box component="footer" sx={{ py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Container maxWidth={maxWidth} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Typography variant="body2" color="text.secondary">
+            NDA / SLA Generator
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            © {new Date().getFullYear()}
+          </Typography>
+        </Container>
+      </Box>
     </Box>
   );
 };

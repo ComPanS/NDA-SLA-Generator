@@ -10,13 +10,29 @@ import {
   Alert,
   Stack,
   Snackbar,
+  FormControlLabel,
+  Switch,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Tooltip,
 } from '@mui/material';
-import { Download, Edit, ArrowBack } from '@mui/icons-material';
+import { Download, Edit, ArrowBack, HelpOutline } from '@mui/icons-material';
 import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage } from '@/shared/components';
-import { useContract, useRefineContract, useExportContract, useUpdateContractFields, useUpdateContractSections, useRenameContract, useDeleteContract } from '@/features/contracts/hooks/useContracts';
+import {
+  useContract,
+  useRefineContract,
+  useExportContract,
+  useUpdateContractFields,
+  useUpdateContractSections,
+  useRenameContract,
+  useDeleteContract,
+  useUpdateContractStatus,
+} from '@/features/contracts/hooks/useContracts';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
-import { ContractFieldInput, ContractSectionInput } from '@/shared/types';
+import { ContractFieldInput, ContractSectionInput, DocumentStatus } from '@/shared/types';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 
 export const ContractView = () => {
@@ -28,6 +44,8 @@ export const ContractView = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [titleDraft, setTitleDraft] = useState('');
+  const [sectionsEnabled, setSectionsEnabled] = useState(false);
+  const [statusDraft, setStatusDraft] = useState<DocumentStatus>('draft');
 
   // Загружаем документ
   const { data, isLoading, error } = useContract(id || '');
@@ -36,9 +54,12 @@ export const ContractView = () => {
   const { mutate: refineContract, isPending: isRefining } = useRefineContract(id || '');
   const { mutate: exportContract, isPending: isExporting } = useExportContract();
   const { mutate: updateFields, isPending: isUpdatingFields } = useUpdateContractFields(id || '');
-  const { mutate: updateSections, isPending: isUpdatingSections } = useUpdateContractSections(id || '');
+  const { mutate: updateSections, isPending: isUpdatingSections } = useUpdateContractSections(
+    id || ''
+  );
   const { mutate: renameContract, isPending: isRenaming } = useRenameContract();
   const { mutate: deleteContract, isPending: isDeleting } = useDeleteContract();
+  const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateContractStatus();
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
   const [sections, setSections] = useState<ContractSectionInput[]>([]);
 
@@ -50,6 +71,9 @@ export const ContractView = () => {
     }
     if (document?.title) {
       setTitleDraft(document.title);
+    }
+    if (document?.status) {
+      setStatusDraft(document.status);
     }
     if (document?.fields) {
       setFields(
@@ -74,6 +98,7 @@ export const ContractView = () => {
           order: s.order,
         }))
       );
+      setSectionsEnabled(document.sections.length > 0);
     }
   }, [document]);
 
@@ -120,9 +145,21 @@ export const ContractView = () => {
     }
   };
 
+  const handleStatusChange = (next: DocumentStatus) => {
+    if (!id) return;
+    setStatusDraft(next);
+    updateStatus(
+      { documentId: id, status: next },
+      {
+        onSuccess: () => showSnackbar('Статус обновлен'),
+        onError: () => showSnackbar('Не удалось обновить статус'),
+      }
+    );
+  };
+
   const handleExport = (format: 'docx' | 'pdf') => {
     if (!id || !document) return;
-    
+
     exportContract(
       { documentId: id, format, title: document.title },
       {
@@ -155,7 +192,8 @@ export const ContractView = () => {
 
   const handleSaveSections = () => {
     if (!id) return;
-    updateSections(sections, {
+    const payload = sectionsEnabled ? sections : [];
+    updateSections(payload, {
       onSuccess: () => showSnackbar('Разделы договора сохранены'),
       onError: () => showSnackbar('Не удалось сохранить разделы'),
     });
@@ -175,12 +213,12 @@ export const ContractView = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <ErrorMessage 
-            title="Документ не найден" 
-            message="Не удалось загрузить документ. Возможно, он был удален или у вас нет доступа." 
+          <ErrorMessage
+            title="Документ не найден"
+            message="Не удалось загрузить документ. Возможно, он был удален или у вас нет доступа."
           />
-          <Button 
-            variant="outlined" 
+          <Button
+            variant="outlined"
             startIcon={<ArrowBack />}
             onClick={() => navigate('/dashboard')}
             sx={{ mt: 2 }}
@@ -207,12 +245,7 @@ export const ContractView = () => {
               Назад
             </Button>
             <Box sx={{ flexGrow: 1 }} />
-            <Button
-              color="error"
-              variant="outlined"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
+            <Button color="error" variant="outlined" onClick={handleDelete} disabled={isDeleting}>
               Удалить договор
             </Button>
             <Button
@@ -239,6 +272,18 @@ export const ContractView = () => {
             >
               Скачать PDF
             </Button>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>Статус</InputLabel>
+              <Select
+                value={statusDraft}
+                label="Статус"
+                onChange={(e) => handleStatusChange(e.target.value as DocumentStatus)}
+                disabled={isUpdatingStatus}
+              >
+                <MenuItem value="draft">Черновик</MenuItem>
+                <MenuItem value="final">Финальный</MenuItem>
+              </Select>
+            </FormControl>
           </Stack>
 
           <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
@@ -249,16 +294,20 @@ export const ContractView = () => {
               sx={{ minWidth: 320 }}
               disabled={isRenaming}
             />
-            <Button variant="contained" onClick={handleRename} disabled={isRenaming || !titleDraft.trim()}>
+            <Button
+              variant="contained"
+              onClick={handleRename}
+              disabled={isRenaming || !titleDraft.trim()}
+            >
               {isRenaming ? 'Сохранение...' : 'Сохранить название'}
             </Button>
           </Stack>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Создан: {new Date(document.created_at).toLocaleString('ru-RU')} | 
-            Версия: {currentVersion?.version || 1} | 
-            Статус: {document.status === 'draft' ? 'Черновик' : 'Финальный'} | 
-            Шаблон: {document.template_name || (document.template_id ? 'Без названия' : 'Без шаблона')}
+            Создан: {new Date(document.created_at).toLocaleString('ru-RU')} | Версия:{' '}
+            {currentVersion?.version || 1} | Статус:{' '}
+            {statusDraft === 'draft' ? 'Черновик' : 'Финальный'} | Шаблон:{' '}
+            {document.template_name || (document.template_id ? 'Без названия' : 'Без шаблона')}
           </Typography>
 
           {showRefineForm && (
@@ -307,54 +356,91 @@ export const ContractView = () => {
             <Typography variant="body2">
               <strong>Это реальный документ, сгенерированный через YandexGPT API.</strong>
               <br />
-              Вы можете редактировать его напрямую в редакторе ниже или использовать AI для 
+              Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
               автоматических изменений через кнопку "Уточнить с AI".
             </Typography>
           </Alert>
 
           <Box sx={{ mb: 3 }}>
-            <ContractFieldsEditor
-              fields={fields}
-              onChange={setFields}
-              title="Заполненные поля"
-            />
+            <ContractFieldsEditor fields={fields} onChange={setFields} title="Заполненные поля" />
             <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }} spacing={2}>
-              <Button
-                variant="contained"
-                onClick={handleSaveFields}
-                disabled={isUpdatingFields}
-              >
+              <Button variant="contained" onClick={handleSaveFields} disabled={isUpdatingFields}>
                 {isUpdatingFields ? 'Сохранение...' : 'Сохранить поля'}
               </Button>
             </Stack>
           </Box>
 
           <Box sx={{ mb: 3 }}>
-            <ContractSectionsEditor
-              sections={sections}
-              onChange={setSections}
-              title="Разделы договора"
-            />
-            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }} spacing={2}>
-              <Button
-                variant="contained"
-                onClick={handleSaveSections}
-                disabled={isUpdatingSections}
-              >
-                {isUpdatingSections ? 'Сохранение...' : 'Сохранить разделы'}
-              </Button>
-            </Stack>
+            {sectionsEnabled ? (
+              <>
+                <ContractSectionsEditor
+                  sections={sections}
+                  onChange={setSections}
+                  title="Разделы договора"
+                  headerAddon={
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={sectionsEnabled}
+                          onChange={(e) => setSectionsEnabled(e.target.checked)}
+                        />
+                      }
+                      label="Включить"
+                    />
+                  }
+                />
+                <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }} spacing={2}>
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveSections}
+                    disabled={isUpdatingSections}
+                  >
+                    {isUpdatingSections ? 'Сохранение...' : 'Сохранить разделы'}
+                  </Button>
+                </Stack>
+              </>
+            ) : (
+              <Card>
+                <CardContent>
+                  <Stack spacing={1}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="h6">Разделы договора</Typography>
+                        <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                          <HelpOutline fontSize="small" color="action" />
+                        </Tooltip>
+                      </Stack>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={sectionsEnabled}
+                            onChange={(e) => setSectionsEnabled(e.target.checked)}
+                          />
+                        }
+                        label="Включить"
+                      />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      Разделы скрыты и не участвуют в документе.
+                    </Typography>
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
           </Box>
 
-          <ContractEditor 
-            content={currentContent} 
+          <ContractEditor
+            content={currentContent}
             onChange={handleContentChange}
             readOnly={false}
           />
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box
+            sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
             <Typography variant="body2" color="text.secondary">
-              ID документа: {id} | Последнее обновление: {new Date(currentVersion?.updated_at || document.updated_at).toLocaleString('ru-RU')}
+              ID документа: {id} | Последнее обновление:{' '}
+              {new Date(currentVersion?.updated_at || document.updated_at).toLocaleString('ru-RU')}
             </Typography>
             <Stack direction="row" spacing={2}>
               <Button variant="outlined" onClick={() => navigate('/dashboard')}>

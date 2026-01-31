@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box,
   Button,
   Card,
   CardContent,
@@ -16,8 +15,12 @@ import { Template, TemplateGroup } from '@/shared/types';
 import { useCreateTemplate, useUpdateTemplate } from '../hooks/useTemplates';
 import { TemplatePayload } from '@/shared/api';
 
-type EditableGroup = Omit<TemplateGroup, 'id' | 'created_at' | 'updated_at' | 'fields'> & {
+type EditableGroup = Omit<
+  TemplateGroup,
+  'id' | 'created_at' | 'updated_at' | 'fields' | 'template_id'
+> & {
   id?: string;
+  template_id?: string;
   fields: Array<{
     id?: string;
     label: string;
@@ -84,6 +87,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       setGroups(
         template.groups.map((g) => ({
           id: g.id,
+          template_id: g.template_id,
           label: g.label,
           order: g.order,
           fields: g.fields.map((f) => ({
@@ -108,7 +112,12 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   const handleAddGroup = () => {
     setGroups((prev) => [
       ...prev,
-      { label: `Группа ${prev.length + 1}`, order: prev.length, fields: [] },
+      {
+        label: `Группа ${prev.length + 1}`,
+        order: prev.length,
+        template_id: template?.id,
+        fields: [],
+      },
     ]);
   };
 

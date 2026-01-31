@@ -1,14 +1,62 @@
-import { Box, Typography, Button, Card, CardContent, Stack, Chip, Divider } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Stack,
+  Chip,
+  Divider,
+  TextField,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+} from '@mui/material';
 import { Add, Description } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Layout, ProtectedRoute } from '@/shared/components';
 import { useContractsList, useDeleteContract, useRenameContract } from '@/features/contracts/hooks/useContracts';
+import { useMemo, useState } from 'react';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
   const { data: documents, isLoading, error } = useContractsList();
   const { mutate: deleteContract, isPending: isDeleting } = useDeleteContract();
   const { mutate: renameContract, isPending: isRenaming } = useRenameContract();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'final'>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sortBy, setSortBy] = useState<'updated_desc' | 'updated_asc' | 'title_asc' | 'title_desc'>('updated_desc');
+
+  const filtered = useMemo(() => {
+    const list = documents || [];
+    return list
+      .filter((doc) => {
+        const matchSearch = search.trim()
+          ? doc.title.toLowerCase().includes(search.trim().toLowerCase())
+          : true;
+        const matchStatus = statusFilter === 'all' ? true : doc.status === statusFilter;
+        const updated = new Date(doc.updated_at);
+        const matchFrom = dateFrom ? updated >= new Date(dateFrom) : true;
+        const matchTo = dateTo ? updated <= new Date(`${dateTo}T23:59:59`) : true;
+        return matchSearch && matchStatus && matchFrom && matchTo;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'updated_asc':
+            return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+          case 'title_asc':
+            return a.title.localeCompare(b.title, 'ru');
+          case 'title_desc':
+            return b.title.localeCompare(a.title, 'ru');
+          case 'updated_desc':
+          default:
+            return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        }
+      });
+  }, [documents, search, statusFilter, dateFrom, dateTo, sortBy]);
 
   return (
     <ProtectedRoute>
@@ -32,7 +80,65 @@ export const Dashboard = () => {
 
         {!isLoading && !error && (
           <Stack spacing={2}>
-            {(documents || []).map((doc) => {
+            <Card variant="outlined">
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                    <TextField
+                      label="Поиск по названию"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      fullWidth
+                    />
+                    <FormControl sx={{ minWidth: 160 }}>
+                      <InputLabel>Статус</InputLabel>
+                      <Select
+                        value={statusFilter}
+                        label="Статус"
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                      >
+                        <MenuItem value="all">Все</MenuItem>
+                        <MenuItem value="draft">Черновик</MenuItem>
+                        <MenuItem value="final">Финальный</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl sx={{ minWidth: 200 }}>
+                      <InputLabel>Сортировка</InputLabel>
+                      <Select
+                        value={sortBy}
+                        label="Сортировка"
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                      >
+                        <MenuItem value="updated_desc">По обновлению (новые)</MenuItem>
+                        <MenuItem value="updated_asc">По обновлению (старые)</MenuItem>
+                        <MenuItem value="title_asc">Название А→Я</MenuItem>
+                        <MenuItem value="title_desc">Название Я→А</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Stack>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                    <TextField
+                      label="Дата с"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      sx={{ minWidth: 200 }}
+                    />
+                    <TextField
+                      label="Дата по"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      sx={{ minWidth: 200 }}
+                    />
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+
+            {filtered.map((doc) => {
               const latest = doc.versions?.[doc.versions.length - 1];
               return (
                 <Card key={doc.id} variant="outlined">
@@ -92,7 +198,7 @@ export const Dashboard = () => {
               );
             })}
 
-            {(documents || []).length === 0 && (
+            {filtered.length === 0 && (
               <Typography variant="body2" color="text.secondary">
                 У вас пока нет документов. Создайте первый договор.
               </Typography>

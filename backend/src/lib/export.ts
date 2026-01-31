@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 import puppeteer from 'puppeteer';
 import { convert } from 'html-to-text';
 
@@ -6,93 +6,59 @@ import { convert } from 'html-to-text';
  * Экспорт HTML в DOCX
  */
 export async function exportToDocx(html: string, title: string): Promise<Buffer> {
-  // Конвертируем HTML в простой текст с сохранением структуры
+  // Конвертируем HTML в простой текст с сохранением абзацев
   const text = convert(html, {
-    wordwrap: 80,
+    wordwrap: false,
     preserveNewlines: true,
   });
 
-  // Разбиваем на параграфы
-  const lines = text.split('\n').filter((line) => line.trim());
+  // Разбиваем на абзацы по пустым строкам
+  const blocks = text
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
 
-  // Создаем параграфы для документа
   const paragraphs: Paragraph[] = [];
 
-  // Добавляем заголовок
-  paragraphs.push(
-    new Paragraph({
-      text: title,
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.CENTER,
-      spacing: {
-        after: 400,
-      },
-    })
-  );
-
-  // Добавляем дату
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `Дата создания: ${new Date().toLocaleDateString('ru-RU')}`,
-          italics: true,
-        }),
-      ],
-      spacing: {
-        after: 200,
-      },
-    })
-  );
-
-  // Добавляем контент
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-
-    // Определяем является ли строка заголовком (обычно заглавными буквами или с номером)
-    const isHeading = /^[А-ЯA-Z\s]+$/.test(trimmed) || /^\d+\./.test(trimmed);
-
+  let isFirst = true;
+  blocks.forEach((block) => {
+    // Определяем, похоже ли на заголовок (по шаблону)
+    const isHeadingLike = /^[А-ЯA-Z0-9\s.()-]+$/.test(block) || /^\d+(\.\d+)*\s/.test(block);
     paragraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: trimmed,
-            bold: isHeading,
+            text: isFirst ? title : block,
+            bold: isFirst || isHeadingLike,
+            font: 'Times New Roman',
+            size: 28, // 14pt
+            color: '000000',
           }),
         ],
-        heading: isHeading ? HeadingLevel.HEADING_2 : undefined,
         spacing: {
-          before: isHeading ? 400 : 200,
-          after: 200,
+          before: isFirst ? 0 : isHeadingLike ? 300 : 200,
+          after: isFirst ? 300 : 200,
         },
       })
     );
+    isFirst = false;
   });
 
-  // Добавляем футер с дисклеймером
-  paragraphs.push(
-    new Paragraph({
-      text: '',
-      spacing: { before: 600 },
-    })
-  );
-
-  paragraphs.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: 'Документ создан автоматически с помощью NDA/SLA Generator. Рекомендуется проверка квалифицированным юристом перед использованием.',
-          italics: true,
-          size: 18,
-        }),
-      ],
-      alignment: AlignmentType.CENTER,
-    })
-  );
-
-  // Создаем документ
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Times New Roman',
+            size: 28,
+            color: '000000',
+          },
+          paragraph: {
+            spacing: { line: 360 },
+          },
+        },
+      },
+    },
     sections: [
       {
         properties: {},
@@ -101,9 +67,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     ],
   });
 
-  // Генерируем буфер
-  const buffer = await Packer.toBuffer(doc);
-  return buffer;
+  return Packer.toBuffer(doc);
 }
 
 /**
@@ -124,7 +88,7 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
     }
     body {
       font-family: 'Times New Roman', serif;
-      font-size: 12pt;
+      font-size: 14px;
       line-height: 1.6;
       color: #000;
       max-width: 21cm;
@@ -132,53 +96,38 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
     }
     h1 {
       text-align: center;
-      font-size: 18pt;
-      margin-bottom: 1cm;
+      font-size: 14px;
+      margin: 0 0 16px 0;
       font-weight: bold;
+      color: #000;
     }
     h2 {
-      font-size: 14pt;
-      margin-top: 0.8cm;
-      margin-bottom: 0.4cm;
+      font-size: 14px;
+      margin: 18px 0 8px 0;
       font-weight: bold;
+      color: #000;
     }
     h3 {
-      font-size: 12pt;
-      margin-top: 0.6cm;
-      margin-bottom: 0.3cm;
+      font-size: 14px;
+      margin: 14px 0 6px 0;
       font-weight: bold;
+      color: #000;
     }
     p {
-      margin-bottom: 0.5cm;
+      margin: 0 0 10px 0;
       text-align: justify;
-    }
-    .date {
-      font-style: italic;
-      margin-bottom: 1cm;
-    }
-    .disclaimer {
-      margin-top: 2cm;
-      font-size: 10pt;
-      font-style: italic;
-      text-align: center;
-      color: #666;
+      color: #000;
     }
     ul, ol {
-      margin-bottom: 0.5cm;
+      margin: 0 0 10px 18px;
     }
     li {
-      margin-bottom: 0.3cm;
+      margin-bottom: 6px;
     }
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
-  <p class="date">Дата создания: ${new Date().toLocaleDateString('ru-RU')}</p>
   ${html}
-  <div class="disclaimer">
-    Документ создан автоматически с помощью NDA/SLA Generator.<br>
-    Рекомендуется проверка квалифицированным юристом перед использованием.
-  </div>
 </body>
 </html>
   `;

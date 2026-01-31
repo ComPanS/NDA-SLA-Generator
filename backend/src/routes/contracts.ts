@@ -149,6 +149,14 @@ function sanitizeFilename(title: string) {
   return slug.length ? slug.slice(0, 100) : 'document';
 }
 
+function extractTitleFromHtml(html: string, fallback: string): string {
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  const raw = h1Match ? h1Match[1] : '';
+  const text = raw.replace(/<[^>]+>/g, '').trim();
+  const cleaned = text.replace(/^СОГЛАШЕНИЕ О КОНФИДЕНЦИАЛЬНОСТИ[:\\s-]*/i, '').trim();
+  return cleaned || fallback;
+}
+
 const contractFieldSchema = z.object({
   id: z.string().uuid().optional(),
   template_field_id: z.string().uuid().optional(),
@@ -192,6 +200,10 @@ const refineSchema = z.object({
   prompt: z.string().min(1),
   format_mode: z.string().optional(),
   risk_check: z.boolean().optional(),
+});
+
+const statusUpdateSchema = z.object({
+  status: z.enum(['draft', 'final']),
 });
 
 router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
@@ -651,6 +663,35 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {
   return res.json({ document: toDocument(updated) });
 });
 
+router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
+  const parsed = statusUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: parsed.error.flatten() });
+  }
+
+  const docId = String(req.params.id);
+  const existing = await prisma.document.findUnique({ where: { id: docId } });
+  if (!existing || existing.ownerId !== req.userId) {
+    return res.status(404).json({ detail: 'Document not found' });
+  }
+
+  const updated = (await prisma.document.update({
+    where: { id: docId },
+    data: { status: parsed.data.status },
+    include: {
+      template: { select: { id: true, name: true } },
+      versions: { orderBy: { version: 'asc' } },
+      fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
+      sections: { orderBy: { order: 'asc' } },
+    },
+  })) as DocWithRelations;
+
+  return res.json({ document: toDocument(updated) });
+});
+
 router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
@@ -696,7 +737,7 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
   }
 
   const content = doc.versions[0]?.content || '';
-  const title = doc.title;
+  const exportTitle = extractTitleFromHtml(content, doc.title);
 
   try {
     // Динамический импорт для избежания проблем с ESM
@@ -706,14 +747,14 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
     let contentType: string;
     let filename: string;
 
-    const safeName = sanitizeFilename(title);
+    const safeName = sanitizeFilename(exportTitle);
 
     if (fmt === 'docx') {
-      buffer = await exportToDocx(content, title);
+      buffer = await exportToDocx(content, exportTitle);
       contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       filename = `${safeName}.docx`;
     } else {
-      buffer = await exportToPdf(content, title);
+      buffer = await exportToPdf(content, exportTitle);
       contentType = 'application/pdf';
       filename = `${safeName}.pdf`;
     }
