@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { AlignmentType, Document, Packer, Paragraph, TextRun } from 'docx';
 import puppeteer from 'puppeteer';
 import { convert } from 'html-to-text';
 
@@ -12,33 +12,53 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     preserveNewlines: true,
   });
 
+  // Нормализуем списки: переводим маркеры "* " или "• " и нумерацию после разделителей на новые строки,
+  // чтобы вложенные пункты не слипались
+  const normalizedText = text
+    .replace(/\s*[•*]\s+(?=\d)/g, '\n* ')
+    .replace(/;\s*(?=\d+\.)/g, ';\n')
+    .replace(/:\s*(?=\d+\.)/g, ':\n');
+
   // Разбиваем на абзацы по пустым строкам
-  const blocks = text
-    .split(/\n{2,}/)
+  const hasBlankLines = /\r?\n{2,}/.test(normalizedText);
+  let blocks = (hasBlankLines
+    ? normalizedText.split(/\r?\n{2,}/)
+    : normalizedText.split(/\r?\n+/)
+  )
     .map((b) => b.trim())
     .filter(Boolean);
 
+  // Фоллбек: если всё ещё один блок, делим по маркерам "* "
+  if (blocks.length <= 1) {
+    blocks = normalizedText.split(/\s*\*\s+(?=\d)/).map((b, idx) => (idx === 0 ? b : `* ${b}`));
+    blocks = blocks.map((b) => b.trim()).filter(Boolean);
+  }
   const paragraphs: Paragraph[] = [];
 
   let isFirst = true;
   blocks.forEach((block) => {
     // Определяем, похоже ли на заголовок (по шаблону)
     const isHeadingLike = /^[А-ЯA-Z0-9\s.()-]+$/.test(block) || /^\d+(\.\d+)*\s/.test(block);
+    const lines = block.split(/\r?\n/).filter(Boolean);
+    const children = lines.map((line, idx) => {
+      const displayLine = line.replace(/^\s*[•*]\s+/, '    '); // заменяем маркеры на отступ
+      return new TextRun({
+        text: idx === 0 && isFirst ? title : displayLine,
+        bold: idx === 0 && (isFirst || isHeadingLike),
+        font: 'Times New Roman',
+        size: 28, // 14pt
+        color: '000000',
+        break: idx > 0,
+      });
+    });
     paragraphs.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: isFirst ? title : block,
-            bold: isFirst || isHeadingLike,
-            font: 'Times New Roman',
-            size: 28, // 14pt
-            color: '000000',
-          }),
-        ],
+        children,
         spacing: {
           before: isFirst ? 0 : isHeadingLike ? 300 : 200,
           after: isFirst ? 300 : 200,
         },
+        alignment: isFirst ? AlignmentType.CENTER : undefined,
       }),
     );
     isFirst = false;
