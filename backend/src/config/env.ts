@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const adminRouteRaw = process.env.ADMIN_ROUTE || '/internal-admin';
+
 export const env = {
   port: Number(process.env.PORT) || 8001,
   databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nda_sla',
@@ -17,4 +19,8 @@ export const env = {
   yandexModel: process.env.YANDEX_GPT_MODEL || 'yandexgpt/latest',
   yandexFolderId: process.env.YANDEX_GPT_FOLDER_ID || '',
   yandexTimeoutMs: Number(process.env.YANDEX_GPT_TIMEOUT || 30000),
+  adminLogin: process.env.ADMIN_LOGIN || '',
+  adminPassword: process.env.ADMIN_PASSWORD || '',
+  adminRoute: adminRouteRaw.startsWith('/') ? adminRouteRaw : `/${adminRouteRaw}`,
+  adminTokenExpiresMinutes: Number(process.env.ADMIN_TOKEN_EXPIRES_MINUTES || 60),
 };

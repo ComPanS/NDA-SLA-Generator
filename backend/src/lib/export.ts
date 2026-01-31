@@ -48,7 +48,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
         font: 'Times New Roman',
         size: 28, // 14pt
         color: '000000',
-        break: idx > 0,
+        break: idx > 0 ? 1 : undefined,
       });
     });
     paragraphs.push(
