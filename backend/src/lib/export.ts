@@ -39,7 +39,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
           before: isFirst ? 0 : isHeadingLike ? 300 : 200,
           after: isFirst ? 300 : 200,
         },
-      })
+      }),
     );
     isFirst = false;
   });
