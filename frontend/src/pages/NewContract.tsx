@@ -261,9 +261,9 @@ export const NewContract = () => {
                                 label="Включить"
                               />
                             </Stack>
-                            <Typography variant="body2" color="text.secondary">
+                            {/* <Typography variant="body2" color="text.secondary">
                               Разделы будут пропущены при генерации.
-                            </Typography>
+                            </Typography> */}
                           </Stack>
                         </CardContent>
                       </Card>

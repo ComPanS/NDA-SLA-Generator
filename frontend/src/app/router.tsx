@@ -7,6 +7,7 @@ import { NewContract } from '@/pages/NewContract';
 import { ContractView } from '@/pages/ContractView';
 import { Billing } from '@/pages/Billing';
 import { Templates } from '@/pages/Templates';
+import { GuestContract } from '@/pages/GuestContract';
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
   {
     path: '/dashboard',
     element: <Dashboard />,
+  },
+  {
+    path: '/guest-contract',
+    element: <GuestContract />,
   },
   {
     path: '/new-contract',

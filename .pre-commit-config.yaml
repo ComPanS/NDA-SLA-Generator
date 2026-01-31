@@ -24,3 +24,15 @@ repos:
         entry: prettier --check
         language: system
         files: "\\.(js|jsx|ts|tsx|json|css|md|yml|yaml)$"
+
+      - id: backend-build
+        name: backend build
+        entry: powershell -NoProfile -ExecutionPolicy Bypass -Command "cd backend; npm run build"
+        language: system
+        pass_filenames: false
+
+      - id: frontend-build
+        name: frontend build
+        entry: powershell -NoProfile -ExecutionPolicy Bypass -Command "cd frontend; npm run build"
+        language: system
+        pass_filenames: false

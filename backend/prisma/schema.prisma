@@ -67,6 +67,14 @@ model Subscription {
   user      User               @relation(fields: [userId], references: [id])
 }
 
+model GuestAccess {
+  id        String   @id @default(uuid())
+  ip        String   @unique
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Document {
   id         String            @id @default(uuid())
   title      String

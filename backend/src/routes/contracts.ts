@@ -5,6 +5,7 @@ import { prisma } from '../config/prisma';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { toDocument } from '../lib/mappers';
 import { generateText } from '../lib/yandex';
+import { getClientIp } from '../lib/requestIp';
 
 const router = Router();
 
@@ -157,6 +158,68 @@ function extractTitleFromHtml(html: string, fallback: string): string {
   return cleaned || fallback;
 }
 
+function buildInstruction(title: string) {
+  return [
+    'Сгенерируй полноценный юридический договор на русском языке в формате валидного HTML.',
+    'Верни СТРОГО только HTML-контент, без пояснений, комментариев, Markdown и вводных фраз.',
+    'HTML должен быть самодостаточным и готовым к встраиванию на сайт или в документ.',
+    'Структура документа:',
+    '- <h1> — название договора;',
+    '- <h2> — разделы;',
+    '- <p> — текст пунктов;',
+    '- <ul>/<li> — перечисления (если уместно).',
+    'Обязательные разделы договора:',
+    '1. Преамбула;',
+    '2. Предмет договора;',
+    '3. Права и обязанности сторон;',
+    '4. Ответственность сторон;',
+    '5. Срок действия и порядок расторжения;',
+    '6. Конфиденциальность;',
+    '7. Урегулирование споров;',
+    '8. Заключительные положения;',
+    '9. Подписи сторон.',
+    'Стиль изложения: официальный, юридически нейтральный, без эмоциональных оценок.',
+    'Используй формулировки, характерные для типовых гражданско-правовых договоров РФ.',
+    'Избегай двусмысленностей, разговорных выражений и воды.',
+    'При необходимости используй нумерацию пунктов внутри разделов.',
+    'Если данные сторон не указаны — используй нейтральные плейсхолдеры (например, «Заказчик», «Исполнитель»).',
+    `Название договора: ${title}`,
+  ].join('\n');
+}
+
+function buildSectionsPrompt(title: string, sectionsSource: ContractSectionDraft[]) {
+  return sectionsSource.length > 0
+    ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
+        .sort((a, b) => a.order - b.order)
+        .map((s, idx) => `${idx + 1}. ${s.title}`)
+        .join('\n')}`
+    : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора с названием «${title}».
+
+Требования к структуре и содержанию:
+• Определи состав, последовательность и глубину разделов, исходя из:
+  - сути регулируемых гражданско-правовых отношений,
+  - положений Гражданского кодекса РФ (особенной части),
+  - специального законодательства (если применимо к данному виду договора),
+  - сложившейся договорной и судебной практики 2024–2026 годов,
+  - типичных рисков, интересов и потребностей сторон именно для данного вида договора.
+• Не используй упрощённые, шаблонные или усечённые перечни разделов.
+• Каждый раздел должен быть детализированным, содержать все логически необходимые подразделы (нумерация 1.1., 1.2., 1.2.1. и т.д.) и исключать двусмысленности.
+• Не оставляй разделы пустыми или состоящими из 1–2 общих фраз — каждый пункт должен нести конкретную юридическую нагрузку и минимизировать риски сторон.
+• Обязательно включи:
+  - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами: наименование, ИНН, ОГРН, адрес, в лице ___________, действующего на основании ___________),
+  - Финальный раздел «Реквизиты и подписи сторон» (или аналогичное название).
+• В разделе с подписями сторон обязательно предусмотри чётко оформленные поля:
+  - дата (««___» _________ 20__ г.»),
+  - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны,
+  - расшифровки подписей под линиями,
+  - место для оттиска печати (при необходимости).
+• Используй тег <h2> для названий основных разделов, нумеруй их арабскими цифрами (1., 2., …).
+• Подразделы внутри разделов нумеруй последовательно (1.1., 1.2., 1.2.1. и т.д.).
+• Порядок разделов должен быть логичным, последовательным и удобным для восприятия сторонами и в случае судебного разбирательства.
+
+Генерируй структуру, максимально соответствующую качественным гражданско-правовым договорам, используемым в российском деловом обороте на текущий момент.`;
+}
+
 const contractFieldSchema = z.object({
   id: z.string().uuid().optional(),
   template_field_id: z.string().uuid().optional(),
@@ -200,6 +263,19 @@ const refineSchema = z.object({
   prompt: z.string().min(1),
   format_mode: z.string().optional(),
   risk_check: z.boolean().optional(),
+});
+
+const guestGenerateSchema = z.object({
+  title: z.string().min(1),
+  prompt: z.string().min(1),
+  risk_check: z.boolean().optional(),
+  fields: z.array(createFieldSchema).optional(),
+  sections: z.array(createSectionSchema).optional(),
+});
+
+const guestExportSchema = z.object({
+  title: z.string().min(1),
+  html: z.string().min(1),
 });
 
 const statusUpdateSchema = z.object({
@@ -247,6 +323,138 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   return res.json({ documents: docs.map(toDocument) });
 });
 
+router.post('/guest/generate', async (req, res) => {
+  const ip = getClientIp(req);
+  if (!ip) {
+    return res.status(400).json({ detail: 'Не удалось определить IP адрес' });
+  }
+
+  const guestAccess = prisma as any;
+  const existing = await guestAccess.guestAccess.findUnique({ where: { ip } });
+  if (existing) {
+    return res
+      .status(429)
+      .json({
+        detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+      });
+  }
+
+  const parsed = guestGenerateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: parsed.error.flatten() });
+  }
+
+  const { title, prompt, fields: incomingFields, sections: incomingSections } = parsed.data;
+
+  const fieldCopies: ContractFieldDraft[] = [];
+  if (incomingFields && incomingFields.length) {
+    for (const [idx, field] of incomingFields.entries()) {
+      fieldCopies.push({
+        templateFieldId: field.template_field_id,
+        groupLabel: field.group_label,
+        groupOrder: field.group_order ?? idx,
+        label: field.label,
+        key: field.key,
+        value: field.value ?? '',
+        order: field.order ?? idx,
+      });
+    }
+  }
+
+  const sectionCopies: ContractSectionDraft[] = [];
+  if (incomingSections && incomingSections.length) {
+    for (const [idx, section] of incomingSections.entries()) {
+      sectionCopies.push({
+        templateSectionId: section.template_section_id,
+        title: section.title,
+        order: section.order ?? idx,
+      });
+    }
+  }
+
+  const instruction = buildInstruction(title);
+  const fieldsPrompt = fieldCopies.length ? buildFieldsPrompt(fieldCopies) : '';
+  const sectionsPrompt = buildSectionsPrompt(title, sectionCopies);
+
+  const finalPrompt = [
+    instruction,
+    fieldsPrompt ? `Структурированные поля:\n${fieldsPrompt}` : null,
+    sectionsPrompt,
+    `Дополнительные требования:\n${prompt}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const rawContent = await generateText(finalPrompt);
+  const content = sanitizeGeneratedHtml(rawContent, title);
+  const exportTitle = extractTitleFromHtml(content, title);
+
+  try {
+    await guestAccess.guestAccess.create({
+      data: {
+        ip,
+        userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+      },
+    });
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      return res
+        .status(429)
+        .json({
+          detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+        });
+    }
+    console.error('Guest access create error:', error);
+    return res.status(500).json({ detail: 'Не удалось зафиксировать попытку' });
+  }
+
+  return res.json({ content, title: exportTitle });
+});
+
+router.post('/guest/export/:fmt', async (req, res) => {
+  const fmt = String(req.params.fmt);
+  if (!['docx', 'pdf'].includes(fmt)) {
+    return res.status(400).json({ detail: 'Unsupported format' });
+  }
+
+  const parsed = guestExportSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: parsed.error.flatten() });
+  }
+
+  const { html, title } = parsed.data;
+  const exportTitle = extractTitleFromHtml(html, title);
+
+  try {
+    const { exportToDocx, exportToPdf } = await import('../lib/export');
+
+    let buffer: Buffer;
+    let contentType: string;
+    let filename: string;
+
+    const safeName = sanitizeFilename(exportTitle);
+
+    if (fmt === 'docx') {
+      buffer = await exportToDocx(html, exportTitle);
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      filename = `${safeName}.docx`;
+    } else {
+      buffer = await exportToPdf(html, exportTitle);
+      contentType = 'application/pdf';
+      filename = `${safeName}.pdf`;
+    }
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
+    res.setHeader('Content-Length', buffer.length);
+
+    return res.send(buffer);
+  } catch (error) {
+    console.error('Guest export error:', error);
+    return res.status(500).json({ detail: 'Failed to export document' });
+  }
+});
+
 router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
@@ -274,32 +482,7 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     : null;
 
   const userPrompt = template ? `${template.content}\n\n${prompt}` : prompt;
-  const instruction = [
-    'Сгенерируй полноценный юридический договор на русском языке в формате валидного HTML.',
-    'Верни СТРОГО только HTML-контент, без пояснений, комментариев, Markdown и вводных фраз.',
-    'HTML должен быть самодостаточным и готовым к встраиванию на сайт или в документ.',
-    'Структура документа:',
-    '- <h1> — название договора;',
-    '- <h2> — разделы;',
-    '- <p> — текст пунктов;',
-    '- <ul>/<li> — перечисления (если уместно).',
-    'Обязательные разделы договора:',
-    '1. Преамбула;',
-    '2. Предмет договора;',
-    '3. Права и обязанности сторон;',
-    '4. Ответственность сторон;',
-    '5. Срок действия и порядок расторжения;',
-    '6. Конфиденциальность;',
-    '7. Урегулирование споров;',
-    '8. Заключительные положения;',
-    '9. Подписи сторон.',
-    'Стиль изложения: официальный, юридически нейтральный, без эмоциональных оценок.',
-    'Используй формулировки, характерные для типовых гражданско-правовых договоров РФ.',
-    'Избегай двусмысленностей, разговорных выражений и воды.',
-    'При необходимости используй нумерацию пунктов внутри разделов.',
-    'Если данные сторон не указаны — используй нейтральные плейсхолдеры (например, «Заказчик», «Исполнитель»).',
-    `Название договора: ${title}`,
-  ].join('\n');
+  const instruction = buildInstruction(title);
 
   const fieldCopies: ContractFieldDraft[] = template ? contractFieldsFromTemplate(template) : [];
   const sectionCopies: ContractSectionDraft[] = template
@@ -394,37 +577,7 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
 
   // Генерируй структуру, максимально соответствующую качественным гражданско-правовым договорам, используемым в российском деловом обороте на текущий момент.`;
 
-  const sectionsPrompt =
-    sectionsSource.length > 0
-      ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
-          .sort((a, b) => a.order - b.order)
-          .map((s, idx) => `${idx + 1}. ${s.title}`)
-          .join('\n')}`
-      : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора с названием «${title}».
-
-Требования к структуре и содержанию:
-• Определи состав, последовательность и глубину разделов, исходя из:
-  - сути регулируемых гражданско-правовых отношений,
-  - положений Гражданского кодекса РФ (особенной части),
-  - специального законодательства (если применимо к данному виду договора),
-  - сложившейся договорной и судебной практики 2024–2026 годов,
-  - типичных рисков, интересов и потребностей сторон именно для данного вида договора.
-• Не используй упрощённые, шаблонные или усечённые перечни разделов.
-• Каждый раздел должен быть детализированным, содержать все логически необходимые подразделы (нумерация 1.1., 1.2., 1.2.1. и т.д.) и исключать двусмысленности.
-• Не оставляй разделы пустыми или состоящими из 1–2 общих фраз — каждый пункт должен нести конкретную юридическую нагрузку и минимизировать риски сторон.
-• Обязательно включи:
-  - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами: наименование, ИНН, ОГРН, адрес, в лице ___________, действующего на основании ___________),
-  - Финальный раздел «Реквизиты и подписи сторон» (или аналогичное название).
-• В разделе с подписями сторон обязательно предусмотри чётко оформленные поля:
-  - дата (««___» _________ 20__ г.»),
-  - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны,
-  - расшифровки подписей под линиями,
-  - место для оттиска печати (при необходимости).
-• Используй тег <h2> для названий основных разделов, нумеруй их арабскими цифрами (1., 2., …).
-• Подразделы внутри разделов нумеруй последовательно (1.1., 1.2., 1.2.1. и т.д.).
-• Порядок разделов должен быть логичным, последовательным и удобным для восприятия сторонами и в случае судебного разбирательства.
-
-Генерируй структуру, максимально соответствующую качественным гражданско-правовым договорам, используемым в российском деловом обороте на текущий момент.`;
+  const sectionsPrompt = buildSectionsPrompt(title, sectionsSource);
 
   const finalPrompt = [
     instruction,

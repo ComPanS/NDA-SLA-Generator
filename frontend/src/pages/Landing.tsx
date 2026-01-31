@@ -36,6 +36,9 @@ export const Landing = () => {
           <Button variant="outlined" size="large" onClick={() => navigate('/login')}>
             Войти
           </Button>
+          <Button variant="outlined" size="large" onClick={() => navigate('/guest-contract')}>
+            Создать без регистрации
+          </Button>
         </Stack>
       </Box>
 
@@ -94,6 +97,14 @@ export const Landing = () => {
         </Typography>
         <Button variant="contained" size="large" onClick={() => navigate('/register')}>
           Создать договор
+        </Button>
+        <Button
+          variant="outlined"
+          size="large"
+          sx={{ ml: 2 }}
+          onClick={() => navigate('/guest-contract')}
+        >
+          Создать без регистрации
         </Button>
       </Box>
     </Layout>

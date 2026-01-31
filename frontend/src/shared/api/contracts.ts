@@ -7,6 +7,9 @@ import {
   ContractSectionInput,
   Document as ContractDocument,
   DocumentStatus,
+  GuestGenerateRequest,
+  GuestGenerateResponse,
+  GuestExportRequest,
 } from '@/shared/types';
 
 export const contractsApi = {
@@ -73,6 +76,20 @@ export const contractsApi = {
       {
         responseType: 'blob',
       }
+    );
+    return response.data;
+  },
+
+  guestGenerate: async (request: GuestGenerateRequest): Promise<GuestGenerateResponse> => {
+    const response = await apiClient.post<GuestGenerateResponse>('/contracts/guest/generate', request);
+    return response.data;
+  },
+
+  guestExport: async ({ html, title, format }: GuestExportRequest): Promise<Blob> => {
+    const response = await apiClient.post(
+      `/contracts/guest/export/${format}`,
+      { html, title },
+      { responseType: 'blob' }
     );
     return response.data;
   },

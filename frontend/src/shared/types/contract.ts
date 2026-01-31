@@ -88,3 +88,22 @@ export interface ContractSectionInput {
   title: string;
   order?: number;
 }
+
+export interface GuestGenerateRequest {
+  title: string;
+  prompt: string;
+  risk_check?: boolean;
+  fields?: ContractFieldInput[];
+  sections?: ContractSectionInput[];
+}
+
+export interface GuestGenerateResponse {
+  content: string;
+  title: string;
+}
+
+export interface GuestExportRequest {
+  html: string;
+  title: string;
+  format: 'docx' | 'pdf';
+}

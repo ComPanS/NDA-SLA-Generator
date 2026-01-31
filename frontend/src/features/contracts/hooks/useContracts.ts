@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { contractsApi } from '@/shared/api';
-import { ContractFieldInput, ContractSectionInput, Document, DocumentStatus, GenerateContractRequest, RefineContractRequest } from '@/shared/types';
+import {
+  ContractFieldInput,
+  ContractSectionInput,
+  Document,
+  DocumentStatus,
+  GenerateContractRequest,
+  RefineContractRequest,
+  GuestGenerateRequest,
+  GuestExportRequest,
+} from '@/shared/types';
 
 export const useContract = (documentId: string) => {
   return useQuery({
@@ -121,6 +130,32 @@ export const useUpdateContractStatus = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['contracts', variables.documentId] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+};
+
+export const useGuestGenerateContract = () => {
+  return useMutation({
+    mutationFn: (request: GuestGenerateRequest) => contractsApi.guestGenerate(request),
+  });
+};
+
+export const useGuestExportContract = () => {
+  return useMutation({
+    mutationFn: async ({ html, title, format }: GuestExportRequest) => {
+      const blob = await contractsApi.guestExport({ html, title, format });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeTitle = `${title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.${format}`;
+      link.href = url;
+      link.download = safeTitle;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true };
     },
   });
 };
