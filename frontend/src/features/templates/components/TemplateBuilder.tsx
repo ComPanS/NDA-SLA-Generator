@@ -9,8 +9,11 @@ import {
   TextField,
   Typography,
   Alert,
+  FormControlLabel,
+  Switch,
+  Tooltip,
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import { Add, Delete, HelpOutline } from '@mui/icons-material';
 import { Template, TemplateGroup } from '@/shared/types';
 import { useCreateTemplate, useUpdateTemplate } from '../hooks/useTemplates';
 import { TemplatePayload } from '@/shared/api';
@@ -41,6 +44,21 @@ interface TemplateBuilderProps {
 }
 
 export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
+  const defaultSections: EditableSection[] = [
+    { title: 'Преамбула', order: 1 },
+    { title: 'Предмет договора', order: 2 },
+    { title: 'Права и обязанности сторон', order: 3 },
+    { title: 'Стоимость и порядок расчетов', order: 4 },
+    { title: 'Сроки выполнения и приемка', order: 5 },
+    { title: 'Ответственность сторон', order: 6 },
+    { title: 'Конфиденциальность', order: 7 },
+    { title: 'Форс-мажор', order: 8 },
+    { title: 'Порядок разрешения споров', order: 9 },
+    { title: 'Срок действия, изменение и расторжение', order: 10 },
+    { title: 'Заключительные положения', order: 11 },
+    { title: 'Реквизиты и подписи сторон', order: 12 },
+  ];
+
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [content, setContent] = useState(template?.content || '');
@@ -56,22 +74,8 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       },
     ]
   );
-  const [sections, setSections] = useState<EditableSection[]>(
-    template?.sections || [
-      { title: 'Преамбула', order: 0 },
-      { title: 'Предмет договора', order: 1 },
-      { title: 'Права и обязанности сторон', order: 2 },
-      { title: 'Стоимость и порядок расчетов', order: 3 },
-      { title: 'Сроки выполнения и приемка', order: 4 },
-      { title: 'Ответственность сторон', order: 5 },
-      { title: 'Конфиденциальность', order: 6 },
-      { title: 'Форс-мажор', order: 7 },
-      { title: 'Порядок разрешения споров', order: 8 },
-      { title: 'Срок действия, изменение и расторжение', order: 9 },
-      { title: 'Заключительные положения', order: 10 },
-      { title: 'Реквизиты и подписи сторон', order: 11 },
-    ]
-  );
+  const [sections, setSections] = useState<EditableSection[]>(template?.sections || defaultSections);
+  const [sectionsEnabled, setSectionsEnabled] = useState(!!(template?.sections?.length));
   const [error, setError] = useState('');
 
   const isEditing = useMemo(() => !!template?.id, [template]);
@@ -106,6 +110,23 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
           order: s.order,
         }))
       );
+      setSectionsEnabled(!!template.sections.length);
+    } else {
+      setName('');
+      setDescription('');
+      setContent('');
+      setGroups([
+        {
+          label: 'Стороны',
+          order: 0,
+          fields: [
+            { label: 'Исполнитель', key: 'executor_name' },
+            { label: 'Заказчик', key: 'customer_name' },
+          ],
+        },
+      ]);
+      setSections(defaultSections);
+      setSectionsEnabled(false);
     }
   }, [template]);
 
@@ -126,19 +147,22 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   };
 
   const handleAddSection = () => {
+    if (!sectionsEnabled) return;
     setSections((prev) => [
       ...prev,
-      { title: `Раздел ${prev.length + 1}`, order: prev.length },
+      { title: `Раздел ${prev.length + 1}`, order: prev.length + 1 },
     ]);
   };
 
   const handleSectionChange = (index: number, key: keyof EditableSection, value: string | number) => {
+    if (!sectionsEnabled) return;
     setSections((prev) =>
       prev.map((section, i) => (i === index ? { ...section, [key]: value } : section))
     );
   };
 
   const handleRemoveSection = (index: number) => {
+    if (!sectionsEnabled) return;
     setSections((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -213,10 +237,12 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
           order: field.order ?? fIdx,
         })),
       })),
-      sections: sections.map((section, sIdx) => ({
-        title: section.title.trim(),
-        order: section.order ?? sIdx,
-      })),
+      sections: sectionsEnabled
+        ? sections.map((section, sIdx) => ({
+            title: section.title.trim(),
+            order: Math.max(1, section.order ?? sIdx + 1),
+          }))
+        : [],
     };
 
     const onError = () => setError('Не удалось сохранить шаблон. Проверьте поля и попробуйте снова.');
@@ -349,44 +375,89 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             ))}
           </Stack>
 
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 3 }}>
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Разделы договора
-            </Typography>
-            <Button startIcon={<Add />} onClick={handleAddSection}>
-              Добавить раздел
-            </Button>
-          </Stack>
+          {sectionsEnabled ? (
+            <>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 3 }}>
+                <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                  Разделы договора
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={sectionsEnabled}
+                        onChange={(e) => setSectionsEnabled(e.target.checked)}
+                      />
+                    }
+                    label="Включить"
+                  />
+                  <Button startIcon={<Add />} onClick={handleAddSection}>
+                    Добавить раздел
+                  </Button>
+                </Stack>
+              </Stack>
 
-          <Stack spacing={2}>
-            {sections
-              .slice()
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-              .map((section, idx) => (
-                <Card variant="outlined" key={`section-${idx}`}>
-                  <CardContent>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <TextField
-                        label="Название раздела"
-                        value={section.title}
-                        onChange={(e) => handleSectionChange(idx, 'title', e.target.value)}
-                        sx={{ flexGrow: 1 }}
-                      />
-                      <TextField
-                        label="Порядок"
-                        type="number"
-                        value={section.order ?? idx}
-                        onChange={(e) => handleSectionChange(idx, 'order', Number(e.target.value))}
+              <Stack spacing={2}>
+                {sections
+                  .slice()
+                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                  .map((section, idx) => (
+                    <Card variant="outlined" key={`section-${idx}`}>
+                      <CardContent>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <TextField
+                            label="Название раздела"
+                            value={section.title}
+                            onChange={(e) => handleSectionChange(idx, 'title', e.target.value)}
+                            sx={{ flexGrow: 1 }}
+                          />
+                          <TextField
+                            label="Порядок"
+                            type="number"
+                        value={section.order ?? idx + 1}
+                            onChange={(e) =>
+                              handleSectionChange(idx, 'order', Number(e.target.value))
+                            }
                         sx={{ width: 120 }}
-                      />
-                      <IconButton onClick={() => handleRemoveSection(idx)}>
-                        <Delete />
-                      </IconButton>
+                        inputProps={{ min: 1 }}
+                          />
+                          <IconButton onClick={() => handleRemoveSection(idx)}>
+                            <Delete />
+                          </IconButton>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </Stack>
+            </>
+          ) : (
+            <Card sx={{ mt: 3 }}>
+              <CardContent>
+                <Stack spacing={1}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography variant="h6">Разделы договора</Typography>
+                      <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                        <HelpOutline fontSize="small" color="action" />
+                      </Tooltip>
                     </Stack>
-                  </CardContent>
-                </Card>
-              ))}
-          </Stack>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={sectionsEnabled}
+                          onChange={(e) => setSectionsEnabled(e.target.checked)}
+                        />
+                      }
+                      label="Включить"
+                    />
+                  </Stack>
+                  {/* <Typography variant="body2" color="text.secondary">
+                    Порядок разделов всегда начинается с 1.
+                  </Typography> */}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
 
           <Stack direction="row" spacing={2} justifyContent="flex-end">
             <Button
