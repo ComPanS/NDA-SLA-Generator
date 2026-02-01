@@ -33,9 +33,12 @@ const templateInput = z.object({
   sections: z.array(sectionInput).default([]),
 });
 
-router.get('/', async (_req, res) => {
+router.get('/', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
   const templates = await prisma.template.findMany({
-    where: { isActive: true },
+    where: { isActive: true, createdById: req.userId },
     orderBy: { createdAt: 'desc' },
     include: {
       groups: {
@@ -52,8 +55,8 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
-  const tpl = await prisma.template.findUnique({
-    where: { id: String(req.params.id) },
+  const tpl = await prisma.template.findFirst({
+    where: { id: String(req.params.id), createdById: req.userId },
     include: {
       groups: {
         orderBy: { order: 'asc' },
@@ -159,7 +162,9 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
   const shouldReplaceGroups = Array.isArray(groups);
   const shouldReplaceSections = Array.isArray(sections);
 
-  const existing = await prisma.template.findUnique({ where: { id: templateId } });
+  const existing = await prisma.template.findFirst({
+    where: { id: templateId, createdById: req.userId },
+  });
   if (!existing) {
     return res.status(404).json({ detail: 'Template not found' });
   }
@@ -247,13 +252,11 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 
   const templateId = String(req.params.id);
-  const existing = await prisma.template.findUnique({ where: { id: templateId } });
+  const existing = await prisma.template.findFirst({
+    where: { id: templateId, createdById: req.userId },
+  });
   if (!existing) {
     return res.status(404).json({ detail: 'Template not found' });
-  }
-
-  if (existing.createdById && existing.createdById !== req.userId) {
-    return res.status(403).json({ detail: 'Forbidden' });
   }
 
   try {

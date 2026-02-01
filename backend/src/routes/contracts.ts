@@ -469,14 +469,18 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   } = parsed.data;
 
   const template = template_id
-    ? await prisma.template.findUnique({
-        where: { id: template_id },
+    ? await prisma.template.findFirst({
+        where: { id: template_id, createdById: req.userId, isActive: true },
         include: {
           groups: { include: { fields: true }, orderBy: { order: 'asc' } },
           sections: { orderBy: { order: 'asc' } },
         },
       })
     : null;
+
+  if (template_id && !template) {
+    return res.status(404).json({ detail: 'Template not found' });
+  }
 
   const userPrompt = template ? `${template.content}\n\n${prompt}` : prompt;
   const instruction = buildInstruction(title);
