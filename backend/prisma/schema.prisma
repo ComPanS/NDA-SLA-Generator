@@ -36,6 +36,7 @@ model User {
   avatarUrl      String?
   isActive       Boolean        @default(true)
   isAdmin        Boolean        @default(false)
+  emailVerified  Boolean        @default(false)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   templates      Template[]
@@ -186,4 +187,17 @@ model SystemNotice {
   enabled   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model EmailVerificationCode {
+  id             String   @id @default(uuid())
+  email          String
+  hashedPassword String
+  code           String
+  expiresAt      DateTime
+  attempts       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([email])
 }

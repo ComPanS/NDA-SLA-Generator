@@ -11,12 +11,23 @@ import {
   verifyYandexState,
   YandexProfile,
 } from '../lib/yandexOauth';
+import { env } from '../config/env';
+import { sendVerificationEmail } from '../lib/mailer';
 
 const router = Router();
 
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+});
+
+const verifySchema = z.object({
+  email: z.string().email(),
+  code: z.string().min(4).max(6),
+});
+
+const resendSchema = z.object({
+  email: z.string().email(),
 });
 
 function tokenPair(userId: string) {
@@ -41,6 +52,7 @@ async function upsertYandexUser(profile: YandexProfile) {
           yandexId: existing.yandexId ?? profile.id,
           displayName: profile.displayName ?? existing.displayName,
           avatarUrl: profile.avatarUrl ?? existing.avatarUrl,
+          emailVerified: true,
         },
       })
     : await prisma.user.create({
@@ -49,10 +61,52 @@ async function upsertYandexUser(profile: YandexProfile) {
           yandexId: profile.id,
           displayName: profile.displayName,
           avatarUrl: profile.avatarUrl,
+          emailVerified: true,
         },
       });
 
   return user;
+}
+
+const VERIFICATION_ATTEMPTS_LIMIT = 5;
+
+function generateCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function createVerificationCode(email: string, hashedPassword: string) {
+  const code = generateCode();
+  const expiresAt = new Date(Date.now() + env.verificationCodeTtlMinutes * 60 * 1000);
+
+  await prisma.emailVerificationCode.deleteMany({ where: { email } });
+  await prisma.emailVerificationCode.create({
+    data: { email, hashedPassword, code, expiresAt },
+  });
+
+  await sendVerificationEmail(email, code);
+}
+
+async function ensureCanResend(email: string) {
+  const lastHour = new Date(Date.now() - 60 * 60 * 1000);
+  const countLastHour = await prisma.emailVerificationCode.count({
+    where: { email, createdAt: { gte: lastHour } },
+  });
+  if (countLastHour >= env.verificationResendMaxPerHour) {
+    return 'too_many_requests';
+  }
+
+  const last = await prisma.emailVerificationCode.findFirst({
+    where: { email },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (
+    last &&
+    Date.now() - last.createdAt.getTime() < env.verificationResendIntervalSeconds * 1000
+  ) {
+    return 'cooldown';
+  }
+
+  return null;
 }
 
 router.post('/register', async (req, res) => {
@@ -66,10 +120,16 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ detail: 'Email already taken' });
   }
   const hashedPassword = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({
-    data: { email, hashedPassword },
-  });
-  return res.status(201).json(tokenPair(user.id));
+
+  try {
+    await createVerificationCode(email, hashedPassword);
+  } catch (error) {
+    console.error('Send verification email error', error);
+  }
+
+  return res
+    .status(201)
+    .json({ requires_verification: true, email_verified: false });
 });
 
 router.post('/login', async (req, res) => {
@@ -80,6 +140,14 @@ router.post('/login', async (req, res) => {
   const { email, password } = parsed.data;
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
+    const pending = await prisma.emailVerificationCode.findFirst({ where: { email } });
+    if (pending) {
+      return res.status(403).json({
+        detail: 'Email not verified',
+        code: 'email_not_verified',
+        requires_verification: true,
+      });
+    }
     return res.status(400).json({ detail: 'Invalid credentials' });
   }
   if (!user.hashedPassword) {
@@ -89,7 +157,125 @@ router.post('/login', async (req, res) => {
   if (!ok) {
     return res.status(400).json({ detail: 'Invalid credentials' });
   }
-  return res.json(tokenPair(user.id));
+  if (!user.emailVerified) {
+    try {
+      const reason = await ensureCanResend(user.email);
+      if (!reason) {
+        const lastPending = await prisma.emailVerificationCode.findFirst({
+          where: { email: user.email },
+          orderBy: { createdAt: 'desc' },
+        });
+        const hashedPassword = lastPending?.hashedPassword || user.hashedPassword || '';
+        if (hashedPassword) {
+          await createVerificationCode(user.email, hashedPassword);
+        }
+      }
+    } catch (error) {
+      console.error('Auto resend verification error', error);
+    }
+    return res.status(403).json({
+      detail: 'Email not verified',
+      code: 'email_not_verified',
+      requires_verification: true,
+    });
+  }
+
+  return res.json({ ...tokenPair(user.id), email_verified: true });
+});
+
+router.post('/verify', async (req, res) => {
+  const parsed = verifySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: 'Invalid payload' });
+  }
+
+  const { email, code } = parsed.data;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user && user.emailVerified) {
+    return res.json({ ...tokenPair(user.id), email_verified: true });
+  }
+
+  const record = await prisma.emailVerificationCode.findFirst({
+    where: { email },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!record) {
+    return res.status(400).json({ detail: 'Code not found or expired' });
+  }
+
+  const now = Date.now();
+  if (record.expiresAt.getTime() < now) {
+    await prisma.emailVerificationCode.deleteMany({ where: { userId: user.id } });
+    return res.status(400).json({ detail: 'Code expired' });
+  }
+
+  if (record.attempts >= VERIFICATION_ATTEMPTS_LIMIT) {
+    return res.status(429).json({ detail: 'Too many attempts' });
+  }
+
+  if (record.code !== code) {
+    await prisma.emailVerificationCode.update({
+      where: { id: record.id },
+      data: { attempts: { increment: 1 } },
+    });
+    return res.status(400).json({ detail: 'Invalid code' });
+  }
+
+  const createdUser =
+    user ||
+    (await prisma.user.create({
+      data: {
+        email,
+        hashedPassword: record.hashedPassword,
+        emailVerified: true,
+      },
+    }));
+
+  await prisma.emailVerificationCode.deleteMany({ where: { email } });
+
+  return res.json({ ...tokenPair(createdUser.id), email_verified: true });
+});
+
+router.post('/resend', async (req, res) => {
+  const parsed = resendSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: 'Invalid payload' });
+  }
+
+  const { email } = parsed.data;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user?.emailVerified) {
+    return res.status(400).json({ detail: 'Already verified' });
+  }
+
+  const pending = await prisma.emailVerificationCode.findFirst({ where: { email } });
+  if (!pending && !user) {
+    return res.status(400).json({ detail: 'Registration not found' });
+  }
+  if (!pending && user && !user.hashedPassword) {
+    return res.status(400).json({ detail: 'Verification not required for this account' });
+  }
+
+  const blockedReason = await ensureCanResend(email);
+  if (blockedReason === 'too_many_requests') {
+    return res.status(429).json({ detail: 'Too many requests. Try later.' });
+  }
+  if (blockedReason === 'cooldown') {
+    return res.status(429).json({ detail: 'Please wait before requesting another code.' });
+  }
+
+  try {
+    const hashedPassword = pending?.hashedPassword || user?.hashedPassword;
+    if (!hashedPassword) {
+      return res.status(400).json({ detail: 'Registration not found' });
+    }
+    await createVerificationCode(email, hashedPassword);
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('Resend verification error', error);
+    return res.status(500).json({ detail: 'Failed to send code' });
+  }
 });
 
 router.post('/refresh', async (req, res) => {
@@ -100,7 +286,14 @@ router.post('/refresh', async (req, res) => {
   }
   try {
     const userId = verifyToken(parsed.data.refresh_token, 'refresh');
-    return res.json(tokenPair(userId));
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(401).json({ detail: 'Invalid refresh token' });
+    }
+    if (!user.emailVerified) {
+      return res.status(403).json({ detail: 'Email not verified', code: 'email_not_verified' });
+    }
+    return res.json({ ...tokenPair(userId), email_verified: true });
   } catch {
     return res.status(401).json({ detail: 'Invalid refresh token' });
   }
@@ -136,7 +329,7 @@ router.post('/yandex/callback', async (req, res) => {
     const profile = await fetchYandexProfile(accessToken);
     const user = await upsertYandexUser(profile);
 
-    return res.json(tokenPair(user.id));
+    return res.json({ ...tokenPair(user.id), email_verified: true });
   } catch (error) {
     return res.status(400).json({ detail: (error as Error).message });
   }
@@ -155,7 +348,7 @@ router.post('/yandex/suggest', async (req, res) => {
   try {
     const profile = await fetchYandexProfile(parsed.data.access_token);
     const user = await upsertYandexUser(profile);
-    return res.json(tokenPair(user.id));
+    return res.json({ ...tokenPair(user.id), email_verified: true });
   } catch (error) {
     return res.status(400).json({ detail: (error as Error).message });
   }
