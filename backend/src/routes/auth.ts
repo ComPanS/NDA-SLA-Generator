@@ -206,7 +206,7 @@ router.post('/verify', async (req, res) => {
 
   const now = Date.now();
   if (record.expiresAt.getTime() < now) {
-    await prisma.emailVerificationCode.deleteMany({ where: { userId: user.id } });
+    await prisma.emailVerificationCode.deleteMany({ where: { email } });
     return res.status(400).json({ detail: 'Code expired' });
   }
 
