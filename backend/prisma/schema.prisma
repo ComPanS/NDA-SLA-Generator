@@ -30,7 +30,10 @@ enum SubscriptionStatus {
 model User {
   id             String         @id @default(uuid())
   email          String         @unique
-  hashedPassword String
+  hashedPassword String?
+  yandexId       String?        @unique
+  displayName    String?
+  avatarUrl      String?
   isActive       Boolean        @default(true)
   isAdmin        Boolean        @default(false)
   createdAt      DateTime       @default(now())

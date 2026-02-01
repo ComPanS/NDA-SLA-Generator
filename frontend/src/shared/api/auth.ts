@@ -4,6 +4,9 @@ import {
   LoginCredentials,
   RegisterCredentials,
   RefreshTokenRequest,
+  YandexAuthUrlResponse,
+  YandexCallbackPayload,
+  YandexSuggestPayload,
 } from '@/shared/types';
 
 export const authApi = {
@@ -19,6 +22,21 @@ export const authApi = {
 
   refresh: async (request: RefreshTokenRequest): Promise<AuthTokens> => {
     const response = await apiClient.post<AuthTokens>('/auth/refresh', request);
+    return response.data;
+  },
+
+  yandexUrl: async (): Promise<YandexAuthUrlResponse> => {
+    const response = await apiClient.get<YandexAuthUrlResponse>('/auth/yandex/url');
+    return response.data;
+  },
+
+  yandexCallback: async (payload: YandexCallbackPayload): Promise<AuthTokens> => {
+    const response = await apiClient.post<AuthTokens>('/auth/yandex/callback', payload);
+    return response.data;
+  },
+
+  yandexSuggest: async (payload: YandexSuggestPayload): Promise<AuthTokens> => {
+    const response = await apiClient.post<AuthTokens>('/auth/yandex/suggest', payload);
     return response.data;
   },
 };

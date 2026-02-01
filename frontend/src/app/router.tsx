@@ -10,6 +10,8 @@ import { Templates } from '@/pages/Templates';
 import { GuestContract } from '@/pages/GuestContract';
 import { Admin } from '@/pages/Admin';
 import { ADMIN_ROUTE } from '@/shared/constants';
+import { OAuthYandexCallback } from '@/pages/OAuthYandexCallback';
+import { YandexSuggestToken } from '@/pages/YandexSuggestToken';
 
 const router = createBrowserRouter([
   {
@@ -51,6 +53,14 @@ const router = createBrowserRouter([
   {
     path: ADMIN_ROUTE,
     element: <Admin />,
+  },
+  {
+    path: '/oauth/yandex/callback',
+    element: <OAuthYandexCallback />,
+  },
+  {
+    path: '/oauth/yandex/token',
+    element: <YandexSuggestToken />,
   },
 ]);
 

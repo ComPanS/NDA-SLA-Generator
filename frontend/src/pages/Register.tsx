@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Link, Navigate } from 'react-router-dom';
 import { useRegister, useAuthStore } from '@/features/auth/hooks/useAuth';
+import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
 import { Layout } from '@/shared/components';
 
 export const Register = () => {
@@ -106,6 +107,8 @@ export const Register = () => {
                 {isPending ? 'Регистрация...' : 'Зарегистрироваться'}
               </Button>
             </form>
+
+            <YandexIdButton disabled={isPending} />
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">

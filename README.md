@@ -117,6 +117,13 @@ IT-агентства, фриланс-команды, B2B-поставщики �
 - Сборка/прод: `npm run build && npm start`.
 - Тесты: `npm test` (vitest + supertest).
 
+**Yandex OAuth (Паспорт)**
+
+1. Создайте приложение на https://oauth.yandex.ru/ с правами `login:email` и `login:info`.
+2. Redirect URI: `http://localhost:5173/oauth/yandex/callback` (или ваш домен).
+3. В `backend/.env` заполните `YANDEX_OAUTH_CLIENT_ID`, `YANDEX_OAUTH_CLIENT_SECRET`, `YANDEX_OAUTH_REDIRECT_URI`, `FRONTEND_URL`.
+4. Проверка: `GET /auth/yandex/url` → редирект в Яндекс, после возврата код и state отправляются на `/auth/yandex/callback`, токены записываются в клиент.
+
 ### Frontend (React + TypeScript)
 
 - Код: `frontend/` (React 18, TypeScript, Vite, MUI, React Query, Zustand).

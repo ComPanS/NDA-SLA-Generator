@@ -22,3 +22,17 @@ export interface RegisterCredentials {
 export interface RefreshTokenRequest {
   refresh_token: string;
 }
+
+export interface YandexAuthUrlResponse {
+  url: string;
+  state: string;
+}
+
+export interface YandexCallbackPayload {
+  code: string;
+  state: string;
+}
+
+export interface YandexSuggestPayload {
+  access_token: string;
+}

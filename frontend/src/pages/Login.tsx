@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Link, Navigate } from 'react-router-dom';
 import { useLogin, useAuthStore } from '@/features/auth/hooks/useAuth';
+import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
 import { Layout } from '@/shared/components';
 
 export const Login = () => {
@@ -75,6 +76,8 @@ export const Login = () => {
                 {isPending ? 'Вход...' : 'Войти'}
               </Button>
             </form>
+
+            <YandexIdButton disabled={isPending} />
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">

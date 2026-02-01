@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/shared/api';
 import { authStore } from '../store/authStore';
-import { LoginCredentials, RegisterCredentials } from '@/shared/types';
+import { LoginCredentials, RegisterCredentials, YandexCallbackPayload } from '@/shared/types';
 import { useNavigate } from 'react-router-dom';
 
 export const useLogin = () => {
@@ -38,3 +38,27 @@ export const useLogout = () => {
 };
 
 export const useAuthStore = () => authStore();
+
+export const useYandexCallback = () => {
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: (payload: YandexCallbackPayload) => authApi.yandexCallback(payload),
+    onSuccess: (data) => {
+      authStore.getState().setTokens(data.access_token, data.refresh_token);
+      navigate('/dashboard');
+    },
+  });
+};
+
+export const useYandexSuggest = () => {
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: (accessToken: string) => authApi.yandexSuggest({ access_token: accessToken }),
+    onSuccess: (data) => {
+      authStore.getState().setTokens(data.access_token, data.refresh_token);
+      navigate('/dashboard');
+    },
+  });
+};

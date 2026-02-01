@@ -11,6 +11,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true,
+    allowedHosts: ['humbler-loise-untolled.ngrok-free.dev'],
     proxy: {
       '/auth': {
         target: 'http://localhost:8001',
