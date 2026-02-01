@@ -354,7 +354,7 @@ export const ContractView = () => {
 
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              <strong>Это реальный документ, сгенерированный через YandexGPT API.</strong>
+              <strong>Это договор, сгенерированный через YandexGPT.</strong>
               <br />
               Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
               автоматических изменений через кнопку "Уточнить с AI".

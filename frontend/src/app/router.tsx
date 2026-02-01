@@ -8,6 +8,8 @@ import { ContractView } from '@/pages/ContractView';
 import { Billing } from '@/pages/Billing';
 import { Templates } from '@/pages/Templates';
 import { GuestContract } from '@/pages/GuestContract';
+import { Admin } from '@/pages/Admin';
+import { ADMIN_ROUTE } from '@/shared/constants';
 
 const router = createBrowserRouter([
   {
@@ -45,6 +47,10 @@ const router = createBrowserRouter([
   {
     path: '/templates',
     element: <Templates />,
+  },
+  {
+    path: ADMIN_ROUTE,
+    element: <Admin />,
   },
 ]);
 
