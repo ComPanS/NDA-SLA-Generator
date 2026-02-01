@@ -6,6 +6,7 @@ import templateRoutes from './routes/templates';
 import contractRoutes from './routes/contracts';
 import billingRoutes from './routes/billing';
 import adminRoutes from './routes/admin';
+import noticeRoutes from './routes/notice';
 
 export function createApp() {
   const app = express();
@@ -26,6 +27,7 @@ export function createApp() {
   app.use('/templates', templateRoutes);
   app.use('/contracts', contractRoutes);
   app.use('/billing', billingRoutes);
+  app.use('/notice', noticeRoutes);
   app.use(env.adminRoute, adminRoutes);
 
   app.use(

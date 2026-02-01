@@ -25,6 +25,23 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+const noticeSchema = z.object({
+  message: z.string().default(''),
+  enabled: z.boolean().default(false),
+});
+
+async function getNotice() {
+  const existing = await prisma.systemNotice.findUnique({ where: { id: 'system_notice' } });
+  if (existing) return existing;
+  return prisma.systemNotice.create({
+    data: {
+      id: 'system_notice',
+      message: '',
+      enabled: false,
+    },
+  });
+}
+
 router.post('/login', (req: Request, res: Response) => {
   if (!env.adminLogin || !env.adminPassword) {
     return res.status(500).json({ detail: 'Admin credentials are not configured' });
@@ -145,6 +162,35 @@ router.get('/users', requireAdmin, async (_req: Request, res: Response) => {
       documentsCount: user._count.documents,
       subscriptionsCount: user._count.subscriptions,
     })),
+  });
+});
+
+router.get('/notice', requireAdmin, async (_req: Request, res: Response) => {
+  const notice = await getNotice();
+  return res.json({
+    id: notice.id,
+    message: notice.message,
+    enabled: notice.enabled,
+    updatedAt: notice.updatedAt,
+  });
+});
+
+router.patch('/notice', requireAdmin, async (req: Request, res: Response) => {
+  const parsed = noticeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: 'Invalid payload' });
+  }
+  const { message, enabled } = parsed.data;
+  const updated = await prisma.systemNotice.upsert({
+    where: { id: 'system_notice' },
+    create: { id: 'system_notice', message, enabled },
+    update: { message, enabled },
+  });
+  return res.json({
+    id: updated.id,
+    message: updated.message,
+    enabled: updated.enabled,
+    updatedAt: updated.updatedAt,
   });
 });
 

@@ -12,12 +12,15 @@ import {
   Select,
   InputLabel,
   FormControl,
+  Alert,
 } from '@mui/material';
 import { Add, Description } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Layout, ProtectedRoute } from '@/shared/components';
 import { useContractsList, useDeleteContract, useRenameContract } from '@/features/contracts/hooks/useContracts';
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { noticeApi } from '@/shared/api';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
@@ -29,6 +32,10 @@ export const Dashboard = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sortBy, setSortBy] = useState<'updated_desc' | 'updated_asc' | 'title_asc' | 'title_desc'>('updated_desc');
+  const noticeQuery = useQuery({
+    queryKey: ['notice'],
+    queryFn: () => noticeApi.getNotice(),
+  });
 
   const filtered = useMemo(() => {
     const list = documents || [];
@@ -61,6 +68,11 @@ export const Dashboard = () => {
   return (
     <ProtectedRoute>
       <Layout>
+        {noticeQuery.data?.enabled && noticeQuery.data.message && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {noticeQuery.data.message}
+          </Alert>
+        )}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
             Мои документы

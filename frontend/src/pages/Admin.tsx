@@ -13,8 +13,11 @@ import {
   TableRow,
   TextField,
   Typography,
+  Switch,
+  FormControlLabel,
+  Collapse,
 } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Layout } from '@/shared/components';
 import {
   useAdminLogin,
@@ -23,6 +26,8 @@ import {
   useAdminStore,
   useAdminUsers,
 } from '@/features/admin/hooks/useAdmin';
+import { adminApi } from '@/shared/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const Admin = () => {
   const { isAuthenticated } = useAdminStore();
@@ -30,9 +35,33 @@ export const Admin = () => {
   const logout = useAdminLogout();
   const overviewQuery = useAdminOverview(isAuthenticated);
   const usersQuery = useAdminUsers(isAuthenticated);
+  const queryClient = useQueryClient();
 
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [noticeMessage, setNoticeMessage] = useState('');
+  const [noticeEnabled, setNoticeEnabled] = useState(false);
+  const [showNoticeSettings, setShowNoticeSettings] = useState(false);
+
+  const noticeQuery = useQuery({
+    queryKey: ['admin', 'notice'],
+    queryFn: () => adminApi.getNotice(),
+    enabled: isAuthenticated,
+  });
+
+  const updateNoticeMutation = useMutation({
+    mutationFn: (payload: { message: string; enabled: boolean }) => adminApi.updateNotice(payload),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['admin', 'notice'], data);
+    },
+  });
+
+  useEffect(() => {
+    if (noticeQuery.data) {
+      setNoticeMessage(noticeQuery.data.message);
+      setNoticeEnabled(noticeQuery.data.enabled);
+    }
+  }, [noticeQuery.data]);
   const loginErrorMessage = useMemo(() => {
     if (!loginMutation.error) return null;
     const err = loginMutation.error as any;
@@ -249,6 +278,67 @@ export const Admin = () => {
                 )}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">Предупреждение на дашборде</Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setShowNoticeSettings((prev) => !prev)}
+              >
+                {showNoticeSettings ? 'Скрыть' : 'Показать'}
+              </Button>
+            </Stack>
+            <Collapse in={showNoticeSettings} timeout="auto" unmountOnExit>
+              {noticeQuery.isError && <Alert severity="error">Не удалось загрузить предупреждение</Alert>}
+              <Stack spacing={2}>
+                <Stack direction="row" justifyContent="flex-end">
+                  <Button variant="outlined" size="small" onClick={() => noticeQuery.refetch()}>
+                    Обновить
+                  </Button>
+                </Stack>
+                <TextField
+                  label="Текст предупреждения"
+                  multiline
+                  minRows={2}
+                  value={noticeMessage}
+                  onChange={(e) => setNoticeMessage(e.target.value)}
+                  placeholder="Краткое сообщение пользователям"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={noticeEnabled}
+                      onChange={(e) => setNoticeEnabled(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Показывать на дашборде"
+                />
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  <Button
+                    variant="contained"
+                    size="small"
+                    disabled={updateNoticeMutation.isPending}
+                    onClick={() => {
+                      updateNoticeMutation.mutate({
+                        message: noticeMessage.trim(),
+                        enabled: noticeEnabled && Boolean(noticeMessage.trim()),
+                      });
+                    }}
+                  >
+                    {updateNoticeMutation.isPending ? 'Сохраняю...' : 'Сохранить'}
+                  </Button>
+                </Stack>
+                {updateNoticeMutation.isError && (
+                  <Alert severity="error">Не удалось сохранить предупреждение</Alert>
+                )}
+              </Stack>
+            </Collapse>
           </CardContent>
         </Card>
 

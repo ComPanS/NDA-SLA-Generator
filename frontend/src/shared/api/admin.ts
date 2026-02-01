@@ -1,12 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { API_BASE_URL } from './client';
 import { ADMIN_ROUTE } from '../constants';
-import {
-  AdminLoginRequest,
-  AdminLoginResponse,
-  AdminOverview,
-  AdminUserSummary,
-} from '../types';
+import { AdminLoginRequest, AdminLoginResponse, AdminOverview, AdminUserSummary, Notice } from '../types';
 import { adminStore } from '@/features/admin/store/adminStore';
 
 const adminClient = axios.create({
@@ -48,5 +43,13 @@ export const adminApi = {
   async getUsers(): Promise<AdminUserSummary[]> {
     const { data } = await adminClient.get<{ users: AdminUserSummary[] }>('/users');
     return data.users;
+  },
+  async getNotice(): Promise<Notice> {
+    const { data } = await adminClient.get<Notice>('/notice');
+    return data;
+  },
+  async updateNotice(payload: Pick<Notice, 'message' | 'enabled'>): Promise<Notice> {
+    const { data } = await adminClient.patch<Notice>('/notice', payload);
+    return data;
   },
 };
