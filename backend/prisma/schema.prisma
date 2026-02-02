@@ -16,9 +16,22 @@ enum TemplateFieldType {
   text
 }
 enum SubscriptionPlan {
-  free
+  freemium
+  basic
+  standard
   pro
-  pay_per_use
+}
+
+enum PaymentType {
+  subscription
+  single_contract
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  canceled
+  refunded
 }
 
 enum SubscriptionStatus {
@@ -42,6 +55,8 @@ model User {
   templates      Template[]
   subscriptions  Subscription[]
   documents      Document[]     @relation("UserDocuments")
+  payments       Payment[]
+  usageRecord    UsageRecord?
 }
 
 model Template {
@@ -61,14 +76,43 @@ model Template {
 }
 
 model Subscription {
-  id        String             @id @default(uuid())
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  userId    String
-  plan      SubscriptionPlan
-  status    SubscriptionStatus
-  expiresAt DateTime?
-  user      User               @relation(fields: [userId], references: [id])
+  id                String             @id @default(uuid())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  userId            String
+  plan              SubscriptionPlan
+  status            SubscriptionStatus
+  expiresAt         DateTime?
+  // YooKassa fields
+  yookassaPaymentMethodId String?      // payment method ID for recurring payments
+  autoRenew         Boolean            @default(true)
+  user              User               @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  amount            Int           // in kopeks (100 kopeks = 1 ruble)
+  currency          String        @default("RUB")
+  type              PaymentType
+  status            PaymentStatus
+  yookassaPaymentId String?       @unique
+  description       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id])
+}
+
+model UsageRecord {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  contractsThisMonth  Int      @default(0)
+  clarificationsUsed  Int      @default(0)
+  extraContractsPaid  Int      @default(0)  // single contracts purchased this month
+  periodStart         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id])
 }
 
 model GuestAccess {

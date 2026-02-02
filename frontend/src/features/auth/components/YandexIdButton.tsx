@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Box, CircularProgress, Typography } from '@mui/material';
+import { Alert, Box } from '@mui/material';
 import { useYandexSuggest } from '../hooks/useAuth';
 
 declare global {
@@ -152,6 +152,7 @@ export const YandexIdButton = ({ disabled }: Props) => {
             parentId: containerId.current,
             buttonView: 'main',
             buttonTheme: 'light',
+            buttonBorderRadius: "8",
             buttonSize: 'm',
             buttonContent: 'Войти с Яндекс ID',
             popup: true,
@@ -210,10 +211,10 @@ export const YandexIdButton = ({ disabled }: Props) => {
 
       {(isLoadingSdk || isAuthFlow || isExchangePending) && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-          <CircularProgress size={18} />
-          <Typography variant="body2" color="text.secondary">
+          {/* <CircularProgress size={18} /> */}
+          {/* <Typography variant="body2" color="text.secondary">
             {isExchangePending ? 'Завершаем вход...' : 'Подключаем кнопку Яндекс ID...'}
-          </Typography>
+          </Typography> */}
         </Box>
       )}
 

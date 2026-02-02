@@ -1,12 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { templatesApi, TemplatePayload } from '@/shared/api';
 import { Template } from '@/shared/types';
+import { authStore } from '@/features/auth/store/authStore';
 
 export const useTemplates = () => {
+  const isAuthenticated = authStore((state) => state.isAuthenticated);
+  const hasHydrated = authStore((state) => state._hasHydrated);
+  const isEnabled = hasHydrated && isAuthenticated;
+
   return useQuery({
     queryKey: ['templates'],
-    queryFn: () => templatesApi.getAll(),
+    queryFn: () => {
+      return templatesApi.getAll();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: isEnabled,
   });
 };
 

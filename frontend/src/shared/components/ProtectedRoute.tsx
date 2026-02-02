@@ -1,13 +1,32 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '@/features/auth/hooks/useAuth';
 import { ReactNode } from 'react';
+import { authStore } from '@/features/auth/store/authStore';
+import { CircularProgress, Box } from '@mui/material';
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated } = useAuthStore();
+  // Subscribe to both values from the same store
+  const hasHydrated = authStore((state) => state._hasHydrated);
+  const isAuthenticated = authStore((state) => state.isAuthenticated);
+
+  // Wait for hydration before making auth decision
+  if (!hasHydrated) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

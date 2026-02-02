@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
-import { authStore } from '@/features/auth/store/authStore';
+import { authStore, waitForHydration } from '@/features/auth/store/authStore';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -12,7 +12,10 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Wait for auth store to hydrate before making requests
+    await waitForHydration();
+
     const token = authStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

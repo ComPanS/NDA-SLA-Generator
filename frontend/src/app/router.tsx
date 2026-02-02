@@ -7,11 +7,15 @@ import { NewContract } from '@/pages/NewContract';
 import { ContractView } from '@/pages/ContractView';
 import { Billing } from '@/pages/Billing';
 import { Templates } from '@/pages/Templates';
+import { VerifyEmail } from '@/pages/VerifyEmail';
 import { GuestContract } from '@/pages/GuestContract';
 import { Admin } from '@/pages/Admin';
 import { ADMIN_ROUTE } from '@/shared/constants';
 import { OAuthYandexCallback } from '@/pages/OAuthYandexCallback';
 import { YandexSuggestToken } from '@/pages/YandexSuggestToken';
+import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
+import { TermsOfUse } from '@/pages/TermsOfUse';
+import { NotFound } from '@/pages/NotFound';
 
 const router = createBrowserRouter([
   {
@@ -25,6 +29,18 @@ const router = createBrowserRouter([
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/verify-email',
+    element: <VerifyEmail />,
+  },
+  {
+    path: '/privacy',
+    element: <PrivacyPolicy />,
+  },
+  {
+    path: '/terms',
+    element: <TermsOfUse />,
   },
   {
     path: '/dashboard',
@@ -61,6 +77,10 @@ const router = createBrowserRouter([
   {
     path: '/oauth/yandex/token',
     element: <YandexSuggestToken />,
+  },
+  {
+    path: '*',
+    element: <NotFound />,
   },
 ]);
 

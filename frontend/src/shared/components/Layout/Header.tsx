@@ -1,4 +1,13 @@
-import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem } from '@mui/material';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+} from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -32,7 +41,7 @@ export const Header = () => {
           to={isAuthenticated ? '/dashboard' : '/'}
           sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
         >
-          NDA / SLA Generator
+          ДоговорAI
         </Typography>
 
         {isAuthenticated ? (
@@ -72,7 +81,12 @@ export const Header = () => {
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
               >
-                <MenuItem onClick={() => { navigate('/billing'); handleClose(); }}>
+                <MenuItem
+                  onClick={() => {
+                    navigate('/billing');
+                    handleClose();
+                  }}
+                >
                   Подписка
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>Выйти</MenuItem>

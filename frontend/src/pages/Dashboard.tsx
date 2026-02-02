@@ -13,29 +13,65 @@ import {
   InputLabel,
   FormControl,
   Alert,
+  Snackbar,
 } from '@mui/material';
 import { Add, Description } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout, ProtectedRoute } from '@/shared/components';
 import { useContractsList, useDeleteContract, useRenameContract } from '@/features/contracts/hooks/useContracts';
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { noticeApi } from '@/shared/api';
+import { PageMeta } from '@/shared/components/PageMeta';
+import { useConfirmPayment } from '@/features/billing/hooks/useBilling';
+import { authStore } from '@/features/auth/store/authStore';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { data: documents, isLoading, error } = useContractsList();
   const { mutate: deleteContract, isPending: isDeleting } = useDeleteContract();
   const { mutate: renameContract, isPending: isRenaming } = useRenameContract();
+  const confirmPaymentMutation = useConfirmPayment();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'final'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sortBy, setSortBy] = useState<'updated_desc' | 'updated_asc' | 'title_asc' | 'title_desc'>('updated_desc');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const noticeQuery = useQuery({
     queryKey: ['notice'],
     queryFn: () => noticeApi.getNotice(),
   });
+
+  // Get hydration state
+  const hasHydrated = authStore((state) => state._hasHydrated);
+  const isAuthenticated = authStore((state) => state.isAuthenticated);
+
+  // Handle payment success redirect - only after hydration
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success' && hasHydrated && isAuthenticated) {
+      // Remove the query param first to prevent re-triggering
+      setSearchParams({});
+      
+      // Confirm payment on backend
+      confirmPaymentMutation.mutate(undefined, {
+        onSuccess: (result) => {
+          setSnackbarMessage(result.message || 'Оплата прошла успешно!');
+          setSnackbarOpen(true);
+          queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
+        },
+        onError: () => {
+          queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
+          setSnackbarMessage('Оплата обрабатывается.');
+          setSnackbarOpen(true);
+        },
+      });
+    }
+  }, [searchParams, setSearchParams, hasHydrated, isAuthenticated]);
 
   const filtered = useMemo(() => {
     const list = documents || [];
@@ -68,6 +104,10 @@ export const Dashboard = () => {
   return (
     <ProtectedRoute>
       <Layout>
+        <PageMeta
+          title="Дашборд договоров | ДоговорAI"
+          description="Управляйте договорами: NDA, SLA и другие. Версии, статусы, экспорт DOCX/PDF в одном месте."
+        />
         {noticeQuery.data?.enabled && noticeQuery.data.message && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             {noticeQuery.data.message}
@@ -217,6 +257,14 @@ export const Dashboard = () => {
             )}
           </Stack>
         )}
+
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={5000}
+          onClose={() => setSnackbarOpen(false)}
+          message={snackbarMessage}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
       </Layout>
     </ProtectedRoute>
   );

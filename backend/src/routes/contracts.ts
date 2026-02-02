@@ -6,6 +6,14 @@ import { AuthRequest, requireAuth } from '../middleware/auth';
 import { toDocument } from '../lib/mappers';
 import { generateText } from '../lib/yandex';
 import { getClientIp } from '../lib/requestIp';
+import {
+  checkContractLimit,
+  checkClarificationLimit,
+  checkFeatureAccess,
+  incrementContractUsage,
+  incrementClarificationUsage,
+} from '../lib/limits';
+import { SINGLE_CONTRACT_PRICE } from '../config/subscriptions';
 
 const router = Router();
 
@@ -479,6 +487,21 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+
+  // Check contract limit
+  const limitCheck = await checkContractLimit(req.userId);
+  if (!limitCheck.allowed) {
+    return res.status(402).json({
+      detail: 'Достигнут лимит договоров на этот месяц',
+      code: 'LIMIT_REACHED',
+      limit_type: 'contracts',
+      current_usage: limitCheck.currentUsage,
+      limit: limitCheck.limit,
+      upgrade_options: limitCheck.upgradeOptions,
+      single_contract_price: SINGLE_CONTRACT_PRICE,
+    });
+  }
+
   const parsed = generateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
@@ -490,6 +513,10 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     fields: incomingFields,
     sections: incomingSections,
   } = parsed.data;
+
+  // Check feature access for sections
+  const hasSectionsAccess = await checkFeatureAccess(req.userId, 'sections');
+  const hasRiskCheckAccess = await checkFeatureAccess(req.userId, 'riskCheck');
 
   const template = template_id
     ? await prisma.template.findFirst({
@@ -509,7 +536,8 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   const instruction = buildInstruction(title);
 
   const fieldCopies: ContractFieldDraft[] = template ? contractFieldsFromTemplate(template) : [];
-  const sectionCopies: ContractSectionDraft[] = template
+  // Only allow sections if user has access
+  const sectionCopies: ContractSectionDraft[] = hasSectionsAccess && template
     ? contractSectionsFromTemplate(template)
     : [];
     
@@ -539,7 +567,8 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     }
   }
 
-  if (incomingSections && incomingSections.length) {
+  // Only process incoming sections if user has access
+  if (hasSectionsAccess && incomingSections && incomingSections.length) {
     for (const [idx, section] of incomingSections.entries()) {
       const existingIdx = sectionCopies.findIndex(
         (s) =>
@@ -606,6 +635,9 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     },
   });
 
+  // Increment contract usage counter
+  await incrementContractUsage(req.userId);
+
   return res.json({ document: toDocument(document) });
 });
 
@@ -613,6 +645,20 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+
+  // Check AI clarification limit
+  const limitCheck = await checkClarificationLimit(req.userId);
+  if (!limitCheck.allowed) {
+    return res.status(402).json({
+      detail: 'Достигнут лимит уточнений от нейросети на этот месяц',
+      code: 'LIMIT_REACHED',
+      limit_type: 'clarifications',
+      current_usage: limitCheck.currentUsage,
+      limit: limitCheck.limit,
+      upgrade_options: limitCheck.upgradeOptions,
+    });
+  }
+
   const parsed = refineSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
@@ -658,6 +704,9 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
     },
     include: { template: { select: { id: true, name: true } }, versions: true },
   })) as DocWithRelations;
+
+  // Increment clarification usage counter
+  await incrementClarificationUsage(req.userId);
 
   return res.json({ document: toDocument(updated) });
 });
@@ -804,6 +853,17 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+
+  // Check status update access
+  const hasStatusAccess = await checkFeatureAccess(req.userId, 'statuses');
+  if (!hasStatusAccess) {
+    return res.status(403).json({
+      detail: 'Изменение статуса договора доступно на тарифах Basic и выше',
+      code: 'FEATURE_RESTRICTED',
+      feature: 'statuses',
+    });
+  }
+
   const parsed = statusUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
@@ -865,6 +925,19 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
   if (!['docx', 'pdf'].includes(fmt)) {
     return res.status(400).json({ detail: 'Unsupported format' });
   }
+
+  // Check DOCX export access
+  if (fmt === 'docx') {
+    const hasDocxAccess = await checkFeatureAccess(req.userId, 'docxExport');
+    if (!hasDocxAccess) {
+      return res.status(403).json({
+        detail: 'Экспорт в DOCX доступен на тарифах Basic и выше',
+        code: 'FEATURE_RESTRICTED',
+        feature: 'docxExport',
+      });
+    }
+  }
+
   const doc = (await prisma.document.findUnique({
     where: { id: docId },
     include: { versions: { orderBy: { version: 'desc' }, take: 1 } },

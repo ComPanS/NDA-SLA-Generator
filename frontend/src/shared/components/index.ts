@@ -6,3 +6,4 @@ export * from './ErrorMessage';
 export * from './ConfirmDialog';
 export * from './EmptyState';
 export * from './PageHeader';
+export * from './UpgradeModal';

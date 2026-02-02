@@ -7,6 +7,8 @@ export interface AuthTokens {
   access_token: string;
   refresh_token: string;
   token_type: 'bearer';
+  email_verified?: boolean;
+  requires_verification?: boolean;
 }
 
 export interface LoginCredentials {
@@ -21,6 +23,23 @@ export interface RegisterCredentials {
 
 export interface RefreshTokenRequest {
   refresh_token: string;
+}
+
+export interface RegistrationResponse {
+  requires_verification: boolean;
+  email_verified?: boolean;
+  access_token?: string;
+  refresh_token?: string;
+  token_type?: 'bearer';
+}
+
+export interface VerifyEmailRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResendVerificationRequest {
+  email: string;
 }
 
 export interface YandexAuthUrlResponse {

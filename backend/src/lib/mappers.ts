@@ -130,12 +130,16 @@ export function toDocument(api: DocumentWithRelations) {
 
 export function toBilling(sub?: Subscription | null) {
   if (!sub) {
-    return { plan: 'free', status: 'inactive' };
+    return { plan: 'freemium', status: 'active', auto_renew: false };
   }
   return {
+    id: sub.id,
     plan: sub.plan,
     status: sub.status,
-    expires_at: sub.expiresAt?.toISOString(),
+    expires_at: sub.expiresAt?.toISOString() || null,
+    auto_renew: (sub as any).autoRenew ?? true,
+    created_at: sub.createdAt.toISOString(),
+    updated_at: sub.updatedAt.toISOString(),
   };
 }
 

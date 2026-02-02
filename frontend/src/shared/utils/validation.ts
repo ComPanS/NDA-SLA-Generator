@@ -4,7 +4,8 @@ export const emailSchema = z.string().email('Некорректный email');
 
 export const passwordSchema = z
   .string()
-  .min(6, 'Пароль должен содержать минимум 6 символов');
+  .min(8, 'Пароль должен содержать минимум 8 символов')
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, 'Пароль должен содержать минимум 8 символов, буквы в разном регистре и цифра');
 
 export const loginSchema = z.object({
   email: emailSchema,

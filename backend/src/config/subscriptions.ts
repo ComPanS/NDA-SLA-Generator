@@ -1,12 +1,12 @@
 /**
- * Centralized Subscription Configuration (Frontend Mirror)
- * Keep in sync with backend/src/config/subscriptions.ts
+ * Centralized Subscription Configuration
+ * Edit this file to change all subscription limits and pricing
  */
 
-import { SubscriptionPlan } from '@/shared/types';
+export type SubscriptionPlanType = 'freemium' | 'basic' | 'standard' | 'pro';
 
 export interface PlanLimits {
-  price: number;
+  price: number; // in rubles
   contractsPerMonth: number; // -1 = unlimited
   maxTemplates: number; // -1 = unlimited
   exportFormats: readonly string[];
@@ -17,10 +17,15 @@ export interface PlanLimits {
   hasPrioritySupport: boolean;
 }
 
-// One-time payment for extra contract when limit reached
-export const SINGLE_CONTRACT_PRICE = 99;
+// Billing interval in milliseconds
+// For testing: 2 minutes
+// For production: 30 * 24 * 60 * 60 * 1000 (30 days)
+export const SUBSCRIPTION_BILLING_INTERVAL_MS = 2 * 60 * 1000;
 
-export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
+// One-time payment for extra contract when limit reached
+export const SINGLE_CONTRACT_PRICE = 99; // rubles
+
+export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
   freemium: {
     price: 0,
     contractsPerMonth: 3,
@@ -56,32 +61,35 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   },
   pro: {
     price: 1990,
-    contractsPerMonth: -1,
-    maxTemplates: -1,
+    contractsPerMonth: -1, // unlimited
+    maxTemplates: -1, // unlimited
     exportFormats: ['pdf', 'docx'],
-    aiClarifications: -1,
+    aiClarifications: -1, // unlimited
     hasRiskCheck: true,
     hasSections: true,
     hasStatuses: true,
     hasPrioritySupport: true,
   },
-};
+} as const;
 
-export const SUBSCRIPTION_NAMES: Record<SubscriptionPlan, string> = {
+// Plan display names (Russian)
+export const SUBSCRIPTION_NAMES: Record<SubscriptionPlanType, string> = {
   freemium: 'Freemium',
   basic: 'Basic',
   standard: 'Standard',
   pro: 'Pro',
 };
 
-export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlan, string> = {
+// Plan descriptions (Russian)
+export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlanType, string> = {
   freemium: 'Базовый бесплатный доступ',
   basic: 'Для индивидуальных пользователей',
   standard: 'Для активных пользователей',
   pro: 'Безлимитный доступ для профессионалов',
 };
 
-export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
+// Plan features list for display (Russian)
+export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlanType, string[]> = {
   freemium: [
     '3 договора в месяц',
     '1 шаблон',
@@ -123,29 +131,24 @@ export function isUnlimited(limit: number): boolean {
   return limit === -1;
 }
 
-// Helper to format limit display
-export function formatLimit(limit: number): string {
-  return isUnlimited(limit) ? 'Безлимит' : String(limit);
-}
-
 // Helper to get plan by name
-export function getPlanLimits(plan: SubscriptionPlan): PlanLimits {
+export function getPlanLimits(plan: SubscriptionPlanType): PlanLimits {
   return SUBSCRIPTION_PLANS[plan];
 }
 
 // Helper to get next upgrade plan
-export function getNextPlan(currentPlan: SubscriptionPlan): SubscriptionPlan | null {
-  const planOrder: SubscriptionPlan[] = ['freemium', 'basic', 'standard', 'pro'];
+export function getNextPlan(currentPlan: SubscriptionPlanType): SubscriptionPlanType | null {
+  const planOrder: SubscriptionPlanType[] = ['freemium', 'basic', 'standard', 'pro'];
   const currentIndex = planOrder.indexOf(currentPlan);
   if (currentIndex === -1 || currentIndex === planOrder.length - 1) {
     return null;
   }
-  return planOrder[currentIndex + 1] ?? null;
+  return planOrder[currentIndex + 1];
 }
 
 // Get all available upgrade options from current plan
-export function getUpgradeOptions(currentPlan: SubscriptionPlan): SubscriptionPlan[] {
-  const planOrder: SubscriptionPlan[] = ['freemium', 'basic', 'standard', 'pro'];
+export function getUpgradeOptions(currentPlan: SubscriptionPlanType): SubscriptionPlanType[] {
+  const planOrder: SubscriptionPlanType[] = ['freemium', 'basic', 'standard', 'pro'];
   const currentIndex = planOrder.indexOf(currentPlan);
   return planOrder.slice(currentIndex + 1);
 }

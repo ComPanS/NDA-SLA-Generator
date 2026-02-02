@@ -9,12 +9,14 @@ import {
   Alert,
   Link as MuiLink,
 } from '@mui/material';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useLogin, useAuthStore } from '@/features/auth/hooks/useAuth';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
 import { Layout } from '@/shared/components';
+import { PageMeta } from '@/shared/components/PageMeta';
 
 export const Login = () => {
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { mutate: login, isPending, error } = useLogin();
@@ -31,6 +33,10 @@ export const Login = () => {
 
   return (
     <Layout maxWidth="sm">
+      <PageMeta
+        title="Вход | ДоговорAI — AI-конструктор договоров"
+        description="Войдите в ДоговорAI, чтобы создавать и управлять договорами (NDA, SLA и другие) с помощью AI."
+      />
       <Box sx={{ mt: 8 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
@@ -77,7 +83,7 @@ export const Login = () => {
               </Button>
             </form>
 
-            <YandexIdButton disabled={isPending} />
+            <YandexIdButton key={location.key} disabled={isPending} />
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">

@@ -4,14 +4,17 @@ import {
   LoginCredentials,
   RegisterCredentials,
   RefreshTokenRequest,
+  RegistrationResponse,
+  ResendVerificationRequest,
+  VerifyEmailRequest,
   YandexAuthUrlResponse,
   YandexCallbackPayload,
   YandexSuggestPayload,
 } from '@/shared/types';
 
 export const authApi = {
-  register: async (credentials: RegisterCredentials): Promise<AuthTokens> => {
-    const response = await apiClient.post<AuthTokens>('/auth/register', credentials);
+  register: async (credentials: RegisterCredentials): Promise<RegistrationResponse> => {
+    const response = await apiClient.post<RegistrationResponse>('/auth/register', credentials);
     return response.data;
   },
 
@@ -38,5 +41,14 @@ export const authApi = {
   yandexSuggest: async (payload: YandexSuggestPayload): Promise<AuthTokens> => {
     const response = await apiClient.post<AuthTokens>('/auth/yandex/suggest', payload);
     return response.data;
+  },
+
+  verifyEmail: async (payload: VerifyEmailRequest): Promise<AuthTokens> => {
+    const response = await apiClient.post<AuthTokens>('/auth/verify', payload);
+    return response.data;
+  },
+
+  resendVerification: async (payload: ResendVerificationRequest): Promise<void> => {
+    await apiClient.post('/auth/resend', payload);
   },
 };

@@ -17,9 +17,10 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  Chip,
 } from '@mui/material';
-import { Download, Edit, ArrowBack, HelpOutline } from '@mui/icons-material';
-import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage } from '@/shared/components';
+import { Download, Edit, ArrowBack, HelpOutline, Lock } from '@mui/icons-material';
+import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage, UpgradeModal } from '@/shared/components';
 import {
   useContract,
   useRefineContract,
@@ -32,8 +33,10 @@ import {
 } from '@/features/contracts/hooks/useContracts';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
-import { ContractFieldInput, ContractSectionInput, DocumentStatus } from '@/shared/types';
+import { ContractFieldInput, ContractSectionInput, DocumentStatus, LimitReachedError } from '@/shared/types';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
+import { useUsage } from '@/features/billing/hooks/useBilling';
+import { AxiosError } from 'axios';
 
 export const ContractView = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,10 +49,18 @@ export const ContractView = () => {
   const [titleDraft, setTitleDraft] = useState('');
   const [sectionsEnabled, setSectionsEnabled] = useState(false);
   const [statusDraft, setStatusDraft] = useState<DocumentStatus>('draft');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [limitError, setLimitError] = useState<LimitReachedError | null>(null);
 
   // Загружаем документ
   const { data, isLoading, error } = useContract(id || '');
   const document = data?.document;
+  const { data: usage } = useUsage();
+
+  // Feature access based on subscription
+  const hasSectionsAccess = usage?.features?.hasSections ?? false;
+  const hasStatusesAccess = usage?.features?.hasStatuses ?? false;
+  const hasDocxExportAccess = usage?.features?.hasDocxExport ?? false;
 
   const { mutate: refineContract, isPending: isRefining } = useRefineContract(id || '');
   const { mutate: exportContract, isPending: isExporting } = useExportContract();
@@ -104,6 +115,7 @@ export const ContractView = () => {
 
   const handleRefine = () => {
     if (!id || !refinePrompt.trim()) return;
+    setLimitError(null);
 
     refineContract(
       { prompt: refinePrompt },
@@ -117,8 +129,14 @@ export const ContractView = () => {
           setShowRefineForm(false);
           showSnackbar('Документ успешно обновлен через AI');
         },
-        onError: () => {
-          showSnackbar('Ошибка при обновлении документа');
+        onError: (error) => {
+          const axiosError = error as AxiosError<LimitReachedError>;
+          if (axiosError.response?.data?.code === 'LIMIT_REACHED') {
+            setLimitError(axiosError.response.data);
+            setUpgradeModalOpen(true);
+          } else {
+            showSnackbar('Ошибка при обновлении документа');
+          }
         },
       }
     );
@@ -256,14 +274,21 @@ export const ContractView = () => {
             >
               Уточнить с AI
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<Download />}
-              onClick={() => handleExport('docx')}
-              disabled={isExporting}
-            >
-              Скачать DOCX
-            </Button>
+            <Tooltip title={hasDocxExportAccess ? '' : 'Доступно на тарифах Basic и выше'}>
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={hasDocxExportAccess ? <Download /> : <Lock />}
+                  onClick={() => handleExport('docx')}
+                  disabled={isExporting || !hasDocxExportAccess}
+                >
+                  Скачать DOCX
+                  {!hasDocxExportAccess && (
+                    <Chip label="Basic+" size="small" sx={{ ml: 1 }} />
+                  )}
+                </Button>
+              </span>
+            </Tooltip>
             <Button
               variant="outlined"
               startIcon={<Download />}
@@ -272,18 +297,22 @@ export const ContractView = () => {
             >
               Скачать PDF
             </Button>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>Статус</InputLabel>
-              <Select
-                value={statusDraft}
-                label="Статус"
-                onChange={(e) => handleStatusChange(e.target.value as DocumentStatus)}
-                disabled={isUpdatingStatus}
-              >
-                <MenuItem value="draft">Черновик</MenuItem>
-                <MenuItem value="final">Финальный</MenuItem>
-              </Select>
-            </FormControl>
+            <Tooltip title={hasStatusesAccess ? '' : 'Доступно на тарифах Basic и выше'}>
+              <span>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel>Статус</InputLabel>
+                  <Select
+                    value={statusDraft}
+                    label="Статус"
+                    onChange={(e) => handleStatusChange(e.target.value as DocumentStatus)}
+                    disabled={isUpdatingStatus || !hasStatusesAccess}
+                  >
+                    <MenuItem value="draft">Черновик</MenuItem>
+                    <MenuItem value="final">Финальный</MenuItem>
+                  </Select>
+                </FormControl>
+              </span>
+            </Tooltip>
           </Stack>
 
           <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
@@ -317,7 +346,7 @@ export const ContractView = () => {
                   Уточнить документ с помощью AI
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Опишите, какие изменения нужно внести в договор, и YandexGPT обновит документ
+                  Опишите, какие изменения нужно внести в договор, и AI обновит документ
                 </Typography>
                 <TextField
                   fullWidth
@@ -354,7 +383,7 @@ export const ContractView = () => {
 
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              <strong>Это договор, сгенерированный через YandexGPT.</strong>
+              <strong>Это договор, сгенерированный через ИИ.</strong>
               <br />
               Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
               автоматических изменений через кнопку "Уточнить с AI".
@@ -371,7 +400,7 @@ export const ContractView = () => {
           </Box>
 
           <Box sx={{ mb: 3 }}>
-            {sectionsEnabled ? (
+            {hasSectionsAccess && sectionsEnabled ? (
               <>
                 <ContractSectionsEditor
                   sections={sections}
@@ -406,22 +435,32 @@ export const ContractView = () => {
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="h6">Разделы договора</Typography>
-                        <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                        {!hasSectionsAccess && (
+                          <Chip
+                            icon={<Lock fontSize="small" />}
+                            label="Basic+"
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                          />
+                        )}
+                      <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
                           <HelpOutline fontSize="small" color="action" />
                         </Tooltip>
                       </Stack>
                       <FormControlLabel
                         control={
                           <Switch
-                            checked={sectionsEnabled}
+                            checked={hasSectionsAccess ? sectionsEnabled : false}
                             onChange={(e) => setSectionsEnabled(e.target.checked)}
+                            disabled={!hasSectionsAccess}
                           />
                         }
                         label="Включить"
                       />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
-                      Разделы скрыты и не участвуют в документе.
+                      {hasSectionsAccess ? 'Разделы скрыты и не участвуют в документе.' : 'Настройка разделов доступна на платных тарифах.'}
                     </Typography>
                   </Stack>
                 </CardContent>
@@ -463,6 +502,19 @@ export const ContractView = () => {
           message={snackbarMessage}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
+
+        {/* Upgrade Modal for limit reached */}
+        {limitError && (
+          <UpgradeModal
+            open={upgradeModalOpen}
+            onClose={() => setUpgradeModalOpen(false)}
+            limitType={limitError.limit_type}
+            currentUsage={limitError.current_usage}
+            limit={limitError.limit}
+            upgradeOptions={limitError.upgrade_options}
+            showSingleContractOption={false}
+          />
+        )}
       </Layout>
     </ProtectedRoute>
   );

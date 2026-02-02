@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { toTemplate } from '../lib/mappers';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { checkTemplateLimit } from '../lib/limits';
 
 const router = Router();
 
@@ -75,6 +76,20 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+
+  // Check template limit
+  const limitCheck = await checkTemplateLimit(req.userId);
+  if (!limitCheck.allowed) {
+    return res.status(402).json({
+      detail: 'Достигнут лимит шаблонов для вашего тарифа',
+      code: 'LIMIT_REACHED',
+      limit_type: 'templates',
+      current_usage: limitCheck.currentUsage,
+      limit: limitCheck.limit,
+      upgrade_options: limitCheck.upgradeOptions,
+    });
+  }
+
   const parsed = templateInput.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });

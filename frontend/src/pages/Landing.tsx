@@ -1,9 +1,57 @@
 import { useEffect } from 'react';
-import { Box, Button, Container, Typography, Stack, Card, CardContent, Grid } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Button,
+  Container,
+  Typography,
+  Stack,
+  Card,
+  CardContent,
+  Grid,
+} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Description, Speed, Security } from '@mui/icons-material';
+import { Description, Speed, Security, ExpandMore } from '@mui/icons-material';
 import { Layout } from '@/shared/components';
 import { useAuthStore } from '@/features/auth/hooks/useAuth';
+import { PageMeta } from '@/shared/components/PageMeta';
+
+const faqItems = [
+  {
+    q: 'Как быстро я получу договор?',
+    a: 'Обычно генерация занимает 5–15 минут. Готовый текст можно сразу отредактировать и экспортировать.',
+  },
+  {
+    q: 'Нужна ли регистрация?',
+    a: 'Первый тестовый договор можно сделать без регистрации. Для сохранения истории и экспорта лучше войти в аккаунт.',
+  },
+  {
+    q: 'Можно ли менять структуру разделов?',
+    a: 'Да, разделы и поля шаблона можно включать/выключать и переупорядочивать перед генерацией.',
+  },
+  {
+    q: 'Что такое шаблон и договор?',
+    a: 'Шаблон задаёт поля и разделы. Договор создаётся на основе шаблона и хранится в вашем аккаунте.',
+  },
+  {
+    q: 'Как внести правки после генерации?',
+    a: 'Откройте договор в редакторе, отредактируйте текст и сохраните новую версию или экспортируйте файл.',
+  },
+  {
+    q: 'Какой формат экспорта доступен?',
+    a: 'Поддерживаются DOCX и PDF. Экспорт доступен из карточки договора.',
+  },
+  {
+    q: 'Работает ли без шаблона?',
+    a: 'Да, можно сгенерировать договор без шаблона: укажите заголовок и подсказку, AI предложит структуру.',
+  },
+  {
+    q: 'Можно ли использовать собственные данные сторон?',
+    a: 'Да, заполните поля в шаблоне или договоре перед генерацией — они попадут в финальный текст.',
+  },
+];
 
 export const Landing = () => {
   const navigate = useNavigate();
@@ -17,6 +65,10 @@ export const Landing = () => {
 
   return (
     <Layout>
+      <PageMeta
+        title="AI-конструктор договоров: NDA, SLA и любые соглашения"
+        description="Создавайте договоры с помощью AI за минуты: NDA, SLA, оферты и индивидуальные соглашения с экспортом DOCX/PDF."
+      />
       <Box
         sx={{
           textAlign: 'center',
@@ -24,14 +76,14 @@ export const Landing = () => {
         }}
       >
         <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
-          Генератор NDA и SLA договоров
+          Создавайте договоры с помощью AI
         </Typography>
         <Typography variant="h5" color="text.secondary" paragraph sx={{ mb: 4 }}>
-          Создавайте юридические документы за минуты с помощью AI
+          AI-конструктор договоров за минуты: NDA, SLA, оферты и любые индивидуальные соглашения.
         </Typography>
         <Stack direction="row" spacing={2} justifyContent="center">
           <Button variant="contained" size="large" onClick={() => navigate('/register')}>
-            Начать бесплатно
+            Запустить AI-конструктор
           </Button>
           <Button variant="outlined" size="large" onClick={() => navigate('/login')}>
             Войти
@@ -49,10 +101,10 @@ export const Landing = () => {
               <CardContent>
                 <Speed sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h5" gutterBottom>
-                  Быстрая генерация
+                  Черновик за минуты
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Создавайте договоры за 5-15 минут вместо 2-10 дней
+                  Генерация текста и структуры за 5–15 минут вместо недель согласований
                 </Typography>
               </CardContent>
             </Card>
@@ -63,10 +115,10 @@ export const Landing = () => {
               <CardContent>
                 <Security sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h5" gutterBottom>
-                  Юридическая точность
+                  NDA и SLA без рутины
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Все шаблоны проверены юристами и соответствуют ГК РФ
+                  Готовые пресеты для NDA/SLA и гибкая настройка под ваши сценарии
                 </Typography>
               </CardContent>
             </Card>
@@ -77,15 +129,42 @@ export const Landing = () => {
               <CardContent>
                 <Description sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h5" gutterBottom>
-                  История документов
+                  Экспорт и контроль
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Храните и управляйте всеми вашими договорами в одном месте
+                  Экспорт DOCX/PDF, хранение версий и управление договорами в одном месте
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Stack spacing={3}>
+          <Typography variant="h4" component="h2">
+            Частые вопросы
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Короткие ответы на популярные вопросы о работе сервиса.
+          </Typography>
+          <Stack spacing={1}>
+            {faqItems.map((item, idx) => (
+              <Accordion key={idx}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {item.q}
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" color="text.secondary">
+                    {item.a}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </Stack>
+        </Stack>
       </Container>
 
       <Box sx={{ py: 8, textAlign: 'center', bgcolor: 'background.paper' }}>

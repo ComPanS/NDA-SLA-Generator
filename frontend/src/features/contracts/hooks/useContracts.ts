@@ -10,12 +10,16 @@ import {
   GuestGenerateRequest,
   GuestExportRequest,
 } from '@/shared/types';
+import { authStore } from '@/features/auth/store/authStore';
 
 export const useContract = (documentId: string) => {
+  const isAuthenticated = authStore((state) => state.isAuthenticated);
+  const hasHydrated = authStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ['contracts', documentId],
     queryFn: () => contractsApi.getById(documentId),
-    enabled: !!documentId,
+    enabled: !!documentId && hasHydrated && isAuthenticated,
   });
 };
 
@@ -31,6 +35,9 @@ export const useGenerateContract = () => {
 };
 
 export const useContractsList = () => {
+  const isAuthenticated = authStore((state) => state.isAuthenticated);
+  const hasHydrated = authStore((state) => state._hasHydrated);
+
   return useQuery({
     queryKey: ['contracts'],
     queryFn: async () => {
@@ -38,6 +45,7 @@ export const useContractsList = () => {
       return data.documents as Document[];
     },
     staleTime: 60_000,
+    enabled: hasHydrated && isAuthenticated,
   });
 };
 

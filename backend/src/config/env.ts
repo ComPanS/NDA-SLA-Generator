@@ -10,7 +10,9 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET || 'change-me',
   jwtExpiresMinutes: Number(process.env.JWT_ACCESS_TOKEN_EXPIRES_MINUTES || 30),
   jwtRefreshDays: Number(process.env.JWT_REFRESH_TOKEN_EXPIRES_DAYS || 7),
-  corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
+  corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map((s) => s.trim()),
   yandexApiKey: process.env.YANDEX_GPT_API_KEY || '',
   yandexEndpoint:
     process.env.YANDEX_GPT_ENDPOINT ||
@@ -35,4 +37,10 @@ export const env = {
   adminPassword: process.env.ADMIN_PASSWORD || '',
   adminRoute: adminRouteRaw.startsWith('/') ? adminRouteRaw : `/${adminRouteRaw}`,
   adminTokenExpiresMinutes: Number(process.env.ADMIN_TOKEN_EXPIRES_MINUTES || 60),
+  // YooKassa payment integration
+  yookassaShopId: process.env.YOOKASSA_SHOP_ID || '',
+  yookassaSecretKey: process.env.YOOKASSA_SECRET_KEY || '',
+  yookassaReturnUrl:
+    process.env.YOOKASSA_RETURN_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
+  yookassaWebhookSecret: process.env.YOOKASSA_WEBHOOK_SECRET || '',
 };

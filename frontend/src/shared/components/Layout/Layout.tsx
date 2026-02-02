@@ -1,4 +1,5 @@
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Container, Stack, Typography, Link as MuiLink } from '@mui/material';
+import { Link } from 'react-router-dom';
 import { Header } from './Header';
 import { ReactNode } from 'react';
 
@@ -21,13 +22,26 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
         {children}
       </Container>
       <Box component="footer" sx={{ py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-        <Container maxWidth={maxWidth} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="body2" color="text.secondary">
-            NDA / SLA Generator
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()}
-          </Typography>
+        <Container
+          maxWidth={maxWidth}
+          sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <Stack spacing={0.5}>
+            <Typography variant="body2" color="text.secondary">
+              ДоговорAI
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              © {new Date().getFullYear()}
+            </Typography>
+          </Stack>
+          <Stack direction="row" spacing={2}>
+            <MuiLink component={Link} to="/privacy" color="text.secondary" underline="hover">
+              Политика конфиденциальности
+            </MuiLink>
+            <MuiLink component={Link} to="/terms" color="text.secondary" underline="hover">
+              Правила использования
+            </MuiLink>
+          </Stack>
         </Container>
       </Box>
     </Box>
