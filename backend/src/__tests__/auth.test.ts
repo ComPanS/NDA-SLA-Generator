@@ -5,7 +5,7 @@ import { prisma } from '../config/prisma';
 
 const app = createApp();
 const TEST_EMAIL = 'test@example.com';
-const TEST_PASSWORD = 'password123';
+const TEST_PASSWORD = 'Password123';
 
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';

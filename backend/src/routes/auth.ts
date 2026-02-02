@@ -16,9 +16,14 @@ import { sendVerificationEmail } from '../lib/mailer';
 
 const router = Router();
 
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, 'Password must include upper, lower, and number');
+
 const credentialsSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: passwordSchema,
 });
 
 const verifySchema = z.object({
