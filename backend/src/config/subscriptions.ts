@@ -20,7 +20,9 @@ export interface PlanLimits {
 // Billing interval in milliseconds
 // For testing: 2 minutes
 // For production: 30 * 24 * 60 * 60 * 1000 (30 days)
-export const SUBSCRIPTION_BILLING_INTERVAL_MS = 2 * 60 * 1000;
+import { env } from './env';
+
+export const SUBSCRIPTION_BILLING_INTERVAL_MS = env.subscriptionBillingIntervalMs;
 
 // One-time payment for extra contract when limit reached
 export const SINGLE_CONTRACT_PRICE = 99; // rubles
@@ -90,12 +92,7 @@ export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlanType, string> = {
 
 // Plan features list for display (Russian)
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlanType, string[]> = {
-  freemium: [
-    '3 договора в месяц',
-    '1 шаблон',
-    'Экспорт в PDF',
-    '1 уточнение от нейросети',
-  ],
+  freemium: ['3 договора в месяц', '1 шаблон', 'Экспорт в PDF', '1 уточнение от нейросети'],
   basic: [
     '20 договоров в месяц',
     '3 шаблона',

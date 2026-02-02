@@ -17,15 +17,16 @@ import {
   Divider,
   CircularProgress,
   Snackbar,
+  Tooltip,
 } from '@mui/material';
+import { Check, Star, AllInclusive, CancelOutlined, Autorenew } from '@mui/icons-material';
 import {
-  Check,
-  Star,
-  AllInclusive,
-  CancelOutlined,
-  Autorenew,
-} from '@mui/icons-material';
-import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage, ConfirmDialog } from '@/shared/components';
+  Layout,
+  ProtectedRoute,
+  LoadingSpinner,
+  ErrorMessage,
+  ConfirmDialog,
+} from '@/shared/components';
 import {
   useBilling,
   useUsage,
@@ -63,17 +64,14 @@ export const Billing = () => {
   // Handle payment success redirect - only after hydration
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
-    console.log('[Billing] useEffect: payment=', paymentStatus, 'hasHydrated=', hasHydrated, 'isAuthenticated=', isAuthenticated);
-    
+
     if (paymentStatus === 'success' && hasHydrated && isAuthenticated) {
       // Remove the query param first to prevent re-triggering
       setSearchParams({});
-      
-      console.log('[Billing] Confirming payment...');
+
       // Confirm payment on backend (applies changes if webhook missed it)
       confirmPaymentMutation.mutate(undefined, {
         onSuccess: (result) => {
-          console.log('[Billing] Payment confirmed:', result);
           setSnackbarMessage(result.message || 'Оплата прошла успешно!');
           setSnackbarOpen(true);
           // Refresh billing and usage data
@@ -81,7 +79,6 @@ export const Billing = () => {
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
         },
         onError: (error) => {
-          console.error('[Billing] Payment confirmation error:', error);
           // Fallback - just refresh
           queryClient.invalidateQueries({ queryKey: ['billing'] });
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
@@ -154,7 +151,7 @@ export const Billing = () => {
     used: number,
     limit: number,
     unlimited: boolean,
-    extraPaid?: number,
+    extraPaid?: number
   ) => {
     const effectiveLimit = extraPaid ? limit + extraPaid : limit;
     const percentage = unlimited ? 0 : Math.min((used / effectiveLimit) * 100, 100);
@@ -168,7 +165,8 @@ export const Billing = () => {
       if (extraPaid && extraPaid > 0) {
         return (
           <span>
-            {limit}<span style={{ color: '#4caf50' }}>+{extraPaid}</span>
+            {limit}
+            <span style={{ color: '#4caf50' }}>+{extraPaid}</span>
           </span>
         );
       }
@@ -206,7 +204,15 @@ export const Billing = () => {
           {subscription && subscription.plan !== 'freemium' && (
             <Card sx={{ mb: 4 }}>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                  }}
+                >
                   <Box>
                     <Typography variant="h6" gutterBottom>
                       Текущая подписка
@@ -276,19 +282,19 @@ export const Billing = () => {
                   usage.contracts.used,
                   usage.contracts.limit,
                   usage.contracts.isUnlimited,
-                  usage.contracts.extraPaid,
+                  usage.contracts.extraPaid
                 )}
                 {renderUsageBar(
                   'Уточнения от нейросети',
                   usage.clarifications.used,
                   usage.clarifications.limit,
-                  usage.clarifications.isUnlimited,
+                  usage.clarifications.isUnlimited
                 )}
                 {renderUsageBar(
                   'Шаблоны',
                   usage.templates.used,
                   usage.templates.limit,
-                  usage.templates.isUnlimited,
+                  usage.templates.isUnlimited
                 )}
 
                 <Divider sx={{ my: 2 }} />
@@ -297,43 +303,18 @@ export const Billing = () => {
                   Доступные функции
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  <Chip
-                    size="small"
-                    label="PDF экспорт"
-                    color="primary"
-                    variant="outlined"
-                  />
+                  <Chip size="small" label="PDF экспорт" color="primary" variant="outlined" />
                   {usage.features.hasDocxExport && (
-                    <Chip
-                      size="small"
-                      label="DOCX экспорт"
-                      color="primary"
-                      variant="outlined"
-                    />
+                    <Chip size="small" label="DOCX экспорт" color="primary" variant="outlined" />
                   )}
                   {usage.features.hasRiskCheck && (
-                    <Chip
-                      size="small"
-                      label="Проверка рисков"
-                      color="primary"
-                      variant="outlined"
-                    />
+                    <Chip size="small" label="Проверка рисков" color="primary" variant="outlined" />
                   )}
                   {usage.features.hasSections && (
-                    <Chip
-                      size="small"
-                      label="Разделы"
-                      color="primary"
-                      variant="outlined"
-                    />
+                    <Chip size="small" label="Разделы" color="primary" variant="outlined" />
                   )}
                   {usage.features.hasStatuses && (
-                    <Chip
-                      size="small"
-                      label="Статусы"
-                      color="primary"
-                      variant="outlined"
-                    />
+                    <Chip size="small" label="Статусы" color="primary" variant="outlined" />
                   )}
                   {usage.features.hasPrioritySupport && (
                     <Chip
@@ -357,9 +338,8 @@ export const Billing = () => {
             {plans.map((plan) => {
               const isCurrent = plan.id === currentPlan;
               const isPro = plan.id === 'pro';
-              const isDowngrade =
-                ['freemium', 'basic', 'standard', 'pro'].indexOf(plan.id) <
-                ['freemium', 'basic', 'standard', 'pro'].indexOf(currentPlan);
+              const isFreePlan = plan.id === 'freemium';
+              const disableFreeWhileActive = isFreePlan && currentPlan !== 'freemium';
 
               return (
                 <Grid item xs={12} sm={6} md={3} key={plan.id}>
@@ -392,7 +372,8 @@ export const Billing = () => {
                         </Typography>
                         {plan.price > 0 && (
                           <Typography variant="body2" color="text.secondary" component="span">
-                            {' '}/ месяц
+                            {' '}
+                            / месяц
                           </Typography>
                         )}
                       </Box>
@@ -423,23 +404,38 @@ export const Billing = () => {
                         ))}
                       </List>
 
-                      <Button
-                        fullWidth
-                        variant={isCurrent ? 'outlined' : isPro ? 'contained' : 'outlined'}
-                        disabled={isCurrent || isDowngrade || subscribeMutation.isPending}
-                        onClick={() => handleSubscribe(plan.id)}
-                        sx={{ mt: 2 }}
+                      <Tooltip
+                        title={
+                          disableFreeWhileActive
+                            ? 'Чтобы вернуться на бесплатный, отмените текущую подписку. После окончания оплаченного периода вы будете на бесплатном тарифе.'
+                            : ''
+                        }
+                        disableHoverListener={!disableFreeWhileActive}
+                        disableFocusListener={!disableFreeWhileActive}
+                        disableTouchListener={!disableFreeWhileActive}
                       >
-                        {selectedPlan === plan.id && subscribeMutation.isPending ? (
-                          <CircularProgress size={20} />
-                        ) : isCurrent ? (
-                          'Текущий тариф'
-                        ) : isDowngrade ? (
-                          'Недоступно'
-                        ) : (
-                          'Выбрать'
-                        )}
-                      </Button>
+                        <span>
+                          <Button
+                            fullWidth
+                            variant={isCurrent ? 'outlined' : isPro ? 'contained' : 'outlined'}
+                            disabled={
+                              isCurrent || disableFreeWhileActive || subscribeMutation.isPending
+                            }
+                            onClick={() => handleSubscribe(plan.id)}
+                            sx={{ mt: 2 }}
+                          >
+                            {selectedPlan === plan.id && subscribeMutation.isPending ? (
+                              <CircularProgress size={20} />
+                            ) : isCurrent ? (
+                              'Текущий тариф'
+                            ) : disableFreeWhileActive ? (
+                              'Недоступно'
+                            ) : (
+                              'Выбрать'
+                            )}
+                          </Button>
+                        </span>
+                      </Tooltip>
                     </CardContent>
                   </Card>
                 </Grid>

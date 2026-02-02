@@ -17,13 +17,28 @@ import {
   parseWebhookEvent,
   getPayment,
 } from '../lib/yookassa';
-import {
-  getUsageSummary,
-  addExtraContractPaid,
-  getUserPlan,
-} from '../lib/limits';
+import { getUsageSummary, addExtraContractPaid, getUserPlan } from '../lib/limits';
+import { env } from '../config/env';
 
 const router = Router();
+
+// Small helper to keep billing logs grouped
+// Logging disabled in production; keep stub to avoid console noise
+const logBilling = (..._args: unknown[]) => {};
+
+/**
+ * Make sure return_url includes payment=success to trigger client fallback flow.
+ */
+const buildReturnUrlWithSuccess = (raw?: string): string => {
+  const fallback = env.yookassaReturnUrl || env.frontendUrl;
+  try {
+    const url = new URL(raw || fallback);
+    url.searchParams.set('payment', 'success');
+    return url.toString();
+  } catch (_err) {
+    return `${fallback.replace(/\/$/, '')}/billing?payment=success`;
+  }
+};
 
 // Validation schemas
 const subscribeSchema = z.object({
@@ -109,36 +124,36 @@ router.post('/subscribe', requireAuth, async (req: AuthRequest, res) => {
 
     const { plan, return_url } = parsed.data;
 
+    const finalReturnUrl = buildReturnUrlWithSuccess(return_url || `${env.frontendUrl}/billing`);
+
     // Check if user already has an active subscription of same or higher tier
     const existingSub = await prisma.subscription.findFirst({
       where: {
         userId: req.userId,
         status: 'active',
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
     });
 
-    if (existingSub) {
-      const planOrder: SubscriptionPlanType[] = ['freemium', 'basic', 'standard', 'pro'];
-      const existingIndex = planOrder.indexOf(existingSub.plan as SubscriptionPlanType);
-      const newIndex = planOrder.indexOf(plan);
-
-      if (newIndex <= existingIndex) {
-        return res.status(400).json({
-          detail: 'You already have this plan or a higher tier subscription',
-        });
-      }
+    if (existingSub && existingSub.plan === plan) {
+      return res.status(400).json({
+        detail: 'You already have this plan',
+      });
     }
 
     // Create payment with YooKassa
     const { paymentUrl, paymentId } = await createSubscriptionPayment(
       req.userId,
       plan,
-      return_url,
+      finalReturnUrl,
     );
+
+    logBilling('subscription payment created', {
+      userId: req.userId,
+      plan,
+      paymentId,
+      returnUrl: finalReturnUrl,
+    });
 
     // Create pending payment record
     await prisma.payment.create({
@@ -175,11 +190,10 @@ router.post('/single-contract', requireAuth, async (req: AuthRequest, res) => {
 
     const { return_url } = parsed.data;
 
+    const finalReturnUrl = buildReturnUrlWithSuccess(return_url || `${env.frontendUrl}/dashboard`);
+
     // Create payment with YooKassa
-    const { paymentUrl, paymentId } = await createSingleContractPayment(
-      req.userId,
-      return_url,
-    );
+    const { paymentUrl, paymentId } = await createSingleContractPayment(req.userId, finalReturnUrl);
 
     // Create pending payment record
     await prisma.payment.create({
@@ -277,6 +291,8 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
       return res.status(401).json({ detail: 'Unauthorized' });
     }
 
+    logBilling('confirm-payment called', { userId: req.userId });
+
     // Find the most recent pending payment for this user
     const pendingPayment = await prisma.payment.findFirst({
       where: {
@@ -287,6 +303,7 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
     });
 
     if (!pendingPayment || !pendingPayment.yookassaPaymentId) {
+      logBilling('no pending payment found', { userId: req.userId });
       // Check if there's a recently succeeded payment (already processed)
       const recentSucceeded = await prisma.payment.findFirst({
         where: {
@@ -303,9 +320,10 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
           success: true,
           status: 'succeeded',
           type: recentSucceeded.type,
-          message: recentSucceeded.type === 'single_contract'
-            ? 'Дополнительный договор добавлен'
-            : 'Подписка активирована',
+          message:
+            recentSucceeded.type === 'single_contract'
+              ? 'Дополнительный договор добавлен'
+              : 'Подписка активирована',
         });
       }
 
@@ -314,6 +332,13 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
 
     // Check payment status with YooKassa
     const yooPayment = await getPayment(pendingPayment.yookassaPaymentId);
+    logBilling('yookassa payment fetched', {
+      userId: req.userId,
+      paymentId: pendingPayment.yookassaPaymentId,
+      status: yooPayment.status,
+      type: pendingPayment.type,
+      metadata: yooPayment.metadata,
+    });
 
     if (yooPayment.status === 'succeeded') {
       // Use atomic updateMany to prevent race condition - only update if still pending
@@ -332,16 +357,17 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
           success: true,
           status: 'succeeded',
           type: pendingPayment.type,
-          message: pendingPayment.type === 'single_contract'
-            ? 'Дополнительный договор добавлен'
-            : 'Подписка активирована',
+          message:
+            pendingPayment.type === 'single_contract'
+              ? 'Дополнительный договор добавлен'
+              : 'Подписка активирована',
         });
       }
 
       // Apply the benefit based on payment type
       if (pendingPayment.type === 'single_contract') {
         await addExtraContractPaid(req.userId);
-        console.log(`Extra contract confirmed for user ${req.userId}`);
+        logBilling('extra contract confirmed', { userId: req.userId });
       } else if (pendingPayment.type === 'subscription') {
         // For subscription, the plan info would be in metadata
         // This case is typically handled by webhook, but as fallback:
@@ -367,7 +393,11 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
             },
           });
 
-          console.log(`Subscription confirmed for user ${req.userId}: ${plan}`);
+          logBilling('subscription confirmed via confirm-payment', {
+            userId: req.userId,
+            plan,
+            expiresAt: expiresAt.toISOString(),
+          });
         }
       }
 
@@ -375,14 +405,20 @@ router.post('/confirm-payment', requireAuth, async (req: AuthRequest, res) => {
         success: true,
         status: 'succeeded',
         type: pendingPayment.type,
-        message: pendingPayment.type === 'single_contract'
-          ? 'Дополнительный договор добавлен'
-          : 'Подписка активирована',
+        message:
+          pendingPayment.type === 'single_contract'
+            ? 'Дополнительный договор добавлен'
+            : 'Подписка активирована',
       });
     } else if (yooPayment.status === 'canceled') {
       await prisma.payment.update({
         where: { id: pendingPayment.id },
         data: { status: 'canceled' },
+      });
+
+      logBilling('payment canceled at yookassa', {
+        userId: req.userId,
+        paymentId: pendingPayment.yookassaPaymentId,
       });
 
       return res.json({
@@ -451,10 +487,16 @@ router.post('/webhook', async (req, res) => {
   try {
     const event = parseWebhookEvent(req.body);
     if (!event) {
+      logBilling('webhook invalid payload', { body: req.body });
       return res.status(400).json({ detail: 'Invalid webhook event' });
     }
 
-    console.log('YooKassa webhook received:', event.event, event.object.id);
+    logBilling('webhook received', {
+      event: event.event,
+      paymentId: event.object.id,
+      metadata: event.object.metadata,
+      status: event.object.status,
+    });
 
     if (event.event === 'payment.succeeded') {
       const payment = event.object;
@@ -466,7 +508,7 @@ router.post('/webhook', async (req, res) => {
       });
 
       if (!localPayment) {
-        console.error('Payment not found for webhook:', payment.id);
+        logBilling('payment not found for webhook', { paymentId: payment.id, metadata });
         return res.status(200).json({ received: true });
       }
 
@@ -481,7 +523,7 @@ router.post('/webhook', async (req, res) => {
         const userId = metadata.user_id;
 
         if (!plan || !userId) {
-          console.error('Missing plan or user_id in payment metadata');
+          logBilling('missing plan or user_id in metadata', { metadata });
           return res.status(200).json({ received: true });
         }
 
@@ -506,19 +548,30 @@ router.post('/webhook', async (req, res) => {
           },
         });
 
-        console.log(`Subscription created for user ${userId}: ${plan}`);
+        logBilling('subscription created via webhook', {
+          userId,
+          plan,
+          paymentId: payment.id,
+          expiresAt: expiresAt.toISOString(),
+        });
       } else if (metadata.type === 'single_contract') {
         const userId = metadata.user_id;
 
         if (!userId) {
-          console.error('Missing user_id in payment metadata');
+          logBilling('missing user_id in metadata for single_contract', { metadata });
           return res.status(200).json({ received: true });
         }
 
         // Add extra contract to user's allowance
         await addExtraContractPaid(userId);
 
-        console.log(`Extra contract added for user ${userId}`);
+        logBilling('extra contract added via webhook', { userId, paymentId: payment.id });
+      } else {
+        logBilling('payment.succeeded with unhandled metadata.type', {
+          type: metadata.type,
+          metadata,
+          paymentId: payment.id,
+        });
       }
     } else if (event.event === 'payment.canceled') {
       const payment = event.object;
@@ -529,12 +582,19 @@ router.post('/webhook', async (req, res) => {
         data: { status: 'canceled' },
       });
 
-      console.log(`Payment canceled: ${payment.id}`);
+      logBilling('payment canceled via webhook', { paymentId: payment.id });
+    } else {
+      logBilling('webhook event ignored (not handled)', {
+        event: event.event,
+        paymentId: event.object.id,
+        status: event.object.status,
+        metadata: event.object.metadata,
+      });
     }
 
     return res.status(200).json({ received: true });
   } catch (error) {
-    console.error('Error processing webhook:', error);
+    logBilling('error processing webhook', { error });
     // Always return 200 to YooKassa to prevent retries
     return res.status(200).json({ received: true, error: 'Processing error' });
   }

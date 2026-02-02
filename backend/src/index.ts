@@ -7,6 +7,7 @@ import contractRoutes from './routes/contracts';
 import billingRoutes from './routes/billing';
 import adminRoutes from './routes/admin';
 import noticeRoutes from './routes/notice';
+import { startSubscriptionExpiryJob } from './lib/subscriptionCleanup';
 
 export function createApp() {
   const app = express();
@@ -42,6 +43,8 @@ export function createApp() {
 
 if (process.env.NODE_ENV !== 'test') {
   const app = createApp();
+  // Start daily expiry checker
+  startSubscriptionExpiryJob();
   app.listen(env.port, () => {
     // eslint-disable-next-line no-console
     console.log(`API listening on http://localhost:${env.port}`);

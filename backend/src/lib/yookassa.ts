@@ -12,13 +12,16 @@ import {
 
 const YOOKASSA_API_URL = 'https://api.yookassa.ru/v3';
 
+// Logging disabled in production; keep stub to avoid console noise
+const logBilling = (..._args: unknown[]) => {};
+
 interface YooKassaPaymentRequest {
   amount: {
     value: string;
     currency: string;
   };
   capture: boolean;
-  confirmation: {
+  confirmation?: {
     type: string;
     return_url: string;
   };
@@ -104,7 +107,7 @@ export async function createSubscriptionPayment(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': getAuthHeader(),
+      Authorization: getAuthHeader(),
       'Idempotence-Key': generateIdempotenceKey(),
     },
     body: JSON.stringify(payload),
@@ -112,6 +115,7 @@ export async function createSubscriptionPayment(
 
   if (!response.ok) {
     const error: YooKassaError = await response.json();
+    logBilling('createSubscriptionPayment error', { userId, plan, error });
     throw new Error(`YooKassa error: ${error.description || error.code}`);
   }
 
@@ -120,6 +124,15 @@ export async function createSubscriptionPayment(
   if (!data.confirmation?.confirmation_url) {
     throw new Error('No confirmation URL in YooKassa response');
   }
+
+  logBilling('createSubscriptionPayment success', {
+    userId,
+    plan,
+    returnUrl: payload.confirmation.return_url,
+    paymentId: data.id,
+    status: data.status,
+    metadata: data.metadata,
+  });
 
   return {
     paymentUrl: data.confirmation.confirmation_url,
@@ -148,10 +161,6 @@ export async function createRecurringPayment(
       currency: 'RUB',
     },
     capture: true,
-    confirmation: {
-      type: 'redirect',
-      return_url: `${env.yookassaReturnUrl}/billing`,
-    },
     description: `Автопродление подписки ${plan} на ДоговорAI`,
     metadata: {
       user_id: userId,
@@ -165,7 +174,7 @@ export async function createRecurringPayment(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': getAuthHeader(),
+      Authorization: getAuthHeader(),
       'Idempotence-Key': generateIdempotenceKey(),
     },
     body: JSON.stringify(payload),
@@ -173,10 +182,20 @@ export async function createRecurringPayment(
 
   if (!response.ok) {
     const error: YooKassaError = await response.json();
+    logBilling('createRecurringPayment error', { userId, plan, error });
     throw new Error(`YooKassa error: ${error.description || error.code}`);
   }
 
   const data: YooKassaPaymentResponse = await response.json();
+
+  logBilling('createRecurringPayment response', {
+    userId,
+    plan,
+    paymentId: data.id,
+    status: data.status,
+    paid: data.paid,
+    metadata: data.metadata,
+  });
 
   return {
     success: data.status === 'succeeded',
@@ -212,7 +231,7 @@ export async function createSingleContractPayment(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': getAuthHeader(),
+      Authorization: getAuthHeader(),
       'Idempotence-Key': generateIdempotenceKey(),
     },
     body: JSON.stringify(payload),
@@ -220,6 +239,7 @@ export async function createSingleContractPayment(
 
   if (!response.ok) {
     const error: YooKassaError = await response.json();
+    logBilling('createSingleContractPayment error', { userId, error });
     throw new Error(`YooKassa error: ${error.description || error.code}`);
   }
 
@@ -228,6 +248,14 @@ export async function createSingleContractPayment(
   if (!data.confirmation?.confirmation_url) {
     throw new Error('No confirmation URL in YooKassa response');
   }
+
+  logBilling('createSingleContractPayment success', {
+    userId,
+    paymentId: data.id,
+    status: data.status,
+    metadata: data.metadata,
+    returnUrl: payload.confirmation.return_url,
+  });
 
   return {
     paymentUrl: data.confirmation.confirmation_url,
@@ -242,7 +270,7 @@ export async function getPayment(paymentId: string): Promise<YooKassaPaymentResp
   const response = await fetch(`${YOOKASSA_API_URL}/payments/${paymentId}`, {
     method: 'GET',
     headers: {
-      'Authorization': getAuthHeader(),
+      Authorization: getAuthHeader(),
     },
   });
 
@@ -277,7 +305,11 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
  */
 export interface YooKassaWebhookEvent {
   type: 'notification';
-  event: 'payment.succeeded' | 'payment.canceled' | 'payment.waiting_for_capture' | 'refund.succeeded';
+  event:
+    | 'payment.succeeded'
+    | 'payment.canceled'
+    | 'payment.waiting_for_capture'
+    | 'refund.succeeded';
   object: YooKassaPaymentResponse;
 }
 

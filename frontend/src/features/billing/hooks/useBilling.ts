@@ -8,12 +8,10 @@ export const useBilling = () => {
   const hasHydrated = authStore((state) => state._hasHydrated);
   const isEnabled = hasHydrated && isAuthenticated;
   
-  console.log('[useBilling] hasHydrated:', hasHydrated, 'isAuthenticated:', isAuthenticated, 'enabled:', isEnabled);
 
   return useQuery({
     queryKey: ['billing'],
     queryFn: () => {
-      console.log('[useBilling] Fetching subscription...');
       return billingApi.getSubscription();
     },
     staleTime: 1 * 60 * 1000, // 1 minute

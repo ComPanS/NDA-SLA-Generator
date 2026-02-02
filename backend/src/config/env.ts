@@ -37,6 +37,14 @@ export const env = {
   adminPassword: process.env.ADMIN_PASSWORD || '',
   adminRoute: adminRouteRaw.startsWith('/') ? adminRouteRaw : `/${adminRouteRaw}`,
   adminTokenExpiresMinutes: Number(process.env.ADMIN_TOKEN_EXPIRES_MINUTES || 60),
+  // Subscription billing interval (ms). Default 2 minutes for testing.
+  subscriptionBillingIntervalMs: Number(
+    process.env.SUBSCRIPTION_BILLING_INTERVAL_MS || 2 * 60 * 1000,
+  ),
+  // How often to run expiry cleanup (ms). Default once per day.
+  subscriptionExpiryCheckIntervalMs: Number(
+    process.env.SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS || 24 * 60 * 60 * 1000,
+  ),
   // YooKassa payment integration
   yookassaShopId: process.env.YOOKASSA_SHOP_ID || '',
   yookassaSecretKey: process.env.YOOKASSA_SECRET_KEY || '',
