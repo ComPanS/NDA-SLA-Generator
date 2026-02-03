@@ -7,6 +7,10 @@ import {
   CardContent,
   Checkbox,
   FormControlLabel,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Stack,
   Switch,
   TextField,
@@ -19,7 +23,10 @@ import { ContractFieldsEditor } from '@/features/contracts/components/ContractFi
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
 import { ContractFieldInput, ContractSectionInput } from '@/shared/types';
-import { useGuestExportContract, useGuestGenerateContract } from '@/features/contracts/hooks/useContracts';
+import {
+  useGuestExportContract,
+  useGuestGenerateContract,
+} from '@/features/contracts/hooks/useContracts';
 
 const storageKey = 'guest-contract-state-v1';
 
@@ -47,6 +54,7 @@ export const GuestContract = () => {
   const [sectionsEnabled, setSectionsEnabled] = useState(false);
   const [content, setContent] = useState('');
   const [exportTitle, setExportTitle] = useState('');
+  const [riskSummary, setRiskSummary] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -68,6 +76,7 @@ export const GuestContract = () => {
       setSectionsEnabled(!!parsed.sectionsEnabled);
       setContent(parsed.content || '');
       setExportTitle(parsed.exportTitle || parsed.title || '');
+      setRiskSummary(parsed.riskSummary || null);
     } catch {
       /* ignore corrupted state */
     }
@@ -83,14 +92,26 @@ export const GuestContract = () => {
       sectionsEnabled,
       content,
       exportTitle,
+      riskSummary,
     };
     sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
-  }, [title, prompt, riskCheck, fields, sections, sectionsEnabled, content, exportTitle]);
+  }, [
+    title,
+    prompt,
+    riskCheck,
+    fields,
+    sections,
+    sectionsEnabled,
+    content,
+    exportTitle,
+    riskSummary,
+  ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
+    setRiskSummary(null);
 
     guestGenerate(
       {
@@ -104,6 +125,7 @@ export const GuestContract = () => {
         onSuccess: (data) => {
           setContent(data.content);
           setExportTitle(data.title || title);
+          setRiskSummary(data.risk_assessment || null);
           setSuccessMessage('Документ сгенерирован. Можно отредактировать и экспортировать.');
         },
         onError: (err: any) => {
@@ -171,6 +193,17 @@ export const GuestContract = () => {
                 placeholder="Например: NDA с ООО Компания"
               />
 
+              <Tooltip title="Выберите шаблон после регистрации или входа">
+                <span>
+                  <FormControl fullWidth margin="normal" disabled>
+                    <InputLabel>Шаблон</InputLabel>
+                    <Select value="" label="Шаблон">
+                      <MenuItem value="">Недоступно для гостей</MenuItem>
+                    </Select>
+                  </FormControl>
+                </span>
+              </Tooltip>
+
               <TextField
                 fullWidth
                 label="Описание / Параметры"
@@ -186,10 +219,7 @@ export const GuestContract = () => {
 
               <FormControlLabel
                 control={
-                  <Checkbox
-                    checked={riskCheck}
-                    onChange={(e) => setRiskCheck(e.target.checked)}
-                  />
+                  <Checkbox checked={riskCheck} onChange={(e) => setRiskCheck(e.target.checked)} />
                 }
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
@@ -201,6 +231,27 @@ export const GuestContract = () => {
                 }
                 sx={{ mt: 1 }}
               />
+
+              {riskSummary && (
+                <Card sx={{ mt: 2 }} variant="outlined">
+                  <CardContent>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      sx={{ mb: 1 }}
+                    >
+                      <Typography variant="h6">Юридические риски</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Получено при генерации
+                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {riskSummary}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              )}
 
               <Box sx={{ mt: 2 }}>
                 <ContractFieldsEditor fields={fields} onChange={setFields} />
@@ -275,6 +326,7 @@ export const GuestContract = () => {
                     setSectionsEnabled(false);
                     setContent('');
                     setExportTitle('');
+                    setRiskSummary(null);
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
@@ -289,7 +341,7 @@ export const GuestContract = () => {
         <Alert severity="info" sx={{ mt: 3 }}>
           <Typography variant="body2">
             Договор сохраняется только в этой вкладке браузера. Скачайте файл, чтобы не потерять
-            результат. 
+            результат.
           </Typography>
         </Alert>
 
@@ -313,6 +365,27 @@ export const GuestContract = () => {
                 Скачать PDF
               </Button>
             </Stack>
+
+            {riskSummary && (
+              <Card sx={{ mb: 2 }} variant="outlined">
+                <CardContent>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ mb: 1 }}
+                  >
+                    <Typography variant="h6">Юридические риски</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Получено при генерации
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {riskSummary}
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
 
             <ContractEditor content={content} onChange={setContent} readOnly={false} />
           </Box>

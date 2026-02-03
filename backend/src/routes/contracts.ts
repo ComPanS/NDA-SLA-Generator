@@ -441,6 +441,16 @@ router.post('/guest/generate', async (req, res) => {
   const rawContent = await generateText(finalPrompt);
   const content = sanitizeGeneratedHtml(rawContent, title);
   const exportTitle = extractTitleFromHtml(content, title);
+  let riskAssessmentText: string | null = null;
+
+  if (parsed.data.risk_check) {
+    try {
+      const riskPrompt = buildRiskPrompt(title, content);
+      riskAssessmentText = (await generateText(riskPrompt)).trim();
+    } catch (error) {
+      console.error('Guest risk assessment generation failed:', error);
+    }
+  }
 
   try {
     await guestAccess.guestAccess.create({
@@ -459,7 +469,7 @@ router.post('/guest/generate', async (req, res) => {
     return res.status(500).json({ detail: 'Не удалось зафиксировать попытку' });
   }
 
-  return res.json({ content, title: exportTitle });
+  return res.json({ content, title: exportTitle, risk_assessment: riskAssessmentText });
 });
 
 router.post('/guest/export/:fmt', async (req, res) => {

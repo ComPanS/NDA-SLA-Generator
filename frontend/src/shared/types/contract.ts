@@ -109,6 +109,7 @@ export interface GuestGenerateRequest {
 export interface GuestGenerateResponse {
   content: string;
   title: string;
+  risk_assessment?: string | null;
 }
 
 export interface GuestExportRequest {
