@@ -18,7 +18,11 @@ import {
 import { Add, Description } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout, ProtectedRoute } from '@/shared/components';
-import { useContractsList, useDeleteContract, useRenameContract } from '@/features/contracts/hooks/useContracts';
+import {
+  useContractsList,
+  useDeleteContract,
+  useRenameContract,
+} from '@/features/contracts/hooks/useContracts';
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { noticeApi } from '@/shared/api';
@@ -38,7 +42,9 @@ export const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'final'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [sortBy, setSortBy] = useState<'updated_desc' | 'updated_asc' | 'title_asc' | 'title_desc'>('updated_desc');
+  const [sortBy, setSortBy] = useState<'updated_desc' | 'updated_asc' | 'title_asc' | 'title_desc'>(
+    'updated_desc'
+  );
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const noticeQuery = useQuery({
@@ -56,7 +62,7 @@ export const Dashboard = () => {
     if (paymentStatus === 'success' && hasHydrated && isAuthenticated) {
       // Remove the query param first to prevent re-triggering
       setSearchParams({});
-      
+
       // Confirm payment on backend
       confirmPaymentMutation.mutate(undefined, {
         onSuccess: (result) => {
@@ -200,17 +206,29 @@ export const Dashboard = () => {
                       <Typography variant="h6" sx={{ flexGrow: 1 }}>
                         {doc.title}
                       </Typography>
-                      <Chip label={doc.status === 'draft' ? 'Черновик' : 'Финальный'} size="small" />
+                      <Chip
+                        label={doc.status === 'draft' ? 'Черновик' : 'Финальный'}
+                        size="small"
+                      />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
-                      Из шаблона: {doc.template_name || (doc.template_id ? doc.template_id : 'Без шаблона')}
+                      Из шаблона:{' '}
+                      {doc.template_name || (doc.template_id ? doc.template_id : 'Без шаблона')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Обновлён: {new Date(doc.updated_at).toLocaleString('ru-RU')}
                     </Typography>
                     <Divider sx={{ my: 1 }} />
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Button size="small" variant="contained" onClick={() => navigate(`/contract/${doc.id}`)}>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1.5}
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    >
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => navigate(`/contract/${doc.id}`)}
+                      >
                         Открыть
                       </Button>
                       <Button
@@ -223,6 +241,7 @@ export const Dashboard = () => {
                             renameContract({ documentId: doc.id, title: nextTitle.trim() });
                           }
                         }}
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
                       >
                         Переименовать
                       </Button>
@@ -236,6 +255,7 @@ export const Dashboard = () => {
                             deleteContract(doc.id);
                           }
                         }}
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
                       >
                         Удалить
                       </Button>

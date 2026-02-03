@@ -8,9 +8,15 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Drawer,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemText,
+  useMediaQuery,
 } from '@mui/material';
-import { AccountCircle } from '@mui/icons-material';
-import { useState } from 'react';
+import { AccountCircle, Menu as MenuIcon, Close as CloseIcon } from '@mui/icons-material';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore, useLogout } from '@/features/auth/hooks/useAuth';
 
@@ -19,6 +25,8 @@ export const Header = () => {
   const { isAuthenticated } = useAuthStore();
   const logout = useLogout();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isTablet = useMediaQuery('(max-width:1024px)');
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -38,9 +46,34 @@ export const Header = () => {
     handleClose();
   };
 
+  const toggleDrawer = () => setDrawerOpen((prev) => !prev);
+
+  const closeDrawerAnd = (cb: () => void) => () => {
+    setDrawerOpen(false);
+    cb();
+  };
+
+  const authLinks = useMemo(
+    () => [
+      { label: 'Дашборд', to: '/dashboard' },
+      { label: 'Шаблоны', to: '/templates' },
+      { label: 'Новый договор', to: '/new-contract' },
+      { label: 'Подписка', to: '/billing' },
+    ],
+    []
+  );
+
+  const guestLinks = useMemo(
+    () => [
+      { label: 'Войти', to: '/login' },
+      { label: 'Регистрация', to: '/register' },
+    ],
+    []
+  );
+
   return (
     <AppBar position="static">
-      <Toolbar sx={{ minHeight: 64 }}>
+      <Toolbar sx={{ minHeight: 64, px: { xs: 2, sm: 3 } }}>
         <Box
           sx={{
             width: '100%',
@@ -49,6 +82,7 @@ export const Header = () => {
             display: 'flex',
             alignItems: 'center',
             gap: 1.5,
+            justifyContent: 'space-between',
           }}
         >
           <Typography
@@ -60,25 +94,81 @@ export const Header = () => {
             ДоговорAI
           </Typography>
 
-          {isAuthenticated ? (
+          {isTablet ? (
+            <>
+              <IconButton color="inherit" onClick={toggleDrawer} aria-label="Открыть меню">
+                <MenuIcon />
+              </IconButton>
+              <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer}>
+                <Box
+                  sx={{
+                    width: 300,
+                    p: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                  }}
+                  role="presentation"
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      Меню
+                    </Typography>
+                    <IconButton onClick={toggleDrawer} aria-label="Закрыть меню">
+                      <CloseIcon />
+                    </IconButton>
+                  </Stack>
+                  <Divider />
+                  <List sx={{ p: 0 }}>
+                    {(isAuthenticated ? authLinks : guestLinks).map((item) => (
+                      <ListItemButton
+                        key={item.to}
+                        onClick={closeDrawerAnd(() => navigate(item.to))}
+                        sx={{ borderRadius: 1 }}
+                      >
+                        <ListItemText primary={item.label} />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                  {isAuthenticated && (
+                    <>
+                      <Divider />
+                      <List sx={{ p: 0 }}>
+                        <ListItemButton
+                          onClick={closeDrawerAnd(handleProfile)}
+                          sx={{ borderRadius: 1 }}
+                        >
+                          <ListItemText primary="Профиль" />
+                        </ListItemButton>
+                        <ListItemButton
+                          onClick={closeDrawerAnd(handleLogout)}
+                          sx={{ borderRadius: 1 }}
+                        >
+                          <ListItemText primary="Выйти" />
+                        </ListItemButton>
+                      </List>
+                    </>
+                  )}
+                </Box>
+              </Drawer>
+            </>
+          ) : isAuthenticated ? (
             <Stack
               direction="row"
               spacing={1.5}
               alignItems="center"
               sx={{ flexGrow: 1, justifyContent: 'flex-end' }}
             >
-              <Button color="inherit" onClick={() => navigate('/dashboard')} size="medium">
-                Дашборд
-              </Button>
-              <Button color="inherit" onClick={() => navigate('/templates')} size="medium">
-                Шаблоны
-              </Button>
-              <Button color="inherit" onClick={() => navigate('/new-contract')} size="medium">
-                Новый договор
-              </Button>
-              <Button color="inherit" onClick={() => navigate('/billing')} size="medium">
-                Подписка
-              </Button>
+              {authLinks.map((link) => (
+                <Button
+                  key={link.to}
+                  color="inherit"
+                  onClick={() => navigate(link.to)}
+                  size="medium"
+                >
+                  {link.label}
+                </Button>
+              ))}
               <IconButton
                 size="large"
                 aria-label="account of current user"
@@ -115,12 +205,16 @@ export const Header = () => {
               alignItems="center"
               sx={{ flexGrow: 1, justifyContent: 'flex-end' }}
             >
-              <Button color="inherit" onClick={() => navigate('/login')} size="medium">
-                Войти
-              </Button>
-              <Button color="inherit" onClick={() => navigate('/register')} size="medium">
-                Регистрация
-              </Button>
+              {guestLinks.map((link) => (
+                <Button
+                  key={link.to}
+                  color="inherit"
+                  onClick={() => navigate(link.to)}
+                  size="medium"
+                >
+                  {link.label}
+                </Button>
+              ))}
             </Stack>
           )}
         </Box>

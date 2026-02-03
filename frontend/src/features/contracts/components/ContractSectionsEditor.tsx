@@ -1,4 +1,14 @@
-import { Stack, TextField, Button, Grid, IconButton, Typography, Tooltip, Card, CardContent } from '@mui/material';
+import {
+  Stack,
+  TextField,
+  Button,
+  Grid,
+  IconButton,
+  Typography,
+  Tooltip,
+  Card,
+  CardContent,
+} from '@mui/material';
 import { Add, Delete, HelpOutline } from '@mui/icons-material';
 import { ContractSectionInput } from '@/shared/types';
 
@@ -39,16 +49,31 @@ export const ContractSectionsEditor = ({
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            rowGap={1}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Typography variant="h6">{title || 'Разделы договора'}</Typography>
               <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
                 <HelpOutline fontSize="small" color="action" />
               </Tooltip>
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              width={{ xs: '100%', sm: 'auto' }}
+            >
               {headerAddon}
-              <Button startIcon={<Add />} onClick={handleAdd} disabled={disabled}>
+              <Button
+                startIcon={<Add />}
+                onClick={handleAdd}
+                disabled={disabled}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
                 Добавить раздел
               </Button>
             </Stack>

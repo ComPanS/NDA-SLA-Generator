@@ -74,8 +74,10 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       },
     ]
   );
-  const [sections, setSections] = useState<EditableSection[]>(template?.sections || defaultSections);
-  const [sectionsEnabled, setSectionsEnabled] = useState(!!(template?.sections?.length));
+  const [sections, setSections] = useState<EditableSection[]>(
+    template?.sections || defaultSections
+  );
+  const [sectionsEnabled, setSectionsEnabled] = useState(!!template?.sections?.length);
   const [error, setError] = useState('');
 
   const isEditing = useMemo(() => !!template?.id, [template]);
@@ -154,7 +156,11 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
     ]);
   };
 
-  const handleSectionChange = (index: number, key: keyof EditableSection, value: string | number) => {
+  const handleSectionChange = (
+    index: number,
+    key: keyof EditableSection,
+    value: string | number
+  ) => {
     if (!sectionsEnabled) return;
     setSections((prev) =>
       prev.map((section, i) => (i === index ? { ...section, [key]: value } : section))
@@ -167,9 +173,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   };
 
   const handleGroupChange = (index: number, key: keyof EditableGroup, value: string | number) => {
-    setGroups((prev) =>
-      prev.map((group, i) => (i === index ? { ...group, [key]: value } : group))
-    );
+    setGroups((prev) => prev.map((group, i) => (i === index ? { ...group, [key]: value } : group)));
   };
 
   const handleAddField = (groupIndex: number) => {
@@ -245,7 +249,8 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
         : [],
     };
 
-    const onError = () => setError('Не удалось сохранить шаблон. Проверьте поля и попробуйте снова.');
+    const onError = () =>
+      setError('Не удалось сохранить шаблон. Проверьте поля и попробуйте снова.');
 
     if (isEditing && template?.id) {
       updateTemplate(
@@ -263,7 +268,9 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h5">{isEditing ? 'Редактировать шаблон' : 'Новый шаблон'}</Typography>
+          <Typography variant="h5">
+            {isEditing ? 'Редактировать шаблон' : 'Новый шаблон'}
+          </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
             label="Название"
@@ -288,11 +295,20 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             helperText="Будет отправлено в AI вместе с заполненными полями"
           />
 
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            spacing={1}
+            rowGap={1}
+          >
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Группы полей
             </Typography>
-            <Button startIcon={<Add />} onClick={handleAddGroup}>
+            <Button
+              startIcon={<Add />}
+              onClick={handleAddGroup}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
               Добавить группу
             </Button>
           </Stack>
@@ -301,7 +317,12 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             {groups.map((group, groupIndex) => (
               <Card variant="outlined" key={`${group.label}-${groupIndex}`}>
                 <CardContent>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    spacing={1}
+                    sx={{ mb: 2 }}
+                  >
                     <TextField
                       label="Название группы"
                       value={group.label}
@@ -377,11 +398,22 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
 
           {sectionsEnabled ? (
             <>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 3 }}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                spacing={1}
+                sx={{ mt: 3 }}
+                rowGap={1}
+              >
                 <Typography variant="h6" sx={{ flexGrow: 1 }}>
                   Разделы договора
                 </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                  width={{ xs: '100%', sm: 'auto' }}
+                >
                   <FormControlLabel
                     control={
                       <Switch
@@ -391,7 +423,11 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                     }
                     label="Включить"
                   />
-                  <Button startIcon={<Add />} onClick={handleAddSection}>
+                  <Button
+                    startIcon={<Add />}
+                    onClick={handleAddSection}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
                     Добавить раздел
                   </Button>
                 </Stack>
@@ -404,7 +440,11 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                   .map((section, idx) => (
                     <Card variant="outlined" key={`section-${idx}`}>
                       <CardContent>
-                        <Stack direction="row" alignItems="center" spacing={1}>
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
+                          spacing={1}
+                        >
                           <TextField
                             label="Название раздела"
                             value={section.title}
@@ -414,12 +454,12 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                           <TextField
                             label="Порядок"
                             type="number"
-                        value={section.order ?? idx + 1}
+                            value={section.order ?? idx + 1}
                             onChange={(e) =>
                               handleSectionChange(idx, 'order', Number(e.target.value))
                             }
-                        sx={{ width: 120 }}
-                        inputProps={{ min: 1 }}
+                            sx={{ width: { xs: '100%', sm: 140 } }}
+                            inputProps={{ min: 1 }}
                           />
                           <IconButton onClick={() => handleRemoveSection(idx)}>
                             <Delete />
@@ -434,8 +474,13 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             <Card sx={{ mt: 3 }}>
               <CardContent>
                 <Stack spacing={1}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Stack direction="row" alignItems="center" spacing={1}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    justifyContent="space-between"
+                    rowGap={1}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
                       <Typography variant="h6">Разделы договора</Typography>
                       <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
                         <HelpOutline fontSize="small" color="action" />
@@ -459,7 +504,12 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             </Card>
           )}
 
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            justifyContent="flex-end"
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+          >
             <Button
               variant="contained"
               onClick={handleSave}

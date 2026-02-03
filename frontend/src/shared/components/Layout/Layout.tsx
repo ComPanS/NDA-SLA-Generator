@@ -16,7 +16,8 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
         maxWidth={maxWidth}
         sx={{
           flex: 1,
-          py: 4,
+          py: { xs: 2, md: 4 },
+          px: { xs: 2, sm: 3, md: 4 },
         }}
       >
         {children}
@@ -24,7 +25,14 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
       <Box component="footer" sx={{ py: 4, borderTop: '1px solid', borderColor: 'divider' }}>
         <Container
           maxWidth="xl"
-          sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
+            px: { xs: 2, sm: 3 },
+          }}
         >
           <Stack spacing={0.5}>
             <Typography variant="body2" color="text.secondary">

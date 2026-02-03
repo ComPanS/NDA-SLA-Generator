@@ -296,16 +296,28 @@ export const ContractView = () => {
     <ProtectedRoute>
       <Layout>
         <Box sx={{ mt: 2 }}>
-          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            sx={{ mb: 3 }}
+            alignItems={{ xs: 'stretch', md: 'center' }}
+          >
             <Button
               variant="outlined"
               startIcon={<ArrowBack />}
               onClick={() => navigate('/dashboard')}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
             >
               Назад
             </Button>
-            <Box sx={{ flexGrow: 1 }} />
-            <Button color="error" variant="outlined" onClick={handleDelete} disabled={isDeleting}>
+            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'block' } }} />
+            <Button
+              color="error"
+              variant="outlined"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
+            >
               Удалить договор
             </Button>
             <Button
@@ -313,6 +325,7 @@ export const ContractView = () => {
               startIcon={<Edit />}
               onClick={() => setShowRefineForm(!showRefineForm)}
               disabled={isRefining}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
             >
               Уточнить с AI
             </Button>
@@ -323,6 +336,7 @@ export const ContractView = () => {
                   startIcon={hasDocxExportAccess ? <Download /> : <Lock />}
                   onClick={() => handleExport('docx')}
                   disabled={isExporting || !hasDocxExportAccess}
+                  sx={{ width: { xs: '100%', md: 'auto' } }}
                 >
                   Скачать DOCX
                   {!hasDocxExportAccess && <Chip label="Basic+" size="small" sx={{ ml: 1 }} />}
@@ -334,12 +348,19 @@ export const ContractView = () => {
               startIcon={<Download />}
               onClick={() => handleExport('pdf')}
               disabled={isExporting}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
             >
               Скачать PDF
             </Button>
             <Tooltip title={hasStatusesAccess ? '' : 'Доступно на тарифах Basic и выше'}>
               <span>
-                <FormControl size="small" sx={{ minWidth: 160 }}>
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: { xs: '100%', sm: 200, md: 160 },
+                    width: { xs: '100%', md: 'auto' },
+                  }}
+                >
                   <InputLabel>Статус</InputLabel>
                   <Select
                     value={statusDraft}
@@ -355,18 +376,27 @@ export const ContractView = () => {
             </Tooltip>
           </Stack>
 
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1}
+            sx={{ mb: 2 }}
+            alignItems={{ xs: 'stretch', md: 'center' }}
+          >
             <TextField
               label="Название договора"
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
-              sx={{ minWidth: 320 }}
+              fullWidth
               disabled={isRenaming}
             />
             <Button
               variant="contained"
               onClick={handleRename}
               disabled={isRenaming || !titleDraft.trim()}
+              sx={{
+                alignSelf: { xs: 'stretch', md: 'center' },
+                width: { xs: '100%', md: 'auto' },
+              }}
             >
               {isRenaming ? 'Сохранение...' : 'Сохранить название'}
             </Button>

@@ -15,7 +15,11 @@ import {
   IconButton,
 } from '@mui/material';
 import { ProtectedRoute, Layout, LoadingSpinner, ErrorMessage } from '@/shared/components';
-import { useTemplate, useTemplates, useDeleteTemplate } from '@/features/templates/hooks/useTemplates';
+import {
+  useTemplate,
+  useTemplates,
+  useDeleteTemplate,
+} from '@/features/templates/hooks/useTemplates';
 import { TemplateBuilder } from '@/features/templates/components/TemplateBuilder';
 import { Delete } from '@mui/icons-material';
 
@@ -51,7 +55,12 @@ export const Templates = () => {
         <Box sx={{ display: 'grid', gridTemplateColumns: { md: '320px 1fr', xs: '1fr' }, gap: 3 }}>
           <Card>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+              >
                 <Typography variant="h6">Шаблоны</Typography>
                 <Button size="small" onClick={() => setSelectedId(undefined)}>
                   Новый
@@ -108,7 +117,7 @@ export const Templates = () => {
             {loadingTemplate && selectedId ? (
               <LoadingSpinner message="Загрузка выбранного шаблона..." />
             ) : (
-              <TemplateBuilder template={selectedTemplate} />
+              <TemplateBuilder key={selectedId || 'new'} template={selectedTemplate} />
             )}
 
             {selectedTemplate && (

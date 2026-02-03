@@ -16,6 +16,7 @@ import {
   Switch,
   FormControlLabel,
   Collapse,
+  TableContainer,
 } from '@mui/material';
 import { useMemo, useState, useEffect } from 'react';
 import { Layout } from '@/shared/components';
@@ -149,9 +150,7 @@ export const Admin = () => {
           </Stack>
         </Stack>
 
-        {overviewQuery.isError && (
-          <Alert severity="error">Не удалось загрузить сводку</Alert>
-        )}
+        {overviewQuery.isError && <Alert severity="error">Не удалось загрузить сводку</Alert>}
 
         <Grid container spacing={2}>
           <Grid item xs={12} md={3}>
@@ -160,9 +159,7 @@ export const Admin = () => {
                 <Typography color="text.secondary" variant="body2">
                   Пользователи (всего)
                 </Typography>
-                <Typography variant="h5">
-                  {overviewQuery.data?.users.total ?? '—'}
-                </Typography>
+                <Typography variant="h5">{overviewQuery.data?.users.total ?? '—'}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   Активные: {overviewQuery.data?.users.active ?? '—'}
                 </Typography>
@@ -181,9 +178,7 @@ export const Admin = () => {
                 <Typography color="text.secondary" variant="body2">
                   Договоры
                 </Typography>
-                <Typography variant="h5">
-                  {overviewQuery.data?.documents.total ?? '—'}
-                </Typography>
+                <Typography variant="h5">{overviewQuery.data?.documents.total ?? '—'}</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" mt={1}>
                   {documentStatuses.map(([status, count]) => (
                     <Chip key={status} label={`${status}: ${count}`} size="small" />
@@ -203,7 +198,11 @@ export const Admin = () => {
                 </Typography>
                 <Stack spacing={0.5} mt={1}>
                   {(overviewQuery.data?.subscriptions.by_plan_status || []).map((row) => (
-                    <Typography key={`${row.plan}-${row.status}`} variant="body2" color="text.secondary">
+                    <Typography
+                      key={`${row.plan}-${row.status}`}
+                      variant="body2"
+                      color="text.secondary"
+                    >
                       {row.plan} / {row.status}: {row.count}
                     </Typography>
                   ))}
@@ -217,9 +216,7 @@ export const Admin = () => {
                 <Typography color="text.secondary" variant="body2">
                   Гости
                 </Typography>
-                <Typography variant="h5">
-                  {overviewQuery.data?.guests.total ?? '—'}
-                </Typography>
+                <Typography variant="h5">{overviewQuery.data?.guests.total ?? '—'}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -238,46 +235,50 @@ export const Admin = () => {
                 Не удалось загрузить пользователей
               </Alert>
             )}
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Роли</TableCell>
-                  <TableCell>Активен</TableCell>
-                  <TableCell>Создан</TableCell>
-                  <TableCell align="right">Договоров</TableCell>
-                  <TableCell align="right">Подписка</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(usersQuery.data || []).map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <Chip label="user" size="small" color="info" />
-                        {user.isAdmin && <Chip label="admin" size="small" color="warning" />}
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{user.isActive ? 'Да' : 'Нет'}</TableCell>
-                    <TableCell>{new Date(user.createdAt).toLocaleString('ru-RU')}</TableCell>
-                    <TableCell align="right">{user.documentsCount}</TableCell>
-                    <TableCell align="right">
-                      {user.subscriptionPlan ? `${user.subscriptionPlan} (${user.subscriptionStatus})` : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {usersQuery.data?.length === 0 && (
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 720 }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={6}>
-                      <Typography align="center" color="text.secondary">
-                        Пользователей нет
-                      </Typography>
-                    </TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Роли</TableCell>
+                    <TableCell>Активен</TableCell>
+                    <TableCell>Создан</TableCell>
+                    <TableCell align="right">Договоров</TableCell>
+                    <TableCell align="right">Подписка</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {(usersQuery.data || []).map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={1}>
+                          <Chip label="user" size="small" color="info" />
+                          {user.isAdmin && <Chip label="admin" size="small" color="warning" />}
+                        </Stack>
+                      </TableCell>
+                      <TableCell>{user.isActive ? 'Да' : 'Нет'}</TableCell>
+                      <TableCell>{new Date(user.createdAt).toLocaleString('ru-RU')}</TableCell>
+                      <TableCell align="right">{user.documentsCount}</TableCell>
+                      <TableCell align="right">
+                        {user.subscriptionPlan
+                          ? `${user.subscriptionPlan} (${user.subscriptionStatus})`
+                          : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {usersQuery.data?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Typography align="center" color="text.secondary">
+                          Пользователей нет
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </CardContent>
         </Card>
 
@@ -294,7 +295,9 @@ export const Admin = () => {
               </Button>
             </Stack>
             <Collapse in={showNoticeSettings} timeout="auto" unmountOnExit>
-              {noticeQuery.isError && <Alert severity="error">Не удалось загрузить предупреждение</Alert>}
+              {noticeQuery.isError && (
+                <Alert severity="error">Не удалось загрузить предупреждение</Alert>
+              )}
               <Stack spacing={2}>
                 <Stack direction="row" justifyContent="flex-end">
                   <Button variant="outlined" size="small" onClick={() => noticeQuery.refetch()}>
@@ -341,7 +344,6 @@ export const Admin = () => {
             </Collapse>
           </CardContent>
         </Card>
-
       </Stack>
     </Layout>
   );

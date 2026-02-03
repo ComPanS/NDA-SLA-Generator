@@ -50,23 +50,26 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
   ];
 
   return (
-    <Paper 
-      sx={{ 
+    <Paper
+      sx={{
         p: 0,
         '& .ql-container': {
-          minHeight: '500px',
+          minHeight: { xs: '320px', sm: '400px', md: '500px' },
           fontSize: '14px',
           fontFamily: '"Times New Roman", serif',
         },
         '& .ql-editor': {
-          minHeight: '500px',
-          padding: '20px',
+          minHeight: { xs: '320px', sm: '400px', md: '500px' },
+          padding: { xs: '12px', sm: '16px', md: '20px' },
           lineHeight: '1.8',
         },
         '& .ql-toolbar': {
           borderTopLeftRadius: '8px',
           borderTopRightRadius: '8px',
           backgroundColor: '#f5f5f5',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1,
         },
         '& .ql-container.ql-snow': {
           borderBottomLeftRadius: '8px',
