@@ -78,7 +78,7 @@ export const Billing = () => {
           queryClient.invalidateQueries({ queryKey: ['billing'] });
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
         },
-        onError: (error) => {
+        onError: () => {
           // Fallback - just refresh
           queryClient.invalidateQueries({ queryKey: ['billing'] });
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
@@ -378,7 +378,7 @@ export const Billing = () => {
                         )}
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
+                      {/* <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
                           Договоров: {formatLimit(plan.limits.contracts_per_month)}
                         </Typography>
@@ -388,7 +388,7 @@ export const Billing = () => {
                         <Typography variant="body2" color="text.secondary">
                           Уточнений: {formatLimit(plan.limits.ai_clarifications)}
                         </Typography>
-                      </Box>
+                      </Box> */}
 
                       <List dense sx={{ flexGrow: 1 }}>
                         {plan.features.map((feature, index) => (

@@ -65,11 +65,7 @@ export const authStore = create<AuthState>()(
         pendingEmail: state.pendingEmail,
       }),
       onRehydrateStorage: () => {
-        return (state, error) => {
-          if (error) {
-            console.error('[AuthStore] Hydration error:', error);
-          } else {
-          }
+        return () => {
           // mark hydration complete even if there was an error to unblock UI
           markHydrated?.();
         };

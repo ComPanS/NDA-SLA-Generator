@@ -11,12 +11,21 @@ import {
   Card,
   CardContent,
   Grid,
+  Chip,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Description, Speed, Security, ExpandMore } from '@mui/icons-material';
+import { Description, Speed, Security, ExpandMore, Check, Star } from '@mui/icons-material';
 import { Layout } from '@/shared/components';
 import { useAuthStore } from '@/features/auth/hooks/useAuth';
 import { PageMeta } from '@/shared/components/PageMeta';
+import { useQuery } from '@tanstack/react-query';
+import { billingApi } from '@/shared/api';
+import { formatLimit } from '@/shared/constants/subscriptions';
 
 const faqItems = [
   {
@@ -56,6 +65,10 @@ const faqItems = [
 export const Landing = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
+  const { data: plansData, isLoading: plansLoading } = useQuery({
+    queryKey: ['landing', 'plans'],
+    queryFn: () => billingApi.getPlans(),
+  });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -115,10 +128,10 @@ export const Landing = () => {
               <CardContent>
                 <Security sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
                 <Typography variant="h5" gutterBottom>
-                  NDA и SLA без рутины
+                  Создавайте свои шаблоны
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Готовые пресеты для NDA/SLA и гибкая настройка под ваши сценарии
+                  Вы сами настраиваете шаблон под свой процесс, а AI помогает с текстом.
                 </Typography>
               </CardContent>
             </Card>
@@ -165,6 +178,105 @@ export const Landing = () => {
             ))}
           </Stack>
         </Stack>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Stack spacing={3} sx={{ mb: 4 }}>
+          <Typography variant="h4" component="h2">
+            Тарифы
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Прозрачные планы: бесплатный старт и гибкие лимиты для бизнеса.
+          </Typography>
+        </Stack>
+        {plansLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {(plansData?.plans || []).map((plan) => {
+              const isPro = plan.id === 'pro';
+              return (
+                <Grid item xs={12} sm={6} md={3} key={plan.id}>
+                  <Card
+                    sx={{
+                      position: 'relative',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      border: isPro ? 2 : 1,
+                      borderColor: isPro ? 'primary.main' : 'divider',
+                    }}
+                  >
+                    {isPro && (
+                      <Chip
+                        icon={<Star />}
+                        label="Популярный"
+                        color="primary"
+                        size="small"
+                        sx={{ position: 'absolute', top: 12, right: 12 }}
+                      />
+                    )}
+                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="h5" gutterBottom>
+                        {plan.name}
+                      </Typography>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="h3" component="span" color="primary">
+                          {plan.price === 0 ? 'Бесплатно' : `${plan.price} ₽`}
+                        </Typography>
+                        {plan.price > 0 && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            component="span"
+                            sx={{ ml: 0.5 }}
+                          >
+                            / месяц
+                          </Typography>
+                        )}
+                      </Box>
+                      {/* <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Договоров: {formatLimit(plan.limits.contracts_per_month)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Шаблонов: {formatLimit(plan.limits.max_templates)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Уточнений: {formatLimit(plan.limits.ai_clarifications)}
+                        </Typography>
+                      </Box> */}
+                      <List dense>
+                        {plan.features.map((feature, idx) => (
+                          <ListItem key={idx} disableGutters sx={{ py: 0.25 }}>
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              <Check color="primary" fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={feature}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </CardContent>
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      <Button
+                        fullWidth
+                        variant={isPro ? 'contained' : 'outlined'}
+                        onClick={() => navigate('/register')}
+                      >
+                        Попробовать
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        )}
       </Container>
 
       <Box sx={{ py: 8, textAlign: 'center', bgcolor: 'background.paper' }}>

@@ -21,9 +21,9 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
       >
         {children}
       </Container>
-      <Box component="footer" sx={{ py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+      <Box component="footer" sx={{ py: 4, borderTop: '1px solid', borderColor: 'divider' }}>
         <Container
-          maxWidth={maxWidth}
+          maxWidth="xl"
           sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
           <Stack spacing={0.5}>
@@ -32,6 +32,15 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
             </Typography>
             <Typography variant="caption" color="text.secondary">
               © {new Date().getFullYear()}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Почта для сотрудничества и поддержки:{' '}
+              <MuiLink href="mailto:support@dogovorai.com" color="inherit" underline="hover">
+                support@dogovorai.com
+              </MuiLink>
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              С уважением, команда ДоговорAI
             </Typography>
           </Stack>
           <Stack direction="row" spacing={2}>

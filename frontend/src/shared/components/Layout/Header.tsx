@@ -7,6 +7,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Stack,
 } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
 import { useState } from 'react';
@@ -34,28 +35,45 @@ export const Header = () => {
 
   return (
     <AppBar position="static">
-      <Toolbar>
-        <Typography
-          variant="h6"
-          component={Link}
-          to={isAuthenticated ? '/dashboard' : '/'}
-          sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
+      <Toolbar sx={{ minHeight: 64 }}>
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 1400,
+            mx: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+          }}
         >
-          ДоговорAI
-        </Typography>
+          <Typography
+            variant="h5"
+            component={Link}
+            to={isAuthenticated ? '/dashboard' : '/'}
+            sx={{ textDecoration: 'none', color: 'inherit', fontWeight: 800, mr: 2 }}
+          >
+            ДоговорAI
+          </Typography>
 
-        {isAuthenticated ? (
-          <>
-            <Button color="inherit" onClick={() => navigate('/dashboard')}>
-              Дашборд
-            </Button>
-            <Button color="inherit" onClick={() => navigate('/templates')}>
-              Шаблоны
-            </Button>
-            <Button color="inherit" onClick={() => navigate('/new-contract')}>
-              Новый договор
-            </Button>
-            <Box>
+          {isAuthenticated ? (
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ flexGrow: 1, justifyContent: 'flex-end' }}
+            >
+              <Button color="inherit" onClick={() => navigate('/dashboard')} size="medium">
+                Дашборд
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/templates')} size="medium">
+                Шаблоны
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/new-contract')} size="medium">
+                Новый договор
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/billing')} size="medium">
+                Подписка
+              </Button>
               <IconButton
                 size="large"
                 aria-label="account of current user"
@@ -81,28 +99,25 @@ export const Header = () => {
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
               >
-                <MenuItem
-                  onClick={() => {
-                    navigate('/billing');
-                    handleClose();
-                  }}
-                >
-                  Подписка
-                </MenuItem>
                 <MenuItem onClick={handleLogout}>Выйти</MenuItem>
               </Menu>
-            </Box>
-          </>
-        ) : (
-          <>
-            <Button color="inherit" onClick={() => navigate('/login')}>
-              Войти
-            </Button>
-            <Button color="inherit" onClick={() => navigate('/register')}>
-              Регистрация
-            </Button>
-          </>
-        )}
+            </Stack>
+          ) : (
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ flexGrow: 1, justifyContent: 'flex-end' }}
+            >
+              <Button color="inherit" onClick={() => navigate('/login')} size="medium">
+                Войти
+              </Button>
+              <Button color="inherit" onClick={() => navigate('/register')} size="medium">
+                Регистрация
+              </Button>
+            </Stack>
+          )}
+        </Box>
       </Toolbar>
     </AppBar>
   );
