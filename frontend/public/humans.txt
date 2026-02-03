@@ -1,0 +1,8 @@
+/* TEAM */
+Developer: ДоговорAI
+Contact: support@dogovorai.com
+Site: https://yourdomain.com
+
+/* TECHNOLOGY */
+Frontend: React, Vite, TypeScript, MUI
+Backend: Node.js, Express, Prisma, PostgreSQL

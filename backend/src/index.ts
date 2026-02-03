@@ -9,10 +9,12 @@ import adminRoutes from './routes/admin';
 import noticeRoutes from './routes/notice';
 import profileRoutes from './routes/profile';
 import { startSubscriptionExpiryJob } from './lib/subscriptionCleanup';
+import { securityHeaders } from './middleware/securityHeaders';
 
 export function createApp() {
   const app = express();
   const allowAnyOrigin = env.corsOrigins.includes('*');
+  app.use(securityHeaders);
   app.use(
     cors({
       origin: allowAnyOrigin ? true : env.corsOrigins,

@@ -18,7 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { HelpOutline, Download } from '@mui/icons-material';
-import { Layout } from '@/shared/components';
+import { Layout, PageMeta } from '@/shared/components';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
@@ -161,6 +161,11 @@ export const GuestContract = () => {
 
   return (
     <Layout maxWidth="md">
+      <PageMeta
+        title="Создание договора без регистрации — ДоговорAI"
+        description="Сгенерируйте тестовый договор бесплатно и без регистрации: NDA, SLA и другие шаблоны."
+        path="/guest-contract"
+      />
       <Box sx={{ mt: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Бесплатный договор без регистрации

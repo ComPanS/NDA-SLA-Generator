@@ -6,6 +6,7 @@ import { AuthRequest, requireAuth } from '../middleware/auth';
 import { toDocument } from '../lib/mappers';
 import { generateText } from '../lib/yandex';
 import { getClientIp } from '../lib/requestIp';
+import sanitizeHtml from 'sanitize-html';
 import {
   checkContractLimit,
   checkClarificationLimit,
@@ -124,7 +125,7 @@ function buildRiskPrompt(title: string, htmlContent: string) {
   ].join('\n');
 }
 
-function sanitizeGeneratedHtml(raw: string, title: string): string {
+export function sanitizeGeneratedHtml(raw: string, title: string): string {
   let content = raw.trim();
 
   // Убираем обёртку ```html ... ```
@@ -167,7 +168,67 @@ function sanitizeGeneratedHtml(raw: string, title: string): string {
   // Нормализуем первый <h1>: если он есть — переписываем текст на точное название договора
   content = content.replace(/<title[^>]*>[\s\S]*?<\/title>/i, '');
 
-  return content.trim();
+  const sanitized = sanitizeHtml(content, {
+    allowedTags: [
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'p',
+      'strong',
+      'em',
+      'b',
+      'i',
+      'u',
+      'ol',
+      'ul',
+      'li',
+      'br',
+      'hr',
+      'blockquote',
+      'code',
+      'pre',
+      'table',
+      'thead',
+      'tbody',
+      'tr',
+      'th',
+      'td',
+      'span',
+      'div',
+      'section',
+      'article',
+      'header',
+      'footer',
+      'figure',
+      'figcaption',
+      'a',
+    ],
+    allowedAttributes: {
+      a: ['href', 'name', 'target', 'rel'],
+      '*': ['class'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemesByTag: {
+      img: ['http', 'https', 'data'],
+    },
+    transformTags: {
+      a: (tagName, attribs) => {
+        const rel = attribs.rel?.includes('noopener') ? attribs.rel : 'noopener noreferrer';
+        return {
+          tagName,
+          attribs: {
+            ...attribs,
+            rel,
+            target: attribs.target === '_blank' ? '_blank' : undefined,
+          },
+        };
+      },
+    },
+    exclusiveFilter: (frame) => frame.tag === 'a' && !frame.attribs.href,
+  });
+
+  return sanitized.trim();
 }
 
 function escapeRegExp(value: string) {
@@ -337,11 +398,19 @@ const statusUpdateSchema = z.object({
   status: z.enum(['draft', 'final']),
 });
 
+const docIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
 router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const doc = (await prisma.document.findUnique({
     where: { id: docId },
     include: {
@@ -714,7 +783,11 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const doc = (await prisma.document.findUnique({
     where: { id: docId },
     include: {
@@ -791,7 +864,11 @@ router.put('/:id/fields', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
 
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const doc = await prisma.document.findUnique({ where: { id: docId } });
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
@@ -853,7 +930,11 @@ router.put('/:id/sections', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
 
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const doc = await prisma.document.findUnique({ where: { id: docId } });
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
@@ -900,7 +981,11 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
 
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const existing = await prisma.document.findUnique({ where: { id: docId } });
   if (!existing || existing.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
@@ -940,7 +1025,11 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
 
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const existing = await prisma.document.findUnique({ where: { id: docId } });
   if (!existing || existing.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
@@ -964,7 +1053,11 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   const existing = await prisma.document.findUnique({ where: { id: docId } });
   if (!existing || existing.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
@@ -992,7 +1085,11 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
   const fmt = String(req.params.fmt);
-  const docId = String(req.params.id);
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+  const docId = parsedId.data.id;
   if (!['docx', 'pdf'].includes(fmt)) {
     return res.status(400).json({ detail: 'Unsupported format' });
   }
