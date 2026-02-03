@@ -38,7 +38,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     maxTemplates: 3,
     exportFormats: ['pdf', 'docx'],
     aiClarifications: 5,
-    hasRiskCheck: true,
+    hasRiskCheck: false,
     hasSections: true,
     hasStatuses: true,
     hasPrioritySupport: false,
@@ -82,18 +82,12 @@ export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlan, string> = {
 };
 
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
-  freemium: [
-    '3 договора в месяц',
-    '1 шаблон',
-    'Экспорт в PDF',
-    '1 уточнение от нейросети',
-  ],
+  freemium: ['3 договора в месяц', '1 шаблон', 'Экспорт в PDF', '1 уточнение от нейросети'],
   basic: [
     '20 договоров в месяц',
     '3 шаблона',
     'Экспорт в PDF и DOCX',
     '5 уточнений от нейросети',
-    'Проверка на юридические риски',
     'Разделы договоров',
     'Статусы договоров',
   ],
@@ -115,6 +109,7 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
     'Разделы договоров',
     'Статусы договоров',
     'Приоритетная поддержка',
+    'История версий договоров',
   ],
 };
 

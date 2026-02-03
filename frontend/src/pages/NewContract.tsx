@@ -289,7 +289,7 @@ export const NewContract = () => {
                       {!hasRiskCheckAccess && (
                         <Chip
                           icon={<Lock fontSize="small" />}
-                          label="Basic+"
+                          label="Standard+"
                           size="small"
                           color="warning"
                           variant="outlined"

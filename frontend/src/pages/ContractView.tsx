@@ -417,7 +417,7 @@ export const ContractView = () => {
                   {!hasRiskCheckAccess && (
                     <Chip
                       icon={<Lock fontSize="small" />}
-                      label="Basic+"
+                      label="Standard+"
                       size="small"
                       color="warning"
                       variant="outlined"
@@ -477,7 +477,7 @@ export const ContractView = () => {
                       {!hasRiskCheckAccess && (
                         <Chip
                           icon={<Lock fontSize="small" />}
-                          label="Basic+"
+                          label="Standard+"
                           size="small"
                           color="warning"
                           variant="outlined"

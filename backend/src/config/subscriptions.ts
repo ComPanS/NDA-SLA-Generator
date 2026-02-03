@@ -45,7 +45,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
     maxTemplates: 3,
     exportFormats: ['pdf', 'docx'],
     aiClarifications: 5,
-    hasRiskCheck: true,
+    hasRiskCheck: false,
     hasSections: true,
     hasStatuses: true,
     hasPrioritySupport: false,
@@ -98,7 +98,6 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlanType, string[]> = {
     '3 шаблона',
     'Экспорт в PDF и DOCX',
     '5 уточнений от нейросети',
-    'Проверка на юридические риски',
     'Разделы договоров',
     'Статусы договоров',
   ],
@@ -120,6 +119,7 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlanType, string[]> = {
     'Разделы договоров',
     'Статусы договоров',
     'Приоритетная поддержка',
+    'История версий договоров',
   ],
 };
 
