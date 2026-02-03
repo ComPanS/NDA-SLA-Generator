@@ -25,7 +25,6 @@ import { useAuthStore } from '@/features/auth/hooks/useAuth';
 import { PageMeta } from '@/shared/components/PageMeta';
 import { useQuery } from '@tanstack/react-query';
 import { billingApi } from '@/shared/api';
-import { formatLimit } from '@/shared/constants/subscriptions';
 
 const faqItems = [
   {

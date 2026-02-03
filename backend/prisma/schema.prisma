@@ -15,6 +15,7 @@ enum DocumentStatus {
 enum TemplateFieldType {
   text
 }
+
 enum SubscriptionPlan {
   freemium
   basic
@@ -60,15 +61,15 @@ model User {
 }
 
 model Template {
-  id          String     @id @default(uuid())
-  name        String     @unique
+  id          String            @id @default(uuid())
+  name        String            @unique
   description String?
   content     String
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   createdById String?
-  createdBy   User?      @relation(fields: [createdById], references: [id])
+  createdBy   User?             @relation(fields: [createdById], references: [id])
   documents   Document[]
   groups      TemplateGroup[]
   fields      TemplateField[]
@@ -76,23 +77,23 @@ model Template {
 }
 
 model Subscription {
-  id                String             @id @default(uuid())
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  userId            String
-  plan              SubscriptionPlan
-  status            SubscriptionStatus
-  expiresAt         DateTime?
+  id                      String             @id @default(uuid())
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  userId                  String
+  plan                    SubscriptionPlan
+  status                  SubscriptionStatus
+  expiresAt               DateTime?
   // YooKassa fields
-  yookassaPaymentMethodId String?      // payment method ID for recurring payments
-  autoRenew         Boolean            @default(true)
-  user              User               @relation(fields: [userId], references: [id])
+  yookassaPaymentMethodId String? // payment method ID for recurring payments
+  autoRenew               Boolean            @default(true)
+  user                    User               @relation(fields: [userId], references: [id])
 }
 
 model Payment {
   id                String        @id @default(uuid())
   userId            String
-  amount            Int           // in kopeks (100 kopeks = 1 ruble)
+  amount            Int // in kopeks (100 kopeks = 1 ruble)
   currency          String        @default("RUB")
   type              PaymentType
   status            PaymentStatus
@@ -104,15 +105,15 @@ model Payment {
 }
 
 model UsageRecord {
-  id                  String   @id @default(uuid())
-  userId              String   @unique
-  contractsThisMonth  Int      @default(0)
-  clarificationsUsed  Int      @default(0)
-  extraContractsPaid  Int      @default(0)  // single contracts purchased this month
-  periodStart         DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  user                User     @relation(fields: [userId], references: [id])
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  contractsThisMonth Int      @default(0)
+  clarificationsUsed Int      @default(0)
+  extraContractsPaid Int      @default(0) // single contracts purchased this month
+  periodStart        DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id])
 }
 
 model GuestAccess {
@@ -139,63 +140,73 @@ model Document {
 }
 
 model DocumentVersion {
-  id         String   @id @default(uuid())
-  version    Int
-  content    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id])
+  id             String          @id @default(uuid())
+  version        Int
+  content        String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  documentId     String
+  document       Document        @relation(fields: [documentId], references: [id])
+  riskAssessment RiskAssessment?
 
   @@unique([documentId, version])
 }
 
+model RiskAssessment {
+  id                String          @id @default(uuid())
+  summary           String
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  documentVersionId String          @unique
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
 model TemplateGroup {
-  id         String       @id @default(uuid())
+  id         String   @id @default(uuid())
   templateId String
   label      String
-  order      Int          @default(0)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  template   Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  fields     TemplateField[]
+  template Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields   TemplateField[]
 }
 
 model TemplateField {
-  id             String            @id @default(uuid())
-  templateId     String
-  groupId        String
-  label          String
-  key            String
-  type           TemplateFieldType @default(text)
-  defaultValue   String?
-  order          Int               @default(0)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id           String            @id @default(uuid())
+  templateId   String
+  groupId      String
+  label        String
+  key          String
+  type         TemplateFieldType @default(text)
+  defaultValue String?
+  order        Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
-  template       Template          @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  group          TemplateGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  template       Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  group          TemplateGroup   @relation(fields: [groupId], references: [id], onDelete: Cascade)
   contractFields ContractField[]
 
   @@unique([templateId, key])
 }
 
 model ContractField {
-  id              String         @id @default(uuid())
+  id              String   @id @default(uuid())
   documentId      String
   templateFieldId String?
   groupLabel      String
-  groupOrder      Int            @default(0)
+  groupOrder      Int      @default(0)
   label           String
   key             String
   value           String?
-  order           Int            @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  templateField   TemplateField? @relation(fields: [templateFieldId], references: [id], onDelete: SetNull)
+  document      Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  templateField TemplateField? @relation(fields: [templateFieldId], references: [id], onDelete: SetNull)
 
   @@unique([documentId, key])
 }
@@ -208,21 +219,21 @@ model TemplateSection {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  contracts  ContractSection[]
+  template  Template          @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  contracts ContractSection[]
 }
 
 model ContractSection {
-  id               String          @id @default(uuid())
-  documentId       String
+  id                String   @id @default(uuid())
+  documentId        String
   templateSectionId String?
-  title            String
-  order            Int             @default(0)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  title             String
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  document         Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  templateSection  TemplateSection? @relation(fields: [templateSectionId], references: [id], onDelete: SetNull)
+  document        Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  templateSection TemplateSection? @relation(fields: [templateSectionId], references: [id], onDelete: SetNull)
 }
 
 model SystemNotice {

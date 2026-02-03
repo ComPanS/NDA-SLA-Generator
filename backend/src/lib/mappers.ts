@@ -9,6 +9,7 @@ import {
   TemplateGroup,
   TemplateSection,
   ContractSection,
+  RiskAssessment,
 } from '@prisma/client';
 
 type TemplateWithRelations = Template & {
@@ -16,7 +17,7 @@ type TemplateWithRelations = Template & {
   sections?: TemplateSection[];
 };
 type DocumentWithRelations = Document & {
-  versions?: DocumentVersion[];
+  versions?: Array<DocumentVersion & { riskAssessment?: RiskAssessment | null }>;
   fields?: ContractField[];
   sections?: ContractSection[];
 };
@@ -71,12 +72,25 @@ export function toTemplate(api: TemplateWithRelations) {
   };
 }
 
-export function toVersion(api: DocumentVersion) {
+export function toRiskAssessment(api?: RiskAssessment | null) {
+  if (!api) return null;
+  return {
+    id: api.id,
+    document_version_id: api.documentVersionId,
+    summary: api.summary,
+    created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+  };
+}
+
+export function toVersion(api: DocumentVersion & { riskAssessment?: RiskAssessment | null }) {
   return {
     id: api.id,
     version: api.version,
     content: api.content,
     created_at: api.createdAt.toISOString(),
+    updated_at: api.updatedAt.toISOString(),
+    risk_assessment: toRiskAssessment(api.riskAssessment || null),
   };
 }
 

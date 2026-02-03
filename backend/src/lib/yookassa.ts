@@ -128,7 +128,7 @@ export async function createSubscriptionPayment(
   logBilling('createSubscriptionPayment success', {
     userId,
     plan,
-    returnUrl: payload.confirmation.return_url,
+    returnUrl: payload.confirmation?.return_url,
     paymentId: data.id,
     status: data.status,
     metadata: data.metadata,
@@ -254,7 +254,7 @@ export async function createSingleContractPayment(
     paymentId: data.id,
     status: data.status,
     metadata: data.metadata,
-    returnUrl: payload.confirmation.return_url,
+    returnUrl: payload.confirmation?.return_url,
   });
 
   return {

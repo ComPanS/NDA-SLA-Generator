@@ -37,7 +37,6 @@ import {
   useConfirmPayment,
 } from '@/features/billing/hooks/useBilling';
 import { SubscriptionPlan } from '@/shared/types';
-import { formatLimit } from '@/shared/constants/subscriptions';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/store/authStore';
 

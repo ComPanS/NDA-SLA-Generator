@@ -1,11 +1,20 @@
 export type DocumentStatus = 'draft' | 'final';
 
+export interface RiskAssessment {
+  id: string;
+  document_version_id: string;
+  summary: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DocumentVersion {
   id: string;
   version: number;
   content: string;
   created_at: string;
   updated_at: string;
+  risk_assessment?: RiskAssessment | null;
 }
 
 export interface Document {
@@ -20,7 +29,7 @@ export interface Document {
   versions: DocumentVersion[];
   current_version?: DocumentVersion;
   fields?: ContractField[];
-   sections?: ContractSection[];
+  sections?: ContractSection[];
 }
 
 export interface GenerateContractRequest {

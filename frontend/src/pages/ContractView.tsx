@@ -20,7 +20,13 @@ import {
   Chip,
 } from '@mui/material';
 import { Download, Edit, ArrowBack, HelpOutline, Lock } from '@mui/icons-material';
-import { Layout, ProtectedRoute, LoadingSpinner, ErrorMessage, UpgradeModal } from '@/shared/components';
+import {
+  Layout,
+  ProtectedRoute,
+  LoadingSpinner,
+  ErrorMessage,
+  UpgradeModal,
+} from '@/shared/components';
 import {
   useContract,
   useRefineContract,
@@ -33,7 +39,12 @@ import {
 } from '@/features/contracts/hooks/useContracts';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
-import { ContractFieldInput, ContractSectionInput, DocumentStatus, LimitReachedError } from '@/shared/types';
+import {
+  ContractFieldInput,
+  ContractSectionInput,
+  DocumentStatus,
+  LimitReachedError,
+} from '@/shared/types';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 import { useUsage } from '@/features/billing/hooks/useBilling';
 import { AxiosError } from 'axios';
@@ -48,6 +59,7 @@ export const ContractView = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [titleDraft, setTitleDraft] = useState('');
   const [sectionsEnabled, setSectionsEnabled] = useState(false);
+  const [riskCheck, setRiskCheck] = useState(false);
   const [statusDraft, setStatusDraft] = useState<DocumentStatus>('draft');
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [limitError, setLimitError] = useState<LimitReachedError | null>(null);
@@ -61,6 +73,7 @@ export const ContractView = () => {
   const hasSectionsAccess = usage?.features?.hasSections ?? false;
   const hasStatusesAccess = usage?.features?.hasStatuses ?? false;
   const hasDocxExportAccess = usage?.features?.hasDocxExport ?? false;
+  const hasRiskCheckAccess = usage?.features?.hasRiskCheck ?? false;
 
   const { mutate: refineContract, isPending: isRefining } = useRefineContract(id || '');
   const { mutate: exportContract, isPending: isExporting } = useExportContract();
@@ -118,7 +131,7 @@ export const ContractView = () => {
     setLimitError(null);
 
     refineContract(
-      { prompt: refinePrompt },
+      { prompt: refinePrompt, risk_check: hasRiskCheckAccess ? riskCheck : false },
       {
         onSuccess: (data) => {
           const newVersion = data.document.versions[data.document.versions.length - 1];
@@ -249,6 +262,7 @@ export const ContractView = () => {
   }
 
   const currentVersion = document.versions[document.versions.length - 1];
+  const riskAssessment = currentVersion?.risk_assessment;
 
   return (
     <ProtectedRoute>
@@ -283,9 +297,7 @@ export const ContractView = () => {
                   disabled={isExporting || !hasDocxExportAccess}
                 >
                   Скачать DOCX
-                  {!hasDocxExportAccess && (
-                    <Chip label="Basic+" size="small" sx={{ ml: 1 }} />
-                  )}
+                  {!hasDocxExportAccess && <Chip label="Basic+" size="small" sx={{ ml: 1 }} />}
                 </Button>
               </span>
             </Tooltip>
@@ -339,6 +351,41 @@ export const ContractView = () => {
             {document.template_name || (document.template_id ? 'Без названия' : 'Без шаблона')}
           </Typography>
 
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="h6">Юридические риски</Typography>
+                  {!hasRiskCheckAccess && (
+                    <Chip
+                      icon={<Lock fontSize="small" />}
+                      label="Basic+"
+                      size="small"
+                      color="warning"
+                      variant="outlined"
+                    />
+                  )}
+                  <Tooltip title="Результат анализа договора на юридические риски. Включите опцию при генерации или уточнении, чтобы обновить этот блок.">
+                    <HelpOutline fontSize="small" color="action" />
+                  </Tooltip>
+                </Stack>
+                {riskAssessment?.updated_at && (
+                  <Typography variant="caption" color="text.secondary">
+                    Обновлено: {new Date(riskAssessment.updated_at).toLocaleString('ru-RU')}
+                  </Typography>
+                )}
+              </Stack>
+              <Typography
+                variant="body2"
+                sx={{ mt: 1.5, whiteSpace: 'pre-wrap' }}
+                color={riskAssessment ? 'text.primary' : 'text.secondary'}
+              >
+                {riskAssessment?.summary?.trim() ||
+                  'Проверка рисков еще не выполнялась. Отметьте опцию при генерации или уточнении, чтобы получить оценку.'}
+              </Typography>
+            </CardContent>
+          </Card>
+
           {showRefineForm && (
             <Card sx={{ mb: 3 }}>
               <CardContent>
@@ -357,6 +404,33 @@ export const ContractView = () => {
                   placeholder="Например: Добавить пункт о штрафных санкциях за разглашение информации в размере 100,000 рублей"
                   sx={{ mb: 2 }}
                   disabled={isRefining}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={hasRiskCheckAccess ? riskCheck : false}
+                      onChange={(e) => setRiskCheck(e.target.checked)}
+                      disabled={!hasRiskCheckAccess || isRefining}
+                    />
+                  }
+                  label={
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <span>Проверить на юридические риски</span>
+                      {!hasRiskCheckAccess && (
+                        <Chip
+                          icon={<Lock fontSize="small" />}
+                          label="Basic+"
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                        />
+                      )}
+                      <Tooltip title="Включите, чтобы AI проанализировал обновленный договор и подсветил возможные риски.">
+                        <HelpOutline fontSize="small" color="action" />
+                      </Tooltip>
+                    </Stack>
+                  }
+                  sx={{ mb: 2 }}
                 />
                 <Stack direction="row" spacing={2}>
                   <Button
@@ -386,7 +460,7 @@ export const ContractView = () => {
               <strong>Это договор, сгенерированный через ИИ.</strong>
               <br />
               Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
-              автоматических изменений через кнопку "Уточнить с AI".
+              автоматических изменений через кнопку "Уточнить с AI". Рекомендована консультация с юристом.
             </Typography>
           </Alert>
 
@@ -444,7 +518,7 @@ export const ContractView = () => {
                             variant="outlined"
                           />
                         )}
-                      <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                        <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
                           <HelpOutline fontSize="small" color="action" />
                         </Tooltip>
                       </Stack>
@@ -460,7 +534,9 @@ export const ContractView = () => {
                       />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
-                      {hasSectionsAccess ? 'Разделы скрыты и не участвуют в документе.' : 'Настройка разделов доступна на платных тарифах.'}
+                      {hasSectionsAccess
+                        ? 'Разделы скрыты и не участвуют в документе.'
+                        : 'Настройка разделов доступна на платных тарифах.'}
                     </Typography>
                   </Stack>
                 </CardContent>

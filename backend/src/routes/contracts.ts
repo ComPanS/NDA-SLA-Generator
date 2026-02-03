@@ -20,13 +20,15 @@ const router = Router();
 type DocWithRelations = Prisma.DocumentGetPayload<{
   include: {
     template: { select: { id: true; name: true } };
-    versions: true;
+    versions: { include: { riskAssessment: true } };
     fields: true;
     sections: true;
   };
 }>;
 
-type DocWithVersions = Prisma.DocumentGetPayload<{ include: { versions: true } }>;
+type DocWithVersions = Prisma.DocumentGetPayload<{
+  include: { versions: { include: { riskAssessment: true } } };
+}>;
 
 type TemplateWithFields = Prisma.TemplateGetPayload<{
   include: { groups: { include: { fields: true } }; sections: true };
@@ -95,6 +97,31 @@ function buildFieldsPrompt(fields: ContractFieldDraft[]) {
       return `- ${group.label}:\n${renderedFields}`;
     })
     .join('\n');
+}
+
+function buildRiskPrompt(title: string, htmlContent: string) {
+  return [
+    'Ты — опытный юрист, специализирующийся на анализе договоров. Твоя задача — внимательно проанализировать предоставленный договор и выявить юридические риски.',
+    '',
+    'Правила оформления ответа:',
+    '- Отвечай исключительно на русском языке.',
+    '- Не используй никакого markdown-форматирования: никаких **, *, __, #, >, кодовых блоков, таблиц или других элементов разметки.',
+    '- Используй только простой текст и обычные маркированные списки с дефисом "- ".',
+    '- Каждый пункт списка должен иметь строго следующий формат:',
+    '  - Риск [краткое название риска]: [пояснение риска].',
+    '  Рекомендация: [конкретная рекомендация по устранению или снижению риска].',
+    '- Между названием риска и пояснением ставь двоеточие, после пояснения — точку.',
+    '- Строка с рекомендацией начинается строго со слова "Рекомендация:" (с большой буквы и двоеточия).',
+    '- Если юридических рисков не выявлено, напиши ровно одну строку: "Юридические риски не выявлены." и ничего больше.',
+    '- Не добавляй вступлений, заключений, приветствий, нумерации, лишних пояснений или пересказа договора.',
+    '- Ответ должен состоять только из списка рисков (или сообщения об их отсутствии).',
+    '',
+    `Название договора: ${title}`,
+    '',
+    '--- Начало текста договора (HTML) ---',
+    htmlContent,
+    '--- Конец текста договора ---',
+  ].join('\n');
 }
 
 function sanitizeGeneratedHtml(raw: string, title: string): string {
@@ -319,7 +346,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
     where: { id: docId },
     include: {
       template: { select: { id: true, name: true } },
-      versions: { orderBy: { version: 'asc' } },
+      versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
       fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       sections: { orderBy: { order: 'asc' } },
     },
@@ -342,7 +369,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     orderBy: { updatedAt: 'desc' },
     include: {
       template: { select: { id: true, name: true } },
-      versions: { orderBy: { version: 'asc' } },
+      versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
       fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       sections: { orderBy: { order: 'asc' } },
     },
@@ -360,11 +387,9 @@ router.post('/guest/generate', async (req, res) => {
   const guestAccess = prisma as any;
   const existing = await guestAccess.guestAccess.findUnique({ where: { ip } });
   if (existing) {
-    return res
-      .status(429)
-      .json({
-        detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
-      });
+    return res.status(429).json({
+      detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+    });
   }
 
   const parsed = guestGenerateSchema.safeParse(req.body);
@@ -426,11 +451,9 @@ router.post('/guest/generate', async (req, res) => {
     });
   } catch (error: any) {
     if (error?.code === 'P2002') {
-      return res
-        .status(429)
-        .json({
-          detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
-        });
+      return res.status(429).json({
+        detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+      });
     }
     console.error('Guest access create error:', error);
     return res.status(500).json({ detail: 'Не удалось зафиксировать попытку' });
@@ -537,10 +560,9 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
 
   const fieldCopies: ContractFieldDraft[] = template ? contractFieldsFromTemplate(template) : [];
   // Only allow sections if user has access
-  const sectionCopies: ContractSectionDraft[] = hasSectionsAccess && template
-    ? contractSectionsFromTemplate(template)
-    : [];
-    
+  const sectionCopies: ContractSectionDraft[] =
+    hasSectionsAccess && template ? contractSectionsFromTemplate(template) : [];
+
   if (incomingFields && incomingFields.length) {
     for (const [idx, field] of incomingFields.entries()) {
       const existingIdx = fieldCopies.findIndex(
@@ -603,6 +625,16 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
 
   const rawContent = await generateText(finalPrompt);
   const content = sanitizeGeneratedHtml(rawContent, title);
+  let riskAssessmentText: string | null = null;
+
+  if (hasRiskCheckAccess && parsed.data.risk_check) {
+    try {
+      const riskPrompt = buildRiskPrompt(title, content);
+      riskAssessmentText = (await generateText(riskPrompt)).trim();
+    } catch (error) {
+      console.error('Risk assessment generation failed:', error);
+    }
+  }
 
   const document = await prisma.document.create({
     data: {
@@ -614,6 +646,13 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
         create: {
           version: 1,
           content,
+          riskAssessment: riskAssessmentText
+            ? {
+                create: {
+                  summary: riskAssessmentText,
+                },
+              }
+            : undefined,
         },
       },
       fields: fieldCopies.length
@@ -629,7 +668,7 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     },
     include: {
       template: { select: { id: true, name: true } },
-      versions: true,
+      versions: { include: { riskAssessment: true } },
       fields: true,
       sections: true,
     },
@@ -659,6 +698,8 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
     });
   }
 
+  const hasRiskCheckAccess = await checkFeatureAccess(req.userId, 'riskCheck');
+
   const parsed = refineSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
@@ -668,7 +709,7 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
     where: { id: docId },
     include: {
       template: { select: { id: true, name: true } },
-      versions: { orderBy: { version: 'asc' } },
+      versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
       fields: true,
       sections: true,
     },
@@ -692,6 +733,16 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
 
   const rawContent = await generateText(refinePrompt);
   const content = sanitizeGeneratedHtml(rawContent, doc.title);
+  let riskAssessmentText: string | null = null;
+
+  if (hasRiskCheckAccess && parsed.data.risk_check) {
+    try {
+      const riskPrompt = buildRiskPrompt(doc.title, content);
+      riskAssessmentText = (await generateText(riskPrompt)).trim();
+    } catch (error) {
+      console.error('Risk assessment generation failed (refine):', error);
+    }
+  }
   const updated = (await prisma.document.update({
     where: { id: doc.id },
     data: {
@@ -699,10 +750,20 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
         create: {
           version: nextVersion,
           content,
+          riskAssessment: riskAssessmentText
+            ? {
+                create: {
+                  summary: riskAssessmentText,
+                },
+              }
+            : undefined,
         },
       },
     },
-    include: { template: { select: { id: true, name: true } }, versions: true },
+    include: {
+      template: { select: { id: true, name: true } },
+      versions: { include: { riskAssessment: true } },
+    },
   })) as DocWithRelations;
 
   // Increment clarification usage counter
@@ -761,7 +822,7 @@ router.put('/:id/fields', requireAuth, async (req: AuthRequest, res) => {
       where: { id: docId },
       include: {
         template: { select: { id: true, name: true } },
-        versions: { orderBy: { version: 'desc' } },
+        versions: { orderBy: { version: 'desc' }, include: { riskAssessment: true } },
         fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       },
     })) as DocWithRelations | null;
@@ -805,7 +866,7 @@ router.put('/:id/sections', requireAuth, async (req: AuthRequest, res) => {
       where: { id: docId },
       include: {
         template: { select: { id: true, name: true } },
-        versions: { orderBy: { version: 'asc' } },
+        versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
         fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
         sections: { orderBy: { order: 'asc' } },
       },
@@ -840,7 +901,7 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {
     data: { title: parsed.data.title },
     include: {
       template: { select: { id: true, name: true } },
-      versions: { orderBy: { version: 'asc' } },
+      versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
       fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       sections: { orderBy: { order: 'asc' } },
     },
@@ -880,7 +941,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
     data: { status: parsed.data.status },
     include: {
       template: { select: { id: true, name: true } },
-      versions: { orderBy: { version: 'asc' } },
+      versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
       fields: { orderBy: [{ groupOrder: 'asc' }, { order: 'asc' }] },
       sections: { orderBy: { order: 'asc' } },
     },
@@ -940,7 +1001,9 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
 
   const doc = (await prisma.document.findUnique({
     where: { id: docId },
-    include: { versions: { orderBy: { version: 'desc' }, take: 1 } },
+    include: {
+      versions: { orderBy: { version: 'desc' }, take: 1, include: { riskAssessment: true } },
+    },
   })) as DocWithVersions | null;
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
