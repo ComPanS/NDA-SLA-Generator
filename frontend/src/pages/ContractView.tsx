@@ -63,6 +63,7 @@ export const ContractView = () => {
   const [statusDraft, setStatusDraft] = useState<DocumentStatus>('draft');
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [limitError, setLimitError] = useState<LimitReachedError | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   // Загружаем документ
   const { data, isLoading, error } = useContract(id || '');
@@ -87,11 +88,25 @@ export const ContractView = () => {
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
   const [sections, setSections] = useState<ContractSectionInput[]>([]);
 
+  const versions = document?.versions || [];
+  const latestVersion = versions[versions.length - 1];
+  const selectedVersion =
+    (selectedVersionId && versions.find((v) => v.id === selectedVersionId)) || latestVersion;
+  const isLatestSelected = selectedVersion?.id === latestVersion?.id;
+  const riskAssessment = selectedVersion?.risk_assessment;
+
   // Обновляем контент когда документ загружен
   useEffect(() => {
     if (document?.versions && document.versions.length > 0) {
       const latestVersion = document.versions[document.versions.length - 1];
-      setCurrentContent(latestVersion?.content || '');
+      const existingSelection =
+        selectedVersionId && document.versions.find((v) => v.id === selectedVersionId);
+      const targetVersion = existingSelection || latestVersion;
+
+      if (targetVersion?.id && targetVersion.id !== selectedVersionId) {
+        setSelectedVersionId(targetVersion.id);
+      }
+      setCurrentContent(targetVersion?.content || '');
     }
     if (document?.title) {
       setTitleDraft(document.title);
@@ -124,7 +139,13 @@ export const ContractView = () => {
       );
       setSectionsEnabled(document.sections.length > 0);
     }
-  }, [document]);
+  }, [document, selectedVersionId]);
+
+  useEffect(() => {
+    if (selectedVersion) {
+      setCurrentContent(selectedVersion.content || '');
+    }
+  }, [selectedVersion?.id]);
 
   const handleRefine = () => {
     if (!id || !refinePrompt.trim()) return;
@@ -136,6 +157,7 @@ export const ContractView = () => {
         onSuccess: (data) => {
           const newVersion = data.document.versions[data.document.versions.length - 1];
           if (newVersion) {
+            setSelectedVersionId(newVersion.id);
             setCurrentContent(newVersion.content);
           }
           setRefinePrompt('');
@@ -208,6 +230,15 @@ export const ContractView = () => {
     setCurrentContent(newContent);
   };
 
+  const handleVersionChange = (versionId: string) => {
+    if (!document?.versions?.length) return;
+    const version = document.versions.find((v) => v.id === versionId);
+    const fallback = document.versions[document.versions.length - 1];
+    const next = version || fallback;
+    setSelectedVersionId(next?.id || null);
+    setCurrentContent(next?.content || '');
+  };
+
   const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
     setSnackbarOpen(true);
@@ -260,9 +291,6 @@ export const ContractView = () => {
       </ProtectedRoute>
     );
   }
-
-  const currentVersion = document.versions[document.versions.length - 1];
-  const riskAssessment = currentVersion?.risk_assessment;
 
   return (
     <ProtectedRoute>
@@ -344,12 +372,42 @@ export const ContractView = () => {
             </Button>
           </Stack>
 
+          {versions.length > 0 && (
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 260 }}>
+                <InputLabel>Версия</InputLabel>
+                <Select
+                  value={selectedVersion?.id || ''}
+                  label="Версия"
+                  onChange={(e) => handleVersionChange(e.target.value as string)}
+                >
+                  {versions.map((v) => (
+                    <MenuItem key={v.id} value={v.id}>
+                      Версия {v.version} — {new Date(v.updated_at).toLocaleString('ru-RU')}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {!isLatestSelected && (
+                <Chip color="warning" label="Историческая версия (только просмотр)" />
+              )}
+            </Stack>
+          )}
+
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Создан: {new Date(document.created_at).toLocaleString('ru-RU')} | Версия:{' '}
-            {currentVersion?.version || 1} | Статус:{' '}
+            Создан: {new Date(document.created_at).toLocaleString('ru-RU')} | Просматриваемая
+            версия: {selectedVersion?.version || 1} | Статус:{' '}
             {statusDraft === 'draft' ? 'Черновик' : 'Финальный'} | Шаблон:{' '}
             {document.template_name || (document.template_id ? 'Без названия' : 'Без шаблона')}
           </Typography>
+
+          {!isLatestSelected && selectedVersion && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Вы смотрите версию №{selectedVersion.version} от{' '}
+              {new Date(selectedVersion.updated_at).toLocaleString('ru-RU')}. Чтобы редактировать,
+              вернитесь к последней версии.
+            </Alert>
+          )}
 
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -460,7 +518,8 @@ export const ContractView = () => {
               <strong>Это договор, сгенерированный через ИИ.</strong>
               <br />
               Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
-              автоматических изменений через кнопку "Уточнить с AI". Рекомендована консультация с юристом.
+              автоматических изменений через кнопку "Уточнить с AI". Рекомендована консультация с
+              юристом.
             </Typography>
           </Alert>
 
@@ -545,9 +604,10 @@ export const ContractView = () => {
           </Box>
 
           <ContractEditor
+            key={selectedVersion?.id || 'latest'}
             content={currentContent}
             onChange={handleContentChange}
-            readOnly={false}
+            readOnly={!isLatestSelected}
           />
 
           <Box
@@ -555,7 +615,7 @@ export const ContractView = () => {
           >
             <Typography variant="body2" color="text.secondary">
               ID документа: {id} | Последнее обновление:{' '}
-              {new Date(currentVersion?.updated_at || document.updated_at).toLocaleString('ru-RU')}
+              {new Date(selectedVersion?.updated_at || document.updated_at).toLocaleString('ru-RU')}
             </Typography>
             <Stack direction="row" spacing={2}>
               <Button variant="outlined" onClick={() => navigate('/dashboard')}>

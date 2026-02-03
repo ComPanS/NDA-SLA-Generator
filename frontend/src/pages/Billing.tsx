@@ -18,8 +18,16 @@ import {
   CircularProgress,
   Snackbar,
   Tooltip,
+  Stack,
 } from '@mui/material';
-import { Check, Star, AllInclusive, CancelOutlined, Autorenew } from '@mui/icons-material';
+import {
+  Check,
+  Star,
+  AllInclusive,
+  CancelOutlined,
+  Autorenew,
+  HelpOutline,
+} from '@mui/icons-material';
 import {
   Layout,
   ProtectedRoute,
@@ -150,7 +158,8 @@ export const Billing = () => {
     used: number,
     limit: number,
     unlimited: boolean,
-    extraPaid?: number
+    extraPaid?: number,
+    hint?: string
   ) => {
     const effectiveLimit = extraPaid ? limit + extraPaid : limit;
     const percentage = unlimited ? 0 : Math.min((used / effectiveLimit) * 100, 100);
@@ -175,7 +184,14 @@ export const Billing = () => {
     return (
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-          <Typography variant="body2">{label}</Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <Typography variant="body2">{label}</Typography>
+            {hint && (
+              <Tooltip title={hint}>
+                <HelpOutline fontSize="small" color="action" />
+              </Tooltip>
+            )}
+          </Stack>
           <Typography variant="body2" color={isNearLimit ? 'error' : 'text.secondary'}>
             {used} / {formatLimitDisplay()}
           </Typography>
@@ -287,7 +303,9 @@ export const Billing = () => {
                   'Уточнения от нейросети',
                   usage.clarifications.used,
                   usage.clarifications.limit,
-                  usage.clarifications.isUnlimited
+                  usage.clarifications.isUnlimited,
+                  undefined,
+                  'Счётчик обновляется при каждом уточнении через AI'
                 )}
                 {renderUsageBar(
                   'Шаблоны',
