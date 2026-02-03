@@ -1,7 +1,7 @@
 /* TEAM */
 Developer: ДоговорAI
-Contact: support@dogovorai.com
-Site: https://yourdomain.com
+Contact: support@dogovorai.ru
+Site: https://dogovarai.ru.com
 
 /* TECHNOLOGY */
 Frontend: React, Vite, TypeScript, MUI

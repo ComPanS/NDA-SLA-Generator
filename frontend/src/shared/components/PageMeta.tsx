@@ -13,7 +13,7 @@ interface PageMetaProps {
   image?: string;
 }
 
-const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://yourdomain.com';
+const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://dogovarai.ru.com';
 const SITE_NAME = 'ДоговорAI';
 
 function ensureMetaTag(name: string, content: string) {

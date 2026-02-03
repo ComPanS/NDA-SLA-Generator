@@ -35,8 +35,8 @@ export const Layout = ({ children, maxWidth = 'lg' }: LayoutProps) => {
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Почта для сотрудничества и поддержки:{' '}
-              <MuiLink href="mailto:support@dogovorai.com" color="inherit" underline="hover">
-                support@dogovorai.com
+              <MuiLink href="mailto:support@dogovorai.ru" color="inherit" underline="hover">
+                support@dogovorai.ru
               </MuiLink>
             </Typography>
             <Typography variant="caption" color="text.secondary">

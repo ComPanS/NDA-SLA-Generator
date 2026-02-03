@@ -5,12 +5,14 @@
 ## Требования
 
 ### Инфраструктура
+
 - PostgreSQL 15+ database
 - Node.js 18+ runtime
 - Nginx (для статики и reverse proxy)
 - SSL сертификат (Let's Encrypt рекомендуется)
 
 ### Сервисы
+
 - Yandex Cloud аккаунт (для YandexGPT API)
 - ЮKassa аккаунт (для платежей, опционально)
 - Хостинг (Yandex Cloud, VK Cloud, Selectel, или другой)
@@ -63,7 +65,7 @@ NODE_ENV=production
 JWT_SECRET=$(openssl rand -base64 32)
 JWT_ACCESS_EXPIRE=15m
 JWT_REFRESH_EXPIRE=7d
-CORS_ORIGINS=https://yourdomain.com
+CORS_ORIGINS=https://dogovarai.ru.com
 YANDEX_GPT_API_KEY=your_api_key
 YANDEX_FOLDER_ID=your_folder_id
 EOF
@@ -107,7 +109,7 @@ cd frontend
 
 # Создание production .env
 cat > .env << EOF
-VITE_API_URL=https://api.yourdomain.com
+VITE_API_URL=https://api.dogovarai.ru.com
 EOF
 
 # Установка зависимостей
@@ -141,18 +143,18 @@ sudo cp -r dist/* /var/www/nda-frontend/
 # Frontend
 server {
     listen 80;
-    server_name yourdomain.com;
-    
+    server_name dogovarai.ru.com;
+
     # Redirect to HTTPS
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name yourdomain.com;
+    server_name dogovarai.ru.com;
 
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/dogovarai.ru.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru.com/privkey.pem;
 
     root /var/www/nda-frontend;
     index index.html;
@@ -177,10 +179,10 @@ server {
 # Backend API
 server {
     listen 443 ssl http2;
-    server_name api.yourdomain.com;
+    server_name api.dogovarai.ru.com;
 
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/dogovarai.ru.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru.com/privkey.pem;
 
     location / {
         proxy_pass http://localhost:8001;
@@ -211,7 +213,7 @@ sudo systemctl reload nginx
 sudo apt install -y certbot python3-certbot-nginx
 
 # Получение сертификата
-sudo certbot --nginx -d yourdomain.com -d api.yourdomain.com
+sudo certbot --nginx -d dogovarai.ru.com -d api.dogovarai.ru.com
 
 # Автообновление
 sudo certbot renew --dry-run
@@ -254,19 +256,19 @@ services:
     networks:
       - app-network
     ports:
-      - "8001:8001"
+      - '8001:8001'
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: https://api.yourdomain.com
+        VITE_API_URL: https://api.dogovarai.ru.com
     restart: always
     networks:
       - app-network
     ports:
-      - "80:80"
+      - '80:80'
 
 volumes:
   postgres_data:
@@ -343,14 +345,14 @@ CMD ["nginx", "-g", "daemon off;"]
 server {
     listen 80;
     server_name _;
-    
+
     root /usr/share/nginx/html;
     index index.html;
-    
+
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
@@ -394,21 +396,21 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Build Backend
         run: |
           cd backend
           npm ci
           npm run build
-      
+
       - name: Build Frontend
         run: |
           cd frontend
@@ -416,16 +418,16 @@ jobs:
           npm run build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-      
+
       - name: Deploy to Server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "backend/dist,frontend/dist"
-          target: "/var/www/nda-generator"
-      
+          source: 'backend/dist,frontend/dist'
+          target: '/var/www/nda-generator'
+
       - name: Restart Services
         uses: appleboy/ssh-action@master
         with:
@@ -497,11 +499,13 @@ psql -U nda_user nda_sla_generator < backup_20260130.sql
 ## Performance Optimization
 
 ### Backend
+
 - Включить gzip сжатие в Nginx
 - Настроить connection pooling в Prisma
 - Использовать Redis для кэширования (опционально)
 
 ### Frontend
+
 - Использовать CDN для статики
 - Включить HTTP/2
 - Настроить кэширование браузера
@@ -552,5 +556,6 @@ ls -la /var/www/nda-frontend
 ## Поддержка
 
 Для вопросов и проблем:
+
 - GitHub Issues: https://github.com/your-username/NDA-SLA-Generator/issues
-- Email: support@yourdomain.com
+- Email: support@dogovarai.ru.com

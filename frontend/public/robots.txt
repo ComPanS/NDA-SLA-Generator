@@ -9,4 +9,4 @@ Disallow: /profile
 Disallow: /contract/
 Disallow: /templates
 
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://dogovarai.ru.com/sitemap.xml
