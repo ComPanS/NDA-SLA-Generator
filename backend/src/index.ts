@@ -7,6 +7,7 @@ import contractRoutes from './routes/contracts';
 import billingRoutes from './routes/billing';
 import adminRoutes from './routes/admin';
 import noticeRoutes from './routes/notice';
+import profileRoutes from './routes/profile';
 import { startSubscriptionExpiryJob } from './lib/subscriptionCleanup';
 
 export function createApp() {
@@ -29,6 +30,7 @@ export function createApp() {
   app.use('/contracts', contractRoutes);
   app.use('/billing', billingRoutes);
   app.use('/notice', noticeRoutes);
+  app.use('/profile', profileRoutes);
   app.use(env.adminRoute, adminRoutes);
 
   app.use(

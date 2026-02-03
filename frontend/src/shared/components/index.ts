@@ -7,3 +7,4 @@ export * from './ConfirmDialog';
 export * from './EmptyState';
 export * from './PageHeader';
 export * from './UpgradeModal';
+export * from './PageMeta';

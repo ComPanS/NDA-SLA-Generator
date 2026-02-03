@@ -10,6 +10,7 @@ import { Templates } from '@/pages/Templates';
 import { VerifyEmail } from '@/pages/VerifyEmail';
 import { GuestContract } from '@/pages/GuestContract';
 import { Admin } from '@/pages/Admin';
+import { Profile } from '@/pages/Profile';
 import { ADMIN_ROUTE } from '@/shared/constants';
 import { OAuthYandexCallback } from '@/pages/OAuthYandexCallback';
 import { YandexSuggestToken } from '@/pages/YandexSuggestToken';
@@ -61,6 +62,10 @@ const router = createBrowserRouter([
   {
     path: '/billing',
     element: <Billing />,
+  },
+  {
+    path: '/profile',
+    element: <Profile />,
   },
   {
     path: '/templates',

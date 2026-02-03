@@ -33,6 +33,11 @@ export const Header = () => {
     handleClose();
   };
 
+  const handleProfile = () => {
+    navigate('/profile');
+    handleClose();
+  };
+
   return (
     <AppBar position="static">
       <Toolbar sx={{ minHeight: 64 }}>
@@ -99,6 +104,7 @@ export const Header = () => {
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
               >
+                <MenuItem onClick={handleProfile}>Профиль</MenuItem>
                 <MenuItem onClick={handleLogout}>Выйти</MenuItem>
               </Menu>
             </Stack>
