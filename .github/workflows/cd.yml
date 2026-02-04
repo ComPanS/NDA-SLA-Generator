@@ -117,9 +117,19 @@ jobs:
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
-      
+
       - name: Export OWNER_LC to environment
         run: echo "OWNER_LC=${{ steps.lowercase_deploy.outputs.owner_lc }}" >> $GITHUB_ENV
+
+      - name: Copy docker-compose to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: docker-compose.yml
+          target: /opt/nda
+
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5 
@@ -168,7 +178,6 @@ jobs:
             YOOKASSA_RETURN_URL,
             YOOKASSA_WEBHOOK_SECRET,
             OWNER_LC
-          script_stop: true
           script: |
             set -euo pipefail
 
