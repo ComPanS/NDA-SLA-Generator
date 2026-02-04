@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: nda-postgres
@@ -9,37 +8,19 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nda_sla_generator}
       POSTGRES_USER: ${POSTGRES_USER:-nda_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nda_pass}
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}  # Strongly recommend providing a strong password via secrets
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nda_user} -d ${POSTGRES_DB:-nda_sla_generator}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    healthcheck: ...
     networks:
       - nda-network
 
-  # Backend API
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE}:${IMAGE_TAG:-latest}  # Crucial: use registry image + tag
     container_name: nda-backend
     restart: unless-stopped
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-nda_user}:${POSTGRES_PASSWORD:-nda_pass}@postgres:5432/${POSTGRES_DB:-nda_sla_generator}
-      PORT: 8001
-      NODE_ENV: ${NODE_ENV:-development}
-      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-change-in-production}
-      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-15m}
-      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-7d}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
-      YANDEX_GPT_API_KEY: ${YANDEX_GPT_API_KEY:-}
-      YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
-      YANDEX_GPT_MODEL: ${YANDEX_GPT_MODEL:-yandexgpt-lite}
+    env_file:
+      - ${BACKEND_ENV_FILE:-/opt/nda/backend.env}
     ports:
       - "8001:8001"
     depends_on:
@@ -47,21 +28,14 @@ services:
         condition: service_healthy
     networks:
       - nda-network
-    volumes:
-      - ./backend/prisma:/app/prisma
     command: sh -c "npx prisma migrate deploy && npm start"
 
-  # Frontend
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8001}
+    image: ${FRONTEND_IMAGE}:${IMAGE_TAG:-latest}
     container_name: nda-frontend
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "5173:80"  # or your actual external port
     depends_on:
       - backend
     networks:
@@ -69,7 +43,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
 
 networks:
   nda-network:

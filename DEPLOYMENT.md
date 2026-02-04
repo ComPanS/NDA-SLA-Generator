@@ -7,7 +7,7 @@
 ### Инфраструктура
 
 - PostgreSQL 15+ database
-- Node.js 18+ runtime
+- Node.js 20+ runtime (LTS)
 - Nginx (для статики и reverse proxy)
 - SSL сертификат (Let's Encrypt рекомендуется)
 
@@ -17,6 +17,23 @@
 - ЮKassa аккаунт (для платежей, опционально)
 - Хостинг (Yandex Cloud, VK Cloud, Selectel, или другой)
 
+## Клонирование приватного репозитория (SSH deploy key)
+
+```bash
+# На сервере
+ssh-keygen -t ed25519 -C "deploy@nda-sla" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+# Скопируйте public key в GitHub → Repo Settings → Deploy Keys → Add (Allow read-only)
+
+# Добавьте GitHub в known_hosts
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+# Клонирование по SSH
+git clone git@github.com:your-username/NDA-SLA-Generator.git
+```
+
+Альтернатива: использовать GitHub Deploy Token/Personal Access Token и `https://<token>@github.com/...`, но SSH-ключ безопаснее.
+
 ## Backend Deployment
 
 ### 1. Подготовка сервера
@@ -25,8 +42,8 @@
 # Обновление системы
 sudo apt update && sudo apt upgrade -y
 
-# Установка Node.js 18+
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Установка Node.js 20+ (пропустите, если уже стоит >=20)
+curl -fsSL https://deb.nodesource.com/setup_23.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Установка PostgreSQL
@@ -57,18 +74,71 @@ cd NDA-SLA-Generator/backend
 # Установка зависимостей
 npm ci --production
 
-# Создание .env файла
-cat > .env << EOF
-DATABASE_URL=postgresql://nda_user:strong_password@localhost:5432/nda_sla_generator
+# Создание .env файла (полный список переменных)
+# Ручной вариант (локально на сервере):
+cat > .env << 'EOF'
 PORT=8001
 NODE_ENV=production
+
+# База
+DATABASE_URL=postgresql://nda_user:strong_password@localhost:5432/nda_sla_generator
+
+# JWT
 JWT_SECRET=$(openssl rand -base64 32)
-JWT_ACCESS_EXPIRE=15m
-JWT_REFRESH_EXPIRE=7d
+JWT_ACCESS_TOKEN_EXPIRES_MINUTES=15
+JWT_REFRESH_TOKEN_EXPIRES_DAYS=7
+
+# CORS / фронтенд
+FRONTEND_URL=https://dogovarai.ru.com
 CORS_ORIGINS=https://dogovarai.ru.com
+
+# YandexGPT
 YANDEX_GPT_API_KEY=your_api_key
-YANDEX_FOLDER_ID=your_folder_id
+YANDEX_GPT_FOLDER_ID=your_folder_id
+YANDEX_GPT_MODEL=yandexgpt/latest
+YANDEX_GPT_ENDPOINT=https://llm.api.cloud.yandex.net/foundationModels/v1/completion
+YANDEX_GPT_TIMEOUT=30000
+
+# Yandex OAuth (кнопка логина)
+YANDEX_OAUTH_CLIENT_ID=
+YANDEX_OAUTH_CLIENT_SECRET=
+YANDEX_OAUTH_REDIRECT_URI=https://dogovarai.ru.com/oauth/yandex/callback
+
+# SMTP (email)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=no-reply@dogovarai.ru.com
+
+# Верификация email
+VERIFICATION_CODE_TTL_MINUTES=15
+VERIFICATION_RESEND_INTERVAL_SECONDS=60
+VERIFICATION_RESEND_MAX_PER_HOUR=3
+
+# Админка
+ADMIN_LOGIN=
+ADMIN_PASSWORD=
+ADMIN_ROUTE=/internal-admin
+ADMIN_TOKEN_EXPIRES_MINUTES=60
+
+# Подписки / биллинг
+SUBSCRIPTION_BILLING_INTERVAL_MS=120000            # 2 минуты (для прод выставьте периодичность)
+SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS=86400000     # сутки
+YOOKASSA_SHOP_ID=
+YOOKASSA_SECRET_KEY=
+YOOKASSA_RETURN_URL=https://dogovarai.ru.com/billing
+YOOKASSA_WEBHOOK_SECRET=
 EOF
+
+# Вариант через GitHub Actions (автоматически на сервере):
+# - Все переменные выше положите в GitHub Secrets (repository/env).
+# - Добавьте секреты путей:
+#     BACKEND_ENV_FILE=/opt/nda/backend.env
+#     DEPLOY_COMPOSE_PATH=/opt/nda/docker-compose.yml
+# - В workflow `cd.yml` секреты попадут в SSH-сессию и соберут файл
+#   `${BACKEND_ENV_FILE}` перед запуском `docker compose`. Ручное создание .env
+#   на сервере не нужно.
 
 # Генерация Prisma клиента
 npx prisma generate
@@ -107,10 +177,15 @@ pm2 restart nda-backend
 ```bash
 cd frontend
 
-# Создание production .env
+# Создание production .env (используются только эти ключи)
 cat > .env << EOF
-VITE_API_URL=https://api.dogovarai.ru.com
+VITE_API_URL=https://api.dogovarai.ru.com   # обязательный (build arg)
+VITE_ADMIN_ROUTE=/internal-admin
+VITE_YANDEX_CLIENT_ID=
+VITE_YANDEX_SUGGEST_REDIRECT_URI=
+VITE_YANDEX_ORIGIN=https://dogovarai.ru.com
 EOF
+# Примечание: DEV_ALLOWED_HOSTS и BACKEND_URL в коде не используются.
 
 # Установка зависимостей
 npm ci

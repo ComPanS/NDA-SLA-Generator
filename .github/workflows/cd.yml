@@ -1,0 +1,169 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency: deploy-main
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/nda-sla-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/nda-sla-frontend
+
+jobs:
+  build-and-push:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to server
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: read
+      packages: write
+    environment: production
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+      BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}
+      FRONTEND_IMAGE: ${{ env.FRONTEND_IMAGE }}
+      COMPOSE_FILE_PATH: ${{ secrets.DEPLOY_COMPOSE_PATH }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_ACTOR: ${{ github.actor }}
+      BACKEND_ENV_FILE: ${{ secrets.BACKEND_ENV_FILE }}
+      PORT: ${{ secrets.PORT }}
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_ACCESS_TOKEN_EXPIRES_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRES_MINUTES }}
+      JWT_REFRESH_TOKEN_EXPIRES_DAYS: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRES_DAYS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      YANDEX_GPT_API_KEY: ${{ secrets.YANDEX_GPT_API_KEY }}
+      YANDEX_GPT_FOLDER_ID: ${{ secrets.YANDEX_GPT_FOLDER_ID }}
+      YANDEX_GPT_MODEL: ${{ secrets.YANDEX_GPT_MODEL }}
+      YANDEX_GPT_ENDPOINT: ${{ secrets.YANDEX_GPT_ENDPOINT }}
+      YANDEX_GPT_TIMEOUT: ${{ secrets.YANDEX_GPT_TIMEOUT }}
+      YANDEX_OAUTH_CLIENT_ID: ${{ secrets.YANDEX_OAUTH_CLIENT_ID }}
+      YANDEX_OAUTH_CLIENT_SECRET: ${{ secrets.YANDEX_OAUTH_CLIENT_SECRET }}
+      YANDEX_OAUTH_REDIRECT_URI: ${{ secrets.YANDEX_OAUTH_REDIRECT_URI }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      VERIFICATION_CODE_TTL_MINUTES: ${{ secrets.VERIFICATION_CODE_TTL_MINUTES }}
+      VERIFICATION_RESEND_INTERVAL_SECONDS: ${{ secrets.VERIFICATION_RESEND_INTERVAL_SECONDS }}
+      VERIFICATION_RESEND_MAX_PER_HOUR: ${{ secrets.VERIFICATION_RESEND_MAX_PER_HOUR }}
+      ADMIN_LOGIN: ${{ secrets.ADMIN_LOGIN }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      ADMIN_ROUTE: ${{ secrets.ADMIN_ROUTE }}
+      ADMIN_TOKEN_EXPIRES_MINUTES: ${{ secrets.ADMIN_TOKEN_EXPIRES_MINUTES }}
+      SUBSCRIPTION_BILLING_INTERVAL_MS: ${{ secrets.SUBSCRIPTION_BILLING_INTERVAL_MS }}
+      SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS: ${{ secrets.SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS }}
+      YOOKASSA_SHOP_ID: ${{ secrets.YOOKASSA_SHOP_ID }}
+      YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
+      YOOKASSA_RETURN_URL: ${{ secrets.YOOKASSA_RETURN_URL }}
+      YOOKASSA_WEBHOOK_SECRET: ${{ secrets.YOOKASSA_WEBHOOK_SECRET }}
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: IMAGE_TAG,BACKEND_IMAGE,FRONTEND_IMAGE,COMPOSE_FILE_PATH,GITHUB_TOKEN,GITHUB_ACTOR,BACKEND_ENV_FILE,PORT,NODE_ENV,DATABASE_URL,JWT_SECRET,JWT_ACCESS_TOKEN_EXPIRES_MINUTES,JWT_REFRESH_TOKEN_EXPIRES_DAYS,FRONTEND_URL,CORS_ORIGINS,YANDEX_GPT_API_KEY,YANDEX_GPT_FOLDER_ID,YANDEX_GPT_MODEL,YANDEX_GPT_ENDPOINT,YANDEX_GPT_TIMEOUT,YANDEX_OAUTH_CLIENT_ID,YANDEX_OAUTH_CLIENT_SECRET,YANDEX_OAUTH_REDIRECT_URI,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,VERIFICATION_CODE_TTL_MINUTES,VERIFICATION_RESEND_INTERVAL_SECONDS,VERIFICATION_RESEND_MAX_PER_HOUR,ADMIN_LOGIN,ADMIN_PASSWORD,ADMIN_ROUTE,ADMIN_TOKEN_EXPIRES_MINUTES,SUBSCRIPTION_BILLING_INTERVAL_MS,SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS,YOOKASSA_SHOP_ID,YOOKASSA_SECRET_KEY,YOOKASSA_RETURN_URL,YOOKASSA_WEBHOOK_SECRET
+          script_stop: true
+          script: |
+            set -euo pipefail
+            COMPOSE_FILE="${COMPOSE_FILE_PATH:-/opt/nda/docker-compose.yml}"
+            BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-/opt/nda/backend.env}"
+
+            echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+            docker pull "${BACKEND_IMAGE}:${IMAGE_TAG}"
+            docker pull "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+
+            mkdir -p "$(dirname "${BACKEND_ENV_FILE}")"
+            cat > "${BACKEND_ENV_FILE}" <<EOF
+PORT=${PORT}
+NODE_ENV=${NODE_ENV}
+DATABASE_URL=${DATABASE_URL}
+JWT_SECRET=${JWT_SECRET}
+JWT_ACCESS_TOKEN_EXPIRES_MINUTES=${JWT_ACCESS_TOKEN_EXPIRES_MINUTES}
+JWT_REFRESH_TOKEN_EXPIRES_DAYS=${JWT_REFRESH_TOKEN_EXPIRES_DAYS}
+FRONTEND_URL=${FRONTEND_URL}
+CORS_ORIGINS=${CORS_ORIGINS}
+YANDEX_GPT_API_KEY=${YANDEX_GPT_API_KEY}
+YANDEX_GPT_FOLDER_ID=${YANDEX_GPT_FOLDER_ID}
+YANDEX_GPT_MODEL=${YANDEX_GPT_MODEL}
+YANDEX_GPT_ENDPOINT=${YANDEX_GPT_ENDPOINT}
+YANDEX_GPT_TIMEOUT=${YANDEX_GPT_TIMEOUT}
+YANDEX_OAUTH_CLIENT_ID=${YANDEX_OAUTH_CLIENT_ID}
+YANDEX_OAUTH_CLIENT_SECRET=${YANDEX_OAUTH_CLIENT_SECRET}
+YANDEX_OAUTH_REDIRECT_URI=${YANDEX_OAUTH_REDIRECT_URI}
+SMTP_HOST=${SMTP_HOST}
+SMTP_PORT=${SMTP_PORT}
+SMTP_USER=${SMTP_USER}
+SMTP_PASS=${SMTP_PASS}
+SMTP_FROM=${SMTP_FROM}
+VERIFICATION_CODE_TTL_MINUTES=${VERIFICATION_CODE_TTL_MINUTES}
+VERIFICATION_RESEND_INTERVAL_SECONDS=${VERIFICATION_RESEND_INTERVAL_SECONDS}
+VERIFICATION_RESEND_MAX_PER_HOUR=${VERIFICATION_RESEND_MAX_PER_HOUR}
+ADMIN_LOGIN=${ADMIN_LOGIN}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_ROUTE=${ADMIN_ROUTE}
+ADMIN_TOKEN_EXPIRES_MINUTES=${ADMIN_TOKEN_EXPIRES_MINUTES}
+SUBSCRIPTION_BILLING_INTERVAL_MS=${SUBSCRIPTION_BILLING_INTERVAL_MS}
+SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS=${SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS}
+YOOKASSA_SHOP_ID=${YOOKASSA_SHOP_ID}
+YOOKASSA_SECRET_KEY=${YOOKASSA_SECRET_KEY}
+YOOKASSA_RETURN_URL=${YOOKASSA_RETURN_URL}
+YOOKASSA_WEBHOOK_SECRET=${YOOKASSA_WEBHOOK_SECRET}
+EOF
+
+            export IMAGE_TAG BACKEND_IMAGE FRONTEND_IMAGE
+
+            docker compose -f "${COMPOSE_FILE}" pull
+            docker compose -f "${COMPOSE_FILE}" up -d --wait --remove-orphans
