@@ -89,8 +89,8 @@ JWT_ACCESS_TOKEN_EXPIRES_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRES_DAYS=7
 
 # CORS / фронтенд
-FRONTEND_URL=https://dogovarai.ru.com
-CORS_ORIGINS=https://dogovarai.ru.com
+FRONTEND_URL=https://dogovarai.ru
+CORS_ORIGINS=https://dogovarai.ru
 
 # YandexGPT
 YANDEX_GPT_API_KEY=your_api_key
@@ -102,14 +102,14 @@ YANDEX_GPT_TIMEOUT=30000
 # Yandex OAuth (кнопка логина)
 YANDEX_OAUTH_CLIENT_ID=
 YANDEX_OAUTH_CLIENT_SECRET=
-YANDEX_OAUTH_REDIRECT_URI=https://dogovarai.ru.com/oauth/yandex/callback
+YANDEX_OAUTH_REDIRECT_URI=https://dogovarai.ru/oauth/yandex/callback
 
 # SMTP (email)
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-SMTP_FROM=no-reply@dogovarai.ru.com
+SMTP_FROM=no-reply@dogovarai.ru
 
 # Верификация email
 VERIFICATION_CODE_TTL_MINUTES=15
@@ -127,7 +127,7 @@ SUBSCRIPTION_BILLING_INTERVAL_MS=120000            # 2 минуты (для пр
 SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS=86400000     # сутки
 YOOKASSA_SHOP_ID=
 YOOKASSA_SECRET_KEY=
-YOOKASSA_RETURN_URL=https://dogovarai.ru.com/billing
+YOOKASSA_RETURN_URL=https://dogovarai.ru/billing
 YOOKASSA_WEBHOOK_SECRET=
 EOF
 
@@ -179,11 +179,11 @@ cd frontend
 
 # Создание production .env (используются только эти ключи)
 cat > .env << EOF
-VITE_API_URL=https://api.dogovarai.ru.com   # обязательный (build arg)
+VITE_API_URL=https://api.dogovarai.ru   # обязательный (build arg)
 VITE_ADMIN_ROUTE=/internal-admin
 VITE_YANDEX_CLIENT_ID=
 VITE_YANDEX_SUGGEST_REDIRECT_URI=
-VITE_YANDEX_ORIGIN=https://dogovarai.ru.com
+VITE_YANDEX_ORIGIN=https://dogovarai.ru
 EOF
 # Примечание: DEV_ALLOWED_HOSTS и BACKEND_URL в коде не используются.
 
@@ -218,7 +218,7 @@ sudo cp -r dist/* /var/www/nda-frontend/
 # Frontend
 server {
     listen 80;
-    server_name dogovarai.ru.com;
+    server_name dogovarai.ru;
 
     # Redirect to HTTPS
     return 301 https://$server_name$request_uri;
@@ -226,10 +226,10 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name dogovarai.ru.com;
+    server_name dogovarai.ru;
 
-    ssl_certificate /etc/letsencrypt/live/dogovarai.ru.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/dogovarai.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru/privkey.pem;
 
     root /var/www/nda-frontend;
     index index.html;
@@ -254,10 +254,10 @@ server {
 # Backend API
 server {
     listen 443 ssl http2;
-    server_name api.dogovarai.ru.com;
+    server_name api.dogovarai.ru;
 
-    ssl_certificate /etc/letsencrypt/live/dogovarai.ru.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/dogovarai.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru/privkey.pem;
 
     location / {
         proxy_pass http://localhost:8001;
@@ -288,7 +288,7 @@ sudo systemctl reload nginx
 sudo apt install -y certbot python3-certbot-nginx
 
 # Получение сертификата
-sudo certbot --nginx -d dogovarai.ru.com -d api.dogovarai.ru.com
+sudo certbot --nginx -d dogovarai.ru -d api.dogovarai.ru
 
 # Автообновление
 sudo certbot renew --dry-run
@@ -338,7 +338,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: https://api.dogovarai.ru.com
+        VITE_API_URL: https://api.dogovarai.ru
     restart: always
     networks:
       - app-network
@@ -633,4 +633,4 @@ ls -la /var/www/nda-frontend
 Для вопросов и проблем:
 
 - GitHub Issues: https://github.com/your-username/NDA-SLA-Generator/issues
-- Email: support@dogovarai.ru.com
+- Email: support@dogovarai.ru
