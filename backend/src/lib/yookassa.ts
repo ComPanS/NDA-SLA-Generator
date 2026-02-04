@@ -3,6 +3,7 @@
  * Documentation: https://yookassa.ru/developers/api
  */
 
+import crypto from 'crypto';
 import { env } from '../config/env';
 import {
   SUBSCRIPTION_PLANS,
@@ -13,7 +14,9 @@ import {
 const YOOKASSA_API_URL = 'https://api.yookassa.ru/v3';
 
 // Logging disabled in production; keep stub to avoid console noise
-const logBilling = (..._args: unknown[]) => {};
+const logBilling = (..._args: unknown[]) => {
+  void _args;
+};
 
 interface YooKassaPaymentRequest {
   amount: {
@@ -291,7 +294,6 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
     return true;
   }
 
-  const crypto = require('crypto');
   const expectedSignature = crypto
     .createHmac('sha256', env.yookassaWebhookSecret)
     .update(body)

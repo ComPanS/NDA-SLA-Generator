@@ -16,10 +16,17 @@ type TemplateWithRelations = Template & {
   groups?: Array<TemplateGroup & { fields?: TemplateField[] }>;
   sections?: TemplateSection[];
 };
+type DocumentTemplateMinimal = Pick<Template, 'name'> & Partial<Template>;
+
 type DocumentWithRelations = Document & {
+  template?: DocumentTemplateMinimal | null;
   versions?: Array<DocumentVersion & { riskAssessment?: RiskAssessment | null }>;
   fields?: ContractField[];
   sections?: ContractSection[];
+};
+
+type SubscriptionWithMeta = Subscription & {
+  autoRenew?: boolean | null;
 };
 
 export function toTemplateField(api: TemplateField) {
@@ -120,7 +127,7 @@ export function toDocument(api: DocumentWithRelations) {
     status: api.status,
     created_at: api.createdAt.toISOString(),
     updated_at: api.updatedAt.toISOString(),
-    template_name: (api as any).template?.name,
+    template_name: api.template?.name,
     versions: versionsSorted.map(toVersion),
     fields: (api.fields || []).map(toContractField).sort((a, b) => {
       if (a.group_order === b.group_order) {
@@ -146,12 +153,17 @@ export function toBilling(sub?: Subscription | null) {
   if (!sub) {
     return { plan: 'freemium', status: 'active', auto_renew: false };
   }
+  const subscription = sub as SubscriptionWithMeta;
+  const autoRenew =
+    subscription.autoRenew !== undefined && subscription.autoRenew !== null
+      ? Boolean(subscription.autoRenew)
+      : true;
   return {
     id: sub.id,
     plan: sub.plan,
     status: sub.status,
     expires_at: sub.expiresAt?.toISOString() || null,
-    auto_renew: (sub as any).autoRenew ?? true,
+    auto_renew: autoRenew,
     created_at: sub.createdAt.toISOString(),
     updated_at: sub.updatedAt.toISOString(),
   };

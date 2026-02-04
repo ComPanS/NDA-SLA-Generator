@@ -17,14 +17,16 @@ import {
   parseWebhookEvent,
   getPayment,
 } from '../lib/yookassa';
-import { getUsageSummary, addExtraContractPaid, getUserPlan } from '../lib/limits';
+import { getUsageSummary, addExtraContractPaid } from '../lib/limits';
 import { env } from '../config/env';
 
 const router = Router();
 
 // Small helper to keep billing logs grouped
 // Logging disabled in production; keep stub to avoid console noise
-const logBilling = (..._args: unknown[]) => {};
+const logBilling = (..._args: unknown[]) => {
+  void _args;
+};
 
 /**
  * Make sure return_url includes payment=success to trigger client fallback flow.
@@ -35,7 +37,7 @@ const buildReturnUrlWithSuccess = (raw?: string): string => {
     const url = new URL(raw || fallback);
     url.searchParams.set('payment', 'success');
     return url.toString();
-  } catch (_err) {
+  } catch {
     return `${fallback.replace(/\/$/, '')}/billing?payment=success`;
   }
 };

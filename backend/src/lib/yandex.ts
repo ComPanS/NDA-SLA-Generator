@@ -39,7 +39,7 @@ export async function generateText(prompt: string): Promise<string> {
       return `No content returned.\n\n${prompt}`;
     }
     return text;
-  } catch (err: unknown) {
+  } catch {
     return `LLM generation failed.\n\n${prompt}`;
   }
 }

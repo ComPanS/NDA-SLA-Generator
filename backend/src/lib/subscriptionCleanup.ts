@@ -1,3 +1,4 @@
+import { Subscription } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { env } from '../config/env';
 import {
@@ -8,9 +9,28 @@ import {
 import { createRecurringPayment } from './yookassa';
 
 const CHECK_INTERVAL_MS = env.subscriptionExpiryCheckIntervalMs;
-const log = (..._args: unknown[]) => {};
-const logWarn = (..._args: unknown[]) => {};
-const logError = (..._args: unknown[]) => {};
+const log = (..._args: unknown[]) => {
+  void _args;
+};
+const logWarn = (..._args: unknown[]) => {
+  void _args;
+};
+const logError = (..._args: unknown[]) => {
+  void _args;
+};
+
+type SubscriptionWithMeta = Subscription & {
+  autoRenew?: boolean | null;
+  yookassaPaymentMethodId?: string | null;
+};
+
+function getAutoRenewFlag(sub: SubscriptionWithMeta): boolean {
+  return sub.autoRenew ?? false;
+}
+
+function getPaymentMethodId(sub: SubscriptionWithMeta): string | null {
+  return sub.yookassaPaymentMethodId ?? null;
+}
 
 async function processExpiredSubscription(sub: {
   id: string;
@@ -175,12 +195,13 @@ async function expireSubscriptionsNow() {
   let pastDue = 0;
 
   for (const sub of expired) {
+    const subscriptionWithMeta = sub as SubscriptionWithMeta;
     const res = await processExpiredSubscription({
       id: sub.id,
       userId: sub.userId,
       plan: sub.plan as SubscriptionPlanType,
-      autoRenew: (sub as any).autoRenew ?? false,
-      yookassaPaymentMethodId: (sub as any).yookassaPaymentMethodId ?? null,
+      autoRenew: getAutoRenewFlag(subscriptionWithMeta),
+      yookassaPaymentMethodId: getPaymentMethodId(subscriptionWithMeta),
     });
     if (res.renewed) renewed += 1;
     if (res.canceled) canceled += 1;

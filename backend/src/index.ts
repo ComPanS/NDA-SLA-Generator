@@ -37,7 +37,7 @@ export function createApp() {
 
   app.use(
     (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      // eslint-disable-next-line no-console
+      void _next;
       console.error(err);
       res.status(500).json({ detail: 'Internal server error' });
     },
@@ -50,7 +50,6 @@ if (process.env.NODE_ENV !== 'test') {
   // Start daily expiry checker
   startSubscriptionExpiryJob();
   app.listen(env.port, () => {
-    // eslint-disable-next-line no-console
     console.log(`API listening on http://localhost:${env.port}`);
   });
 }

@@ -9,11 +9,12 @@ describe('mappers', () => {
       description: null,
       content: 'base content',
       isActive: true,
+      createdById: null,
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-02'),
       groups: [],
       sections: [],
-    } as any);
+    } satisfies Parameters<typeof toTemplate>[0]);
 
     expect(dto).toMatchObject({
       id: 'tpl1',
@@ -32,7 +33,7 @@ describe('mappers', () => {
       status: 'draft',
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-02'),
-    } as any);
+    } satisfies Parameters<typeof toDocument>[0]);
 
     expect(dto).toMatchObject({
       id: 'doc1',

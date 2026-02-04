@@ -1,12 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { Router } from 'express';
 import { z } from 'zod';
+import sanitizeHtml, { Attributes, IFrame } from 'sanitize-html';
 import { prisma } from '../config/prisma';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { toDocument } from '../lib/mappers';
 import { generateText } from '../lib/yandex';
 import { getClientIp } from '../lib/requestIp';
-import sanitizeHtml from 'sanitize-html';
 import {
   checkContractLimit,
   checkClarificationLimit,
@@ -213,19 +213,24 @@ export function sanitizeGeneratedHtml(raw: string, title: string): string {
       img: ['http', 'https', 'data'],
     },
     transformTags: {
-      a: (tagName, attribs) => {
+      a: (tagName: string, attribs: Attributes) => {
         const rel = attribs.rel?.includes('noopener') ? attribs.rel : 'noopener noreferrer';
+        const updatedAttribs: Attributes = {
+          ...attribs,
+          rel,
+        };
+        if (attribs.target === '_blank') {
+          updatedAttribs.target = '_blank';
+        } else {
+          delete updatedAttribs.target;
+        }
         return {
           tagName,
-          attribs: {
-            ...attribs,
-            rel,
-            target: attribs.target === '_blank' ? '_blank' : undefined,
-          },
+          attribs: updatedAttribs,
         };
       },
     },
-    exclusiveFilter: (frame) => frame.tag === 'a' && !frame.attribs.href,
+    exclusiveFilter: (frame: IFrame) => frame.tag === 'a' && !frame.attribs.href,
   });
 
   return sanitized.trim();
@@ -281,6 +286,7 @@ function extractTitleFromHtml(html: string, fallback: string): string {
 // }
 
 function buildInstruction(title: string) {
+  void title;
   return [
     'Сгенерируй полноценный юридический договор на русском языке в формате валидного HTML.',
     'Верни СТРОГО только HTML-контент, без пояснений, комментариев, Markdown и вводных фраз.',
@@ -453,8 +459,7 @@ router.post('/guest/generate', async (req, res) => {
     return res.status(400).json({ detail: 'Не удалось определить IP адрес' });
   }
 
-  const guestAccess = prisma as any;
-  const existing = await guestAccess.guestAccess.findUnique({ where: { ip } });
+  const existing = await prisma.guestAccess.findUnique({ where: { ip } });
   if (existing) {
     return res.status(429).json({
       detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
@@ -522,14 +527,15 @@ router.post('/guest/generate', async (req, res) => {
   }
 
   try {
-    await guestAccess.guestAccess.create({
+    await prisma.guestAccess.create({
       data: {
         ip,
         userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
       },
     });
-  } catch (error: any) {
-    if (error?.code === 'P2002') {
+  } catch (error: unknown) {
+    const maybePrismaError = error as { code?: string };
+    if (maybePrismaError?.code === 'P2002') {
       return res.status(429).json({
         detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
       });
@@ -575,7 +581,7 @@ router.post('/guest/export/:fmt', async (req, res) => {
     }
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);
 
     return res.send(buffer);
@@ -1071,9 +1077,10 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
       await tx.document.delete({ where: { id: docId } });
     });
     return res.status(204).send();
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Delete document error:', error);
-    if (error?.code === 'P2003') {
+    const maybePrismaError = error as { code?: string };
+    if (maybePrismaError?.code === 'P2003') {
       return res.status(409).json({ detail: 'Cannot delete document due to linked records' });
     }
     return res.status(500).json({ detail: 'Failed to delete document' });
@@ -1140,7 +1147,7 @@ router.post('/:id/export/:fmt', requireAuth, async (req: AuthRequest, res) => {
     }
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);
 
     return res.send(buffer);
