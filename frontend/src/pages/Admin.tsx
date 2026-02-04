@@ -29,6 +29,7 @@ import {
 } from '@/features/admin/hooks/useAdmin';
 import { adminApi } from '@/shared/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
 export const Admin = () => {
   const { isAuthenticated } = useAdminStore();
@@ -65,7 +66,7 @@ export const Admin = () => {
   }, [noticeQuery.data]);
   const loginErrorMessage = useMemo(() => {
     if (!loginMutation.error) return null;
-    const err = loginMutation.error as any;
+    const err = loginMutation.error as AxiosError<{ detail?: string }>;
     const detail = err?.response?.data?.detail;
     if (typeof detail === 'string') {
       return detail;

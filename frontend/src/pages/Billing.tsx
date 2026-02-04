@@ -94,7 +94,14 @@ export const Billing = () => {
         },
       });
     }
-  }, [searchParams, setSearchParams, hasHydrated, isAuthenticated]);
+  }, [
+    searchParams,
+    setSearchParams,
+    hasHydrated,
+    isAuthenticated,
+    confirmPaymentMutation,
+    queryClient,
+  ]);
 
   const isLoading = subLoading || usageLoading || plansLoading;
 

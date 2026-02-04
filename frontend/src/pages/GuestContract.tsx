@@ -27,6 +27,7 @@ import {
   useGuestExportContract,
   useGuestGenerateContract,
 } from '@/features/contracts/hooks/useContracts';
+import { AxiosError } from 'axios';
 
 const storageKey = 'guest-contract-state-v1';
 
@@ -128,10 +129,11 @@ export const GuestContract = () => {
           setRiskSummary(data.risk_assessment || null);
           setSuccessMessage('Документ сгенерирован. Можно отредактировать и экспортировать.');
         },
-        onError: (err: any) => {
+        onError: (error) => {
+          const err = error as AxiosError<{ detail?: string }>;
           const detail =
-            err?.response?.data?.detail ||
-            err?.message ||
+            err.response?.data?.detail ||
+            err.message ||
             'Не удалось создать договор. Попробуйте позже.';
           setErrorMessage(
             typeof detail === 'string' ? detail : 'Не удалось создать договор. Попробуйте позже.'
@@ -148,10 +150,11 @@ export const GuestContract = () => {
     guestExport(
       { html: content, title: exportTitle || title || 'document', format },
       {
-        onError: (err: any) => {
+        onError: (error) => {
+          const err = error as AxiosError<{ detail?: string }>;
           const detail =
-            err?.response?.data?.detail ||
-            err?.message ||
+            err.response?.data?.detail ||
+            err.message ||
             `Не удалось экспортировать в ${format.toUpperCase()}`;
           setErrorMessage(typeof detail === 'string' ? detail : 'Ошибка экспорта');
         },

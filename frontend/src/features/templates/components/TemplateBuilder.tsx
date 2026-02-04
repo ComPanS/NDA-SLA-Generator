@@ -43,22 +43,22 @@ interface TemplateBuilderProps {
   template?: Template;
 }
 
-export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
-  const defaultSections: EditableSection[] = [
-    { title: 'Преамбула', order: 1 },
-    { title: 'Предмет договора', order: 2 },
-    { title: 'Права и обязанности сторон', order: 3 },
-    { title: 'Стоимость и порядок расчетов', order: 4 },
-    { title: 'Сроки выполнения и приемка', order: 5 },
-    { title: 'Ответственность сторон', order: 6 },
-    { title: 'Конфиденциальность', order: 7 },
-    { title: 'Форс-мажор', order: 8 },
-    { title: 'Порядок разрешения споров', order: 9 },
-    { title: 'Срок действия, изменение и расторжение', order: 10 },
-    { title: 'Заключительные положения', order: 11 },
-    { title: 'Реквизиты и подписи сторон', order: 12 },
-  ];
+const defaultSections: EditableSection[] = [
+  { title: 'Преамбула', order: 1 },
+  { title: 'Предмет договора', order: 2 },
+  { title: 'Права и обязанности сторон', order: 3 },
+  { title: 'Стоимость и порядок расчетов', order: 4 },
+  { title: 'Сроки выполнения и приемка', order: 5 },
+  { title: 'Ответственность сторон', order: 6 },
+  { title: 'Конфиденциальность', order: 7 },
+  { title: 'Форс-мажор', order: 8 },
+  { title: 'Порядок разрешения споров', order: 9 },
+  { title: 'Срок действия, изменение и расторжение', order: 10 },
+  { title: 'Заключительные положения', order: 11 },
+  { title: 'Реквизиты и подписи сторон', order: 12 },
+];
 
+export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [content, setContent] = useState(template?.content || '');

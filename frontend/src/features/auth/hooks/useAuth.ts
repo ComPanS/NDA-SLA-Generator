@@ -24,7 +24,7 @@ export const useLogin = () => {
       authStore.getState().setTokens(data.access_token, data.refresh_token);
       navigate('/dashboard');
     },
-    onError: (error: AxiosError<any>, variables) => {
+    onError: (error: AxiosError<{ code?: string }>, variables) => {
       if (error.response?.status === 403 && error.response.data?.code === 'email_not_verified') {
         authStore.getState().setPendingEmail(variables.email);
         navigate('/verify-email');

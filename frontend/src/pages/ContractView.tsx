@@ -145,7 +145,7 @@ export const ContractView = () => {
     if (selectedVersion) {
       setCurrentContent(selectedVersion.content || '');
     }
-  }, [selectedVersion?.id]);
+  }, [selectedVersion]);
 
   const handleRefine = () => {
     if (!id || !refinePrompt.trim()) return;
@@ -548,8 +548,8 @@ export const ContractView = () => {
               <strong>Это договор, сгенерированный через ИИ.</strong>
               <br />
               Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
-              автоматических изменений через кнопку "Уточнить с AI". Рекомендована консультация с
-              юристом.
+              автоматических изменений через кнопку &quot;Уточнить с AI&quot;. Рекомендована
+              консультация с юристом.
             </Typography>
           </Alert>
 

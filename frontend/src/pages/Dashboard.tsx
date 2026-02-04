@@ -77,7 +77,14 @@ export const Dashboard = () => {
         },
       });
     }
-  }, [searchParams, setSearchParams, hasHydrated, isAuthenticated]);
+  }, [
+    searchParams,
+    setSearchParams,
+    hasHydrated,
+    isAuthenticated,
+    confirmPaymentMutation,
+    queryClient,
+  ]);
 
   const filtered = useMemo(() => {
     const list = documents || [];
@@ -153,7 +160,9 @@ export const Dashboard = () => {
                       <Select
                         value={statusFilter}
                         label="Статус"
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        onChange={(e) =>
+                          setStatusFilter(e.target.value as 'all' | 'draft' | 'final')
+                        }
                       >
                         <MenuItem value="all">Все</MenuItem>
                         <MenuItem value="draft">Черновик</MenuItem>
@@ -165,7 +174,15 @@ export const Dashboard = () => {
                       <Select
                         value={sortBy}
                         label="Сортировка"
-                        onChange={(e) => setSortBy(e.target.value as any)}
+                        onChange={(e) =>
+                          setSortBy(
+                            e.target.value as
+                              | 'updated_desc'
+                              | 'updated_asc'
+                              | 'title_asc'
+                              | 'title_desc'
+                          )
+                        }
                       >
                         <MenuItem value="updated_desc">По обновлению (новые)</MenuItem>
                         <MenuItem value="updated_asc">По обновлению (старые)</MenuItem>
