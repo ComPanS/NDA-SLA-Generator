@@ -72,10 +72,9 @@ jobs:
 
     env:
       IMAGE_TAG: ${{ github.sha }}
-      COMPOSE_FILE_PATH: ${{ secrets.DEPLOY_COMPOSE_PATH }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_ACTOR: ${{ github.actor }}
-      BACKEND_ENV_FILE: ${{ secrets.BACKEND_ENV_FILE }}
+
       PORT: ${{ secrets.PORT }}
       NODE_ENV: production
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -84,28 +83,35 @@ jobs:
       JWT_REFRESH_TOKEN_EXPIRES_DAYS: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRES_DAYS }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
       CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+
       YANDEX_GPT_API_KEY: ${{ secrets.YANDEX_GPT_API_KEY }}
       YANDEX_GPT_FOLDER_ID: ${{ secrets.YANDEX_GPT_FOLDER_ID }}
       YANDEX_GPT_MODEL: ${{ secrets.YANDEX_GPT_MODEL }}
       YANDEX_GPT_ENDPOINT: ${{ secrets.YANDEX_GPT_ENDPOINT }}
       YANDEX_GPT_TIMEOUT: ${{ secrets.YANDEX_GPT_TIMEOUT }}
+
       YANDEX_OAUTH_CLIENT_ID: ${{ secrets.YANDEX_OAUTH_CLIENT_ID }}
       YANDEX_OAUTH_CLIENT_SECRET: ${{ secrets.YANDEX_OAUTH_CLIENT_SECRET }}
       YANDEX_OAUTH_REDIRECT_URI: ${{ secrets.YANDEX_OAUTH_REDIRECT_URI }}
+
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USER: ${{ secrets.SMTP_USER }}
       SMTP_PASS: ${{ secrets.SMTP_PASS }}
       SMTP_FROM: ${{ secrets.SMTP_FROM }}
+
       VERIFICATION_CODE_TTL_MINUTES: ${{ secrets.VERIFICATION_CODE_TTL_MINUTES }}
       VERIFICATION_RESEND_INTERVAL_SECONDS: ${{ secrets.VERIFICATION_RESEND_INTERVAL_SECONDS }}
       VERIFICATION_RESEND_MAX_PER_HOUR: ${{ secrets.VERIFICATION_RESEND_MAX_PER_HOUR }}
+
       ADMIN_LOGIN: ${{ secrets.ADMIN_LOGIN }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       ADMIN_ROUTE: ${{ secrets.ADMIN_ROUTE }}
       ADMIN_TOKEN_EXPIRES_MINUTES: ${{ secrets.ADMIN_TOKEN_EXPIRES_MINUTES }}
+
       SUBSCRIPTION_BILLING_INTERVAL_MS: ${{ secrets.SUBSCRIPTION_BILLING_INTERVAL_MS }}
       SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS: ${{ secrets.SUBSCRIPTION_EXPIRY_CHECK_INTERVAL_MS }}
+
       YOOKASSA_SHOP_ID: ${{ secrets.YOOKASSA_SHOP_ID }}
       YOOKASSA_SECRET_KEY: ${{ secrets.YOOKASSA_SECRET_KEY }}
       YOOKASSA_RETURN_URL: ${{ secrets.YOOKASSA_RETURN_URL }}
@@ -127,22 +133,20 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: docker-compose.yml
+          source: infra/docker-compose.yml
           target: /opt/nda
 
-
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.5 
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           envs: >-
             IMAGE_TAG,
-            COMPOSE_FILE_PATH,
             GITHUB_TOKEN,
             GITHUB_ACTOR,
-            BACKEND_ENV_FILE,
+            OWNER_LC,
             PORT,
             NODE_ENV,
             DATABASE_URL,
@@ -176,26 +180,21 @@ jobs:
             YOOKASSA_SHOP_ID,
             YOOKASSA_SECRET_KEY,
             YOOKASSA_RETURN_URL,
-            YOOKASSA_WEBHOOK_SECRET,
-            OWNER_LC
+            YOOKASSA_WEBHOOK_SECRET
           script: |
             set -euo pipefail
 
-            # Определяем имена образов с lowercase владельцем
             BACKEND_IMAGE="ghcr.io/${OWNER_LC}/nda-sla-backend"
             FRONTEND_IMAGE="ghcr.io/${OWNER_LC}/nda-sla-frontend"
 
-            COMPOSE_FILE="${COMPOSE_FILE_PATH:-/opt/nda/docker-compose.yml}"
-            BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-/opt/nda/backend.env}"
+            COMPOSE_FILE="/opt/nda/docker-compose.yml"
+            BACKEND_ENV_FILE="/opt/nda/backend.env"
 
             echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 
-            docker pull "${BACKEND_IMAGE}:${IMAGE_TAG}"
-            docker pull "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+            mkdir -p /opt/nda
 
-            mkdir -p "$(dirname "${BACKEND_ENV_FILE}")"
-
-            cat > "${BACKEND_ENV_FILE}" <<'EOF'
+            cat > "${BACKEND_ENV_FILE}" <<EOF
             PORT=${PORT}
             NODE_ENV=${NODE_ENV}
             DATABASE_URL=${DATABASE_URL}
