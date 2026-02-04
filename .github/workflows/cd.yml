@@ -117,9 +117,12 @@ jobs:
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
+      
+      - name: Export OWNER_LC to environment
+        run: echo "OWNER_LC=${{ steps.lowercase_deploy.outputs.owner_lc }}" >> $GITHUB_ENV
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3  # рекомендуется использовать стабильную версию
+        uses: appleboy/ssh-action@v1.2.5 
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
