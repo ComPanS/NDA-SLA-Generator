@@ -196,90 +196,93 @@ npm run build
 
 Результат в `frontend/dist/`.
 
-### 2. Деплой статики
+### 2. Nginx + HTTPS для dogovarai.ru (один сервер, прокси на Docker Compose)
 
-#### Вариант A: Nginx на том же сервере
+Цель: `dogovarai.ru` → фронтенд контейнера (порт 5173 наружу), `/api` → бэкенд контейнера (порт 8001 наружу). `VITE_API_URL` в сборке уже равен `/api`, поэтому достаточно path-based прокси.
+
+1. DNS (уже задано):
+
+   - `A @` → `95.163.244.138`
+   - `A www` → `95.163.244.138`
+   - (опционально) `A api` → `95.163.244.138`, если захотите отдельный поддомен для API.
+   - MX/TXT/DKIM/DMARC оставьте как есть.
+
+2. Установите Nginx и Certbot на сервере:
 
 ```bash
-# Копирование файлов
-sudo mkdir -p /var/www/nda-frontend
-sudo cp -r dist/* /var/www/nda-frontend/
+sudo apt update
+sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
-#### Вариант B: CDN (рекомендуется)
+3. Получите сертификат Let’s Encrypt (одним сертификатом на домен и www):
 
-Загрузите содержимое `dist/` в S3-совместимое хранилище (Yandex Object Storage, AWS S3) и настройте CDN.
+```bash
+sudo certbot --nginx -d dogovarai.ru -d www.dogovarai.ru
+```
 
-### 3. Настройка Nginx
+Если добавите `api.dogovarai.ru`, добавьте его сразу: `-d api.dogovarai.ru`.
+
+4. Создайте конфиг `/etc/nginx/sites-available/dogovorai`:
 
 ```nginx
-# /etc/nginx/sites-available/nda-generator
+# /etc/nginx/sites-available/dogovorai
 
-# Frontend
 server {
     listen 80;
-    server_name dogovarai.ru;
-
-    # Redirect to HTTPS
-    return 301 https://$server_name$request_uri;
+    server_name dogovarai.ru www.dogovarai.ru;
+    return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name dogovarai.ru;
+    server_name dogovarai.ru www.dogovarai.ru;
 
     ssl_certificate /etc/letsencrypt/live/dogovarai.ru/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru/privkey.pem;
 
-    root /var/www/nda-frontend;
-    index index.html;
-
-    # SPA routing
+    # Frontend контейнер (порт 5173 опубликован на хосте)
     location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-}
-
-# Backend API
-server {
-    listen 443 ssl http2;
-    server_name api.dogovarai.ru;
-
-    ssl_certificate /etc/letsencrypt/live/dogovarai.ru/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/dogovarai.ru/privkey.pem;
-
-    location / {
-        proxy_pass http://localhost:8001;
+        proxy_pass http://127.0.0.1:5173;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
     }
+
+    # API → бэкенд контейнер (порт 8001 на хосте)
+    location /api/ {
+        proxy_pass http://127.0.0.1:8001/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Базовые security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
 }
 ```
 
-Активация конфигурации:
+5. Включите конфиг и перезагрузите Nginx:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/nda-generator /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/dogovorai /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+6. Проверка:
+
+- Откройте https://dogovarai.ru — должен открыться фронт из контейнера.
+- https://dogovarai.ru/api/health (или `/health` вашего бэкенда) — должен отвечать бэкенд.
+- После деплоя из GitHub Actions `docker compose` поднимет контейнеры, а Nginx будет только проксировать.
 
 ### 4. SSL сертификат
 

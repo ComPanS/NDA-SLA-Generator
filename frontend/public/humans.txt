@@ -1,6 +1,6 @@
 /* TEAM */
 Developer: ДоговорAI
-Contact: support@dogovorai.ru
+Contact: support@dogovarai.ru
 Site: https://dogovarai.ru
 
 /* TECHNOLOGY */
