@@ -61,6 +61,37 @@ const faqItems = [
   },
 ];
 
+const whyUsItems = [
+  {
+    title: 'Договоры не теряются',
+    desc: 'Храним сохранения и версии в аккаунте — можно откатиться и сравнить.',
+  },
+  {
+    title: 'AI — соавтор, а не разовая генерация',
+    desc: 'Уточняйте и редактируйте текст вместе с моделью, пока не будет «та самое» формулировка.',
+  },
+  {
+    title: 'Живой редактор в браузере',
+    desc: 'Правьте финальный вариант прямо на сайте, без скачиваний и пересборок.',
+  },
+  {
+    title: 'Шаблоны под ваш процесс',
+    desc: 'Гибко настраивайте поля и разделы, а при использовании сразу правьте данные шаблона.',
+  },
+  {
+    title: 'Экспорт без лишних кликов',
+    desc: 'DOCX и PDF готовы сразу после правок — не нужно копировать вручную.',
+  },
+  {
+    title: 'Структура под контролем',
+    desc: 'Задайте разделы договора, и AI будет писать строго по ним.',
+  },
+  {
+    title: 'Проверка на юрриски',
+    desc: 'Сервис подсветит потенциальные проблемы и даст рекомендации, что поправить.',
+  },
+];
+
 export const Landing = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
@@ -78,8 +109,8 @@ export const Landing = () => {
   return (
     <Layout>
       <PageMeta
-        title="AI-конструктор договоров: NDA, SLA и любые соглашения"
-        description="Создавайте договоры с помощью AI за минуты: NDA, SLA, оферты и индивидуальные соглашения с экспортом DOCX/PDF."
+        title="AI-конструктор договоров: NDA, SLA, ГПХ и любые соглашения"
+        description="Создавайте договоры с помощью AI за минуты: NDA, SLA, ГПХ, оферты и индивидуальные соглашения с экспортом DOCX/PDF."
       />
       <Box
         sx={{
@@ -91,7 +122,7 @@ export const Landing = () => {
           Создавайте договоры с помощью AI
         </Typography>
         <Typography variant="h5" color="text.secondary" paragraph sx={{ mb: 4 }}>
-          AI-конструктор договоров за минуты: NDA, SLA, оферты и любые индивидуальные соглашения.
+          AI-конструктор договоров за минуты: NDA, SLA, ГПХ, оферты и любые индивидуальные соглашения.
         </Typography>
         <Stack direction="row" spacing={2} justifyContent="center">
           <Button variant="contained" size="large" onClick={() => navigate('/register')}>
@@ -116,7 +147,7 @@ export const Landing = () => {
                   Черновик за минуты
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Генерация текста и структуры за 5–15 минут вместо недель согласований
+                  Генерация текста и структуры за 2–5 минут вместо недель согласований
                 </Typography>
               </CardContent>
             </Card>
@@ -150,6 +181,58 @@ export const Landing = () => {
             </Card>
           </Grid>
         </Grid>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Stack spacing={3}>
+          <Typography variant="h4" component="h2">
+            Почему мы?
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Чтобы не тратить недели на переписки, мы собрали инструменты, которые реально экономят время юристов и продактов.
+          </Typography>
+          <Grid container spacing={2}>
+            {whyUsItems.map((item) => (
+              <Grid item xs={12} md={6} key={item.title}>
+                <Card
+                  variant="outlined"
+                  sx={{
+                    height: '100%',
+                    borderColor: 'primary.light',
+                    boxShadow: '0 12px 28px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <CardContent>
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          bgcolor: 'primary.light',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Check fontSize="small" color="primary" />
+                      </Box>
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          {item.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {item.desc}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Stack>
       </Container>
 
       <Container maxWidth="lg" sx={{ py: 8 }}>
