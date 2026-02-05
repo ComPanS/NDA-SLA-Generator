@@ -84,7 +84,6 @@ model Subscription {
   plan                    SubscriptionPlan
   status                  SubscriptionStatus
   expiresAt               DateTime?
-  // YooKassa fields
   yookassaPaymentMethodId String? // payment method ID for recurring payments
   autoRenew               Boolean            @default(true)
   user                    User               @relation(fields: [userId], references: [id])
