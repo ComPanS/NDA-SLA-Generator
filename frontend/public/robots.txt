@@ -1,2 +1,11 @@
 User-agent: *
-Disallow:*
+Allow: /
+
+# Block non-public and sensitive areas
+Disallow: /dashboard
+Disallow: /billing
+Disallow: /profile
+Disallow: /contract/
+Disallow: /templates
+
+Sitemap: https://dogovarai.ru/sitemap.xml

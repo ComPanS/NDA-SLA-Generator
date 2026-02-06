@@ -8,7 +8,7 @@ git pull
 cd backend
 npm ci
 # если нужно применить миграции:
-npx prisma migrate deploy
+# npx prisma migrate deploy
 cd ..
 
 # frontend deps + сборка
