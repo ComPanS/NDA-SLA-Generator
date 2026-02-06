@@ -47,7 +47,6 @@ const defaultSections: ContractSectionInput[] = [
 ];
 
 export const GuestContract = () => {
-  const [title, setTitle] = useState('');
   const [prompt, setPrompt] = useState('');
   const [riskCheck, setRiskCheck] = useState(false);
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
@@ -58,18 +57,22 @@ export const GuestContract = () => {
   const [riskSummary, setRiskSummary] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showValidation, setShowValidation] = useState(false);
 
   const { mutate: guestGenerate, isPending: isGenerating } = useGuestGenerateContract();
   const { mutate: guestExport, isPending: isExporting } = useGuestExportContract();
 
-  const canSubmit = useMemo(() => !!title.trim() && !!prompt.trim(), [title, prompt]);
+  const derivedTitle = useMemo(
+    () => (prompt.trim() ? prompt.trim().slice(0, 80) : 'Гостевой договор'),
+    [prompt]
+  );
+  const isPromptMissing = showValidation && !prompt.trim();
 
   useEffect(() => {
     const saved = sessionStorage.getItem(storageKey);
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
-      setTitle(parsed.title || '');
       setPrompt(parsed.prompt || '');
       setRiskCheck(!!parsed.riskCheck);
       setFields(parsed.fields || []);
@@ -85,7 +88,6 @@ export const GuestContract = () => {
 
   useEffect(() => {
     const snapshot = {
-      title,
       prompt,
       riskCheck,
       fields,
@@ -97,7 +99,6 @@ export const GuestContract = () => {
     };
     sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
   }, [
-    title,
     prompt,
     riskCheck,
     fields,
@@ -113,10 +114,16 @@ export const GuestContract = () => {
     setErrorMessage(null);
     setSuccessMessage(null);
     setRiskSummary(null);
+    setShowValidation(true);
+
+    if (!prompt.trim()) {
+      setErrorMessage('Заполните обязательные поля.');
+      return;
+    }
 
     guestGenerate(
       {
-        title,
+        title: derivedTitle,
         prompt,
         risk_check: riskCheck,
         fields,
@@ -125,9 +132,10 @@ export const GuestContract = () => {
       {
         onSuccess: (data) => {
           setContent(data.content);
-          setExportTitle(data.title || title);
+          setExportTitle(data.title || derivedTitle);
           setRiskSummary(data.risk_assessment || null);
           setSuccessMessage('Документ сгенерирован. Можно отредактировать и экспортировать.');
+          setShowValidation(false);
         },
         onError: (error) => {
           const err = error as AxiosError<{ detail?: string }>;
@@ -148,7 +156,7 @@ export const GuestContract = () => {
     setErrorMessage(null);
 
     guestExport(
-      { html: content, title: exportTitle || title || 'document', format },
+      { html: content, title: exportTitle || derivedTitle || 'document', format },
       {
         onError: (error) => {
           const err = error as AxiosError<{ detail?: string }>;
@@ -191,16 +199,6 @@ export const GuestContract = () => {
         <Card>
           <CardContent>
             <form onSubmit={handleSubmit}>
-              <TextField
-                fullWidth
-                label="Название договора"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                margin="normal"
-                required
-                placeholder="Например: NDA с ООО Компания"
-              />
-
               <Tooltip title="Выберите шаблон после регистрации или входа">
                 <span>
                   <FormControl fullWidth margin="normal" disabled>
@@ -216,13 +214,34 @@ export const GuestContract = () => {
                 fullWidth
                 label="Описание / Параметры"
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  if (showValidation) {
+                    setShowValidation(false);
+                    setErrorMessage(null);
+                  }
+                }}
                 margin="normal"
                 multiline
                 rows={6}
-                required
                 placeholder="Опишите детали договора: стороны, предмет, сроки, условия..."
-                helperText="Чем подробнее описание, тем точнее будет сгенерирован документ"
+                helperText={
+                  isPromptMissing
+                    ? 'Заполните обязательное поле'
+                    : 'Чем подробнее описание, тем точнее будет сгенерирован документ'
+                }
+                error={isPromptMissing}
+                sx={
+                  isPromptMissing
+                    ? {
+                        '& .MuiOutlinedInput-root': {
+                          borderBottom: (theme) => `2px solid ${theme.palette.error.main}`,
+                          borderBottomLeftRadius: 0,
+                          borderBottomRightRadius: 0,
+                        },
+                      }
+                    : undefined
+                }
               />
 
               <FormControlLabel
@@ -317,7 +336,7 @@ export const GuestContract = () => {
                   type="submit"
                   variant="contained"
                   size="large"
-                  disabled={isGenerating || !canSubmit}
+                  disabled={isGenerating}
                   fullWidth
                 >
                   {isGenerating ? 'Генерация...' : 'Сгенерировать договор'}
@@ -327,7 +346,6 @@ export const GuestContract = () => {
                   size="large"
                   disabled={isGenerating}
                   onClick={() => {
-                    setTitle('');
                     setPrompt('');
                     setFields([]);
                     setSections(defaultSections);
@@ -337,6 +355,7 @@ export const GuestContract = () => {
                     setRiskSummary(null);
                     setErrorMessage(null);
                     setSuccessMessage(null);
+                    setShowValidation(false);
                   }}
                 >
                   Очистить
