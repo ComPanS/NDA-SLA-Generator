@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+  <channel>
+    <title>ДоговорAI — новости и обновления</title>
+    <link>https://dogovarai.ru</link>
+    <description>Самые свежие новости о функционале AI-конструктора договоров: NDA, SLA и другие </description>
+    <language>ru-RU</language>
+    <lastBuildDate>Fri, 06 Feb 2026 12:00:00 +0000</lastBuildDate>
+
+    <item>
+      <title>Бесплатный конструктор документов с экспортом в DOCX и PDF</title>
+      <link>https://dogovarai.ru</link>
+      <description>Создавайте NDA, SLA или любое соглашение за пару минут с AI-помощником и экспортируйте в нужный формат.</description>
+      <pubDate>Fri, 06 Feb 2026 10:00:00 +0000</pubDate>
+      <guid isPermaLink="true">https://dogovarai.ru/news/1</guid>
+    </item>
+
+    <item>
+      <title>Новые шаблоны договоров и подсказки для полей</title>
+      <link>https://dogovarai.ru/dashboard</link>
+      <description>Добавили умные подсказки по разделам и полям, а также новые шаблоны для партнерских соглашений и SLA.</description>
+      <pubDate>Thu, 05 Feb 2026 14:00:00 +0000</pubDate>
+      <guid isPermaLink="true">https://dogovarai.ru/news/2</guid>
+    </item>
+
+    <item>
+      <title>Безопасность, подписки и админ-панель</title>
+      <link>https://dogovarai.ru/admin</link>
+      <description>Реализована проверка доступа, админский доступ к статистике пользователей и настройка подписок через Яндекс/ЮKassa.</description>
+      <pubDate>Wed, 04 Feb 2026 09:00:00 +0000</pubDate>
+      <guid isPermaLink="true">https://dogovarai.ru/news/3</guid>
+    </item>
+  </channel>
+</rss>
