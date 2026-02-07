@@ -250,6 +250,7 @@ export const NewContract = () => {
                   margin="normal"
                   required
                   placeholder="Например: NDA с ООО Компания"
+                  helperText="Название — только для вашего удобства, на текст генерации не влияет. Описание для ИИ укажите ниже в поле “Описание / Параметры”."
                 />
 
                 <FormControl fullWidth margin="normal">
