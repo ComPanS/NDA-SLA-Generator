@@ -120,7 +120,7 @@ export const Dashboard = () => {
     <ProtectedRoute>
       <Layout>
         <PageMeta
-          title="Дашборд договоров | ДоговорAI"
+          title="Мои договоры | ДоговорAI"
           description="Управляйте договорами: NDA, SLA и другие. Версии, статусы, экспорт DOCX/PDF в одном месте."
         />
         {noticeQuery.data?.enabled && noticeQuery.data.message && (
@@ -130,7 +130,7 @@ export const Dashboard = () => {
         )}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Мои документы
+            Мои договоры
           </Typography>
           {hasDocuments && (
             <Button

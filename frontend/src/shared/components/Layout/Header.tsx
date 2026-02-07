@@ -55,7 +55,7 @@ export const Header = () => {
 
   const authLinks = useMemo(
     () => [
-      { label: 'Дашборд', to: '/dashboard' },
+      { label: 'Мои договоры', to: '/dashboard' },
       { label: 'Шаблоны', to: '/templates' },
       { label: 'Новый договор', to: '/new-contract' },
       { label: 'Подписка', to: '/billing' },

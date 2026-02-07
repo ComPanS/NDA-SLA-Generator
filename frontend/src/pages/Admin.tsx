@@ -286,7 +286,7 @@ export const Admin = () => {
         <Card>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">Предупреждение на дашборде</Typography>
+              <Typography variant="h6">Предупреждение в моих договорах</Typography>
               <Button
                 variant="outlined"
                 size="small"
@@ -321,7 +321,7 @@ export const Admin = () => {
                       color="primary"
                     />
                   }
-                  label="Показывать на дашборде"
+                  label="Показывать в моих договорах"
                 />
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Button
