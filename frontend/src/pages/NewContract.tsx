@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Card,
@@ -69,6 +69,9 @@ export const NewContract = () => {
   const [limitError, setLimitError] = useState<LimitReachedError | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [showValidation, setShowValidation] = useState(false);
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  const promptRef = useRef<HTMLInputElement | null>(null);
 
   const { data: templates, isLoading: templatesLoading, error: templatesError } = useTemplates();
   const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(
@@ -162,11 +165,23 @@ export const NewContract = () => {
     }
   }, [selectedTemplate]);
 
-  const canSubmit = useMemo(() => !!title.trim() && !!prompt.trim(), [title, prompt]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLimitError(null);
+    const hasTitle = !!title.trim();
+    const hasPrompt = !!prompt.trim();
+
+    if (!hasTitle || !hasPrompt) {
+      setShowValidation(true);
+      setSnackbarMessage('Заполните название и поле «Описание / Параметры»');
+      setSnackbarOpen(true);
+      if (!hasTitle && titleRef.current) {
+        titleRef.current.focus();
+      } else if (!hasPrompt && promptRef.current) {
+        promptRef.current.focus();
+      }
+      return;
+    }
 
     generateContract(
       {
@@ -248,9 +263,14 @@ export const NewContract = () => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   margin="normal"
-                  required
                   placeholder="Например: NDA с ООО Компания"
-                  helperText="Название — только для вашего удобства, на текст генерации не влияет. Описание для ИИ укажите ниже в поле “Описание / Параметры”."
+                  error={showValidation && !title.trim()}
+                  inputRef={titleRef}
+                  helperText={
+                    showValidation && !title.trim()
+                      ? 'Введите название'
+                      : 'Название — только для вашего удобства, на текст генерации не влияет. Описание для ИИ укажите ниже в поле “Описание / Параметры”.'
+                  }
                 />
 
                 <FormControl fullWidth margin="normal">
@@ -279,9 +299,14 @@ export const NewContract = () => {
                   margin="normal"
                   multiline
                   rows={6}
-                  required
                   placeholder="Опишите детали договора: стороны, предмет, сроки, условия..."
-                  helperText="Чем подробнее описание, тем точнее будет сгенерирован документ"
+                  error={showValidation && !prompt.trim()}
+                  inputRef={promptRef}
+                  helperText={
+                    showValidation && !prompt.trim()
+                      ? 'Заполните описание / параметры для ИИ'
+                      : 'Чем подробнее описание, тем точнее будет сгенерирован документ'
+                  }
                 />
 
                 <FormControlLabel
@@ -396,7 +421,7 @@ export const NewContract = () => {
                     type="submit"
                     variant="contained"
                     size="large"
-                    disabled={isGenerating || !canSubmit}
+                  disabled={isGenerating}
                     fullWidth
                   >
                     {isGenerating ? 'Генерация документа...' : 'Сгенерировать договор'}
