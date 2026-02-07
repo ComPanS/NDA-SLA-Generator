@@ -40,7 +40,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
     hasPrioritySupport: false,
   },
   basic: {
-    price: 490,
+    price: 290,
     contractsPerMonth: 20,
     maxTemplates: 3,
     exportFormats: ['pdf', 'docx'],
@@ -51,7 +51,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
     hasPrioritySupport: false,
   },
   standard: {
-    price: 1290,
+    price: 790,
     contractsPerMonth: 100,
     maxTemplates: 10,
     exportFormats: ['pdf', 'docx'],
@@ -62,7 +62,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
     hasPrioritySupport: false,
   },
   pro: {
-    price: 1990,
+    price: 1490,
     contractsPerMonth: -1, // unlimited
     maxTemplates: -1, // unlimited
     exportFormats: ['pdf', 'docx'],
