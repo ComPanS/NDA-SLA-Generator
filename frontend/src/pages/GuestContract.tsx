@@ -199,7 +199,7 @@ export const GuestContract = () => {
         <Card>
           <CardContent>
             <form onSubmit={handleSubmit}>
-              <Tooltip title="Выберите шаблон после регистрации или входа">
+              <Tooltip title="Шаблоны доступны после регистрации или входа">
                 <span>
                   <FormControl fullWidth margin="normal" disabled>
                     <InputLabel>Шаблон</InputLabel>
@@ -209,6 +209,9 @@ export const GuestContract = () => {
                   </FormControl>
                 </span>
               </Tooltip>
+              <Typography variant="caption" color="text.secondary">
+                Шаблоны станут доступны после регистрации или входа в аккаунт.
+              </Typography>
 
               <TextField
                 fullWidth
