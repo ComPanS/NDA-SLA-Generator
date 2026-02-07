@@ -58,6 +58,7 @@ model User {
   documents      Document[]     @relation("UserDocuments")
   payments       Payment[]
   usageRecord    UsageRecord?
+  clarifications ClarificationUsage[]
 }
 
 model Template {
@@ -115,6 +116,21 @@ model UsageRecord {
   user               User     @relation(fields: [userId], references: [id])
 }
 
+model ClarificationUsage {
+  id          String   @id @default(uuid())
+  userId      String
+  documentId  String
+  periodStart DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId, periodStart])
+  @@index([userId, periodStart])
+}
+
 model GuestAccess {
   id        String   @id @default(uuid())
   ip        String   @unique
@@ -136,6 +152,7 @@ model Document {
   versions   DocumentVersion[]
   fields     ContractField[]
   sections   ContractSection[]
+  clarifications ClarificationUsage[]
 }
 
 model DocumentVersion {

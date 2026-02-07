@@ -12,6 +12,11 @@ import {
   SUBSCRIPTION_NAMES,
 } from '../config/subscriptions';
 
+function getCurrentPeriodStart(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
 export interface LimitCheckResult {
   allowed: boolean;
   currentUsage: number;
@@ -43,19 +48,27 @@ export async function getOrCreateUsageRecord(userId: string) {
         contractsThisMonth: 0,
         clarificationsUsed: 0,
         extraContractsPaid: 0,
-        periodStart: new Date(),
+        periodStart: getCurrentPeriodStart(),
       },
     });
   }
 
   // Check if period needs reset (monthly)
-  const now = new Date();
+  const currentPeriodStart = getCurrentPeriodStart();
   const periodStart = new Date(usage.periodStart);
   const monthDiff =
-    (now.getFullYear() - periodStart.getFullYear()) * 12 +
-    (now.getMonth() - periodStart.getMonth());
+    (currentPeriodStart.getFullYear() - periodStart.getFullYear()) * 12 +
+    (currentPeriodStart.getMonth() - periodStart.getMonth());
 
-  if (monthDiff >= 1) {
+  if (monthDiff >= 1 || periodStart.getTime() !== currentPeriodStart.getTime()) {
+    // Clean up old per-document clarification usages
+    await prisma.clarificationUsage.deleteMany({
+      where: {
+        userId,
+        periodStart: { lt: currentPeriodStart },
+      },
+    });
+
     // Reset monthly counters
     usage = await prisma.usageRecord.update({
       where: { userId },
@@ -63,7 +76,7 @@ export async function getOrCreateUsageRecord(userId: string) {
         contractsThisMonth: 0,
         clarificationsUsed: 0,
         extraContractsPaid: 0,
-        periodStart: new Date(),
+        periodStart: currentPeriodStart,
       },
     });
   }
@@ -148,13 +161,33 @@ export async function checkContractLimit(userId: string): Promise<LimitCheckResu
 /**
  * Check if user can use AI clarification
  */
-export async function checkClarificationLimit(userId: string): Promise<LimitCheckResult> {
+export async function checkClarificationLimit(
+  userId: string,
+  documentId?: string,
+): Promise<LimitCheckResult> {
   const plan = await getUserPlan(userId);
   const planConfig = SUBSCRIPTION_PLANS[plan];
-  const usage = await getOrCreateUsageRecord(userId);
+  await getOrCreateUsageRecord(userId);
+  const currentPeriodStart = getCurrentPeriodStart();
+  const currentUsage = await prisma.clarificationUsage.count({
+    where: { userId, periodStart: currentPeriodStart },
+  });
+  const alreadyUsedForDoc =
+    documentId &&
+    (await prisma.clarificationUsage.findFirst({
+      where: { userId, documentId, periodStart: currentPeriodStart },
+    }));
 
   const limit = planConfig.aiClarifications;
-  const currentUsage = usage.clarificationsUsed;
+
+  if (alreadyUsedForDoc) {
+    return {
+      allowed: true,
+      currentUsage,
+      limit: isUnlimited(limit) ? -1 : limit,
+      isUnlimited: isUnlimited(limit),
+    };
+  }
 
   if (isUnlimited(limit)) {
     return {
@@ -282,14 +315,33 @@ export async function incrementContractUsage(userId: string): Promise<void> {
 /**
  * Increment clarification usage counter
  */
-export async function incrementClarificationUsage(userId: string): Promise<void> {
+export async function incrementClarificationUsage(userId: string, documentId: string): Promise<void> {
   await getOrCreateUsageRecord(userId);
-  await prisma.usageRecord.update({
-    where: { userId },
-    data: {
-      clarificationsUsed: { increment: 1 },
-    },
+  const currentPeriodStart = getCurrentPeriodStart();
+
+  const existing = await prisma.clarificationUsage.findFirst({
+    where: { userId, documentId, periodStart: currentPeriodStart },
   });
+
+  if (existing) {
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.clarificationUsage.create({
+      data: {
+        userId,
+        documentId,
+        periodStart: currentPeriodStart,
+      },
+    }),
+    prisma.usageRecord.update({
+      where: { userId },
+      data: {
+        clarificationsUsed: { increment: 1 },
+      },
+    }),
+  ]);
 }
 
 /**
@@ -312,6 +364,10 @@ export async function getUsageSummary(userId: string) {
   const plan = await getUserPlan(userId);
   const planConfig = SUBSCRIPTION_PLANS[plan];
   const usage = await getOrCreateUsageRecord(userId);
+  const currentPeriodStart = getCurrentPeriodStart();
+  const clarificationsUsed = await prisma.clarificationUsage.count({
+    where: { userId, periodStart: currentPeriodStart },
+  });
 
   const templateCount = await prisma.template.count({
     where: { createdById: userId },
@@ -327,7 +383,7 @@ export async function getUsageSummary(userId: string) {
       isUnlimited: isUnlimited(planConfig.contractsPerMonth),
     },
     clarifications: {
-      used: usage.clarificationsUsed,
+      used: clarificationsUsed,
       limit: planConfig.aiClarifications,
       isUnlimited: isUnlimited(planConfig.aiClarifications),
     },

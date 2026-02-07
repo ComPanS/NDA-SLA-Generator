@@ -38,7 +38,7 @@ interface UpgradeModalProps {
 
 const LIMIT_TYPE_LABELS = {
   contracts: 'договоров',
-  clarifications: 'уточнений от нейросети',
+  clarifications: 'уточнений на документ',
   templates: 'шаблонов',
 };
 

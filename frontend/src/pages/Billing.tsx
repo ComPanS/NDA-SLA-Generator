@@ -166,11 +166,14 @@ export const Billing = () => {
     limit: number,
     unlimited: boolean,
     extraPaid?: number,
-    hint?: string
+    hint?: string,
+    options?: { displayLimitOnly?: boolean; hideProgress?: boolean }
   ) => {
+    const displayLimitOnly = options?.displayLimitOnly;
+    const hideProgress = options?.hideProgress;
     const effectiveLimit = extraPaid ? limit + extraPaid : limit;
     const percentage = unlimited ? 0 : Math.min((used / effectiveLimit) * 100, 100);
-    const isNearLimit = !unlimited && percentage >= 80;
+    const isNearLimit = !unlimited && !hideProgress && percentage >= 80;
 
     // Format limit display: "3" or "3+1" if extraPaid
     const formatLimitDisplay = () => {
@@ -200,10 +203,10 @@ export const Billing = () => {
             )}
           </Stack>
           <Typography variant="body2" color={isNearLimit ? 'error' : 'text.secondary'}>
-            {used} / {formatLimitDisplay()}
+            {displayLimitOnly ? formatLimitDisplay() : `${used} / ${formatLimitDisplay()}`}
           </Typography>
         </Box>
-        {!unlimited && (
+        {!unlimited && !hideProgress && (
           <LinearProgress
             variant="determinate"
             value={percentage}
@@ -307,18 +310,19 @@ export const Billing = () => {
                   usage.contracts.extraPaid
                 )}
                 {renderUsageBar(
-                  'Уточнения от нейросети',
-                  usage.clarifications.used,
-                  usage.clarifications.limit,
-                  usage.clarifications.isUnlimited,
-                  undefined,
-                  'Счётчик обновляется при каждом уточнении через AI'
-                )}
-                {renderUsageBar(
                   'Шаблоны',
                   usage.templates.used,
                   usage.templates.limit,
                   usage.templates.isUnlimited
+                )}
+                {renderUsageBar(
+                  'Уточнения на документ',
+                  usage.clarifications.used,
+                  usage.clarifications.limit,
+                  usage.clarifications.isUnlimited,
+                  undefined,
+                  'Считаем уникальные документы, в которых было уточнение; повторные уточнения в одном документе лимит не тратят',
+                  { displayLimitOnly: true, hideProgress: true }
                 )}
 
                 <Divider sx={{ my: 2 }} />

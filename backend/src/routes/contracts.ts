@@ -770,19 +770,6 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
 
-  // Check AI clarification limit
-  const limitCheck = await checkClarificationLimit(req.userId);
-  if (!limitCheck.allowed) {
-    return res.status(402).json({
-      detail: 'Достигнут лимит уточнений от нейросети на этот месяц',
-      code: 'LIMIT_REACHED',
-      limit_type: 'clarifications',
-      current_usage: limitCheck.currentUsage,
-      limit: limitCheck.limit,
-      upgrade_options: limitCheck.upgradeOptions,
-    });
-  }
-
   const hasRiskCheckAccess = await checkFeatureAccess(req.userId, 'riskCheck');
 
   const parsed = refineSchema.safeParse(req.body);
@@ -805,6 +792,18 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   })) as DocWithRelations | null;
   if (!doc || doc.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
+  }
+  // Check AI clarification limit (per document)
+  const limitCheck = await checkClarificationLimit(req.userId, doc.id);
+  if (!limitCheck.allowed) {
+    return res.status(402).json({
+      detail: 'Достигнут лимит документов с уточнениями от нейросети на этот месяц',
+      code: 'LIMIT_REACHED',
+      limit_type: 'clarifications',
+      current_usage: limitCheck.currentUsage,
+      limit: limitCheck.limit,
+      upgrade_options: limitCheck.upgradeOptions,
+    });
   }
   const nextVersion = (doc.versions?.reduce((m, v) => Math.max(m, v.version), 0) || 0) + 1;
   const baseContent = doc.versions?.[doc.versions.length - 1]?.content || '';
@@ -856,7 +855,7 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   })) as DocWithRelations;
 
   // Increment clarification usage counter
-  await incrementClarificationUsage(req.userId);
+  await incrementClarificationUsage(req.userId, doc.id);
 
   return res.json({ document: toDocument(updated) });
 });
