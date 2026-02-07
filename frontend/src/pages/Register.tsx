@@ -11,14 +11,15 @@ import {
   FormControlLabel,
   Checkbox,
   Stack,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import { Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-material';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useRegister, useAuthStore } from '@/features/auth/hooks/useAuth';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
-
-const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export const Register = () => {
   const location = useLocation();
@@ -28,8 +29,19 @@ export const Register = () => {
   const [passwordError, setPasswordError] = useState('');
   const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const [policyError, setPolicyError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { mutate: register, isPending, error } = useRegister();
   const { isAuthenticated } = useAuthStore();
+
+  const passwordChecks = {
+    length: password.length >= 8,
+    lower: /[a-z]/.test(password),
+    upper: /[A-Z]/.test(password),
+    digit: /\d/.test(password),
+  };
+  const isPasswordStrong = Object.values(passwordChecks).every(Boolean);
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -40,15 +52,13 @@ export const Register = () => {
     setPasswordError('');
     setPolicyError('');
 
-
-
-    if (password !== confirmPassword) {
-      setPasswordError('Пароли не совпадают');
+    if (!isPasswordStrong) {
+      setPasswordError('Исправьте требования к паролю ниже');
       return;
     }
 
-    if (!STRONG_PASSWORD_REGEX.test(password)) {
-      setPasswordError('Минимум 8 символов, буквы в разном регистре и цифра');
+    if (!passwordsMatch) {
+      setPasswordError('Пароли не совпадают');
       return;
     }
 
@@ -99,22 +109,91 @@ export const Register = () => {
               <TextField
                 fullWidth
                 label="Пароль"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError('');
+                }}
                 margin="normal"
                 required
-                helperText="Минимум 8 символов, буквы в разном регистре и цифра"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="показать пароль"
+                        onClick={() => setShowPassword((v) => !v)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
+
+              <Stack spacing={0.5} sx={{ mt: 1, mb: 1 }}>
+                {[
+                  { key: 'length', text: 'Минимум 8 символов' },
+                  { key: 'lower', text: 'Строчная буква (a-z)' },
+                  { key: 'upper', text: 'Заглавная буква (A-Z)' },
+                  { key: 'digit', text: 'Цифра (0-9)' },
+                ].map(({ key, text }) => {
+                  const passed = passwordChecks[key as keyof typeof passwordChecks];
+                  return (
+                    <Stack
+                      key={key}
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      color={passed ? 'success.main' : 'text.secondary'}
+                      sx={{ fontSize: 14 }}
+                    >
+                      {passed ? (
+                        <CheckCircle fontSize="small" color="success" />
+                      ) : (
+                        <Cancel fontSize="small" color="disabled" />
+                      )}
+                      <span>{text}</span>
+                    </Stack>
+                  );
+                })}
+              </Stack>
 
               <TextField
                 fullWidth
                 label="Подтвердите пароль"
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (passwordError) setPasswordError('');
+                }}
                 margin="normal"
                 required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="показать пароль"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                helperText={
+                  confirmPassword
+                    ? passwordsMatch
+                      ? 'Пароли совпадают'
+                      : 'Пароли должны совпадать'
+                    : ''
+                }
+                FormHelperTextProps={{
+                  sx: { color: passwordsMatch || !confirmPassword ? 'text.secondary' : 'error.main' },
+                }}
               />
 
               <Stack sx={{ mt: 1 }}>

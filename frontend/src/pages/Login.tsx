@@ -8,7 +8,10 @@ import {
   Typography,
   Alert,
   Link as MuiLink,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useLogin, useAuthStore } from '@/features/auth/hooks/useAuth';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
@@ -19,6 +22,7 @@ export const Login = () => {
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { mutate: login, isPending, error } = useLogin();
   const { isAuthenticated } = useAuthStore();
 
@@ -64,11 +68,24 @@ export const Login = () => {
               <TextField
                 fullWidth
                 label="Пароль"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 margin="normal"
                 required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="показать пароль"
+                        onClick={() => setShowPassword((v) => !v)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
 
               <Button
