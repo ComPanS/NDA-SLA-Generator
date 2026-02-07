@@ -101,12 +101,15 @@ export const ContractView = () => {
       const latestVersion = document.versions[document.versions.length - 1];
       const existingSelection =
         selectedVersionId && document.versions.find((v) => v.id === selectedVersionId);
-      const targetVersion = existingSelection || latestVersion;
 
-      if (targetVersion?.id && targetVersion.id !== selectedVersionId) {
-        setSelectedVersionId(targetVersion.id);
+      if (existingSelection) {
+        setCurrentContent(existingSelection.content || '');
+      } else if (!selectedVersionId && latestVersion) {
+        setSelectedVersionId(latestVersion.id);
+        setCurrentContent(latestVersion.content || '');
       }
-      setCurrentContent(targetVersion?.content || '');
+      // Если selectedVersionId уже установлен, но версия еще не успела попасть в список,
+      // ничего не делаем и ждём следующего обновления данных, чтобы не переключать вкладку назад.
     }
     if (document?.title) {
       setTitleDraft(document.title);
