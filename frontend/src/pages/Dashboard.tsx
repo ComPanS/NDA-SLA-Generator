@@ -86,9 +86,11 @@ export const Dashboard = () => {
     queryClient,
   ]);
 
+  const hasDocuments = (documents?.length || 0) > 0;
+
   const filtered = useMemo(() => {
-    const list = documents || [];
-    return list
+    if (!hasDocuments) return [];
+    return (documents || [])
       .filter((doc) => {
         const matchSearch = search.trim()
           ? doc.title.toLowerCase().includes(search.trim().toLowerCase())
@@ -112,7 +114,7 @@ export const Dashboard = () => {
             return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
         }
       });
-  }, [documents, search, statusFilter, dateFrom, dateTo, sortBy]);
+  }, [documents, hasDocuments, search, statusFilter, dateFrom, dateTo, sortBy]);
 
   return (
     <ProtectedRoute>
@@ -130,169 +132,203 @@ export const Dashboard = () => {
           <Typography variant="h4" component="h1" gutterBottom>
             Мои документы
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => navigate('/new-contract')}
-            sx={{ mt: 2 }}
-          >
-            Создать новый договор
-          </Button>
+          {hasDocuments && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate('/new-contract')}
+              sx={{ mt: 2 }}
+            >
+              Создать новый договор
+            </Button>
+          )}
         </Box>
 
         {isLoading && <Typography>Загрузка документов...</Typography>}
         {error && <Typography color="error">Не удалось загрузить документы</Typography>}
 
         {!isLoading && !error && (
-          <Stack spacing={2}>
-            <Card variant="outlined">
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                    <TextField
-                      label="Поиск по названию"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      fullWidth
-                    />
-                    <FormControl sx={{ minWidth: 160 }}>
-                      <InputLabel>Статус</InputLabel>
-                      <Select
-                        value={statusFilter}
-                        label="Статус"
-                        onChange={(e) =>
-                          setStatusFilter(e.target.value as 'all' | 'draft' | 'final')
-                        }
-                      >
-                        <MenuItem value="all">Все</MenuItem>
-                        <MenuItem value="draft">Черновик</MenuItem>
-                        <MenuItem value="final">Финальный</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl sx={{ minWidth: 200 }}>
-                      <InputLabel>Сортировка</InputLabel>
-                      <Select
-                        value={sortBy}
-                        label="Сортировка"
-                        onChange={(e) =>
-                          setSortBy(
-                            e.target.value as
-                              | 'updated_desc'
-                              | 'updated_asc'
-                              | 'title_asc'
-                              | 'title_desc'
-                          )
-                        }
-                      >
-                        <MenuItem value="updated_desc">По обновлению (новые)</MenuItem>
-                        <MenuItem value="updated_asc">По обновлению (старые)</MenuItem>
-                        <MenuItem value="title_asc">Название А→Я</MenuItem>
-                        <MenuItem value="title_desc">Название Я→А</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Stack>
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                    <TextField
-                      label="Дата с"
-                      type="date"
-                      InputLabelProps={{ shrink: true }}
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      sx={{ minWidth: 200 }}
-                    />
-                    <TextField
-                      label="Дата по"
-                      type="date"
-                      InputLabelProps={{ shrink: true }}
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      sx={{ minWidth: 200 }}
-                    />
-                  </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            {filtered.map((doc) => {
-              const latest = doc.versions?.[doc.versions.length - 1];
-              return (
-                <Card key={doc.id} variant="outlined">
+          <>
+            {hasDocuments ? (
+              <Stack spacing={2}>
+                <Card variant="outlined">
                   <CardContent>
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                      <Description fontSize="small" />
-                      <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                        {doc.title}
-                      </Typography>
-                      <Chip
-                        label={doc.status === 'draft' ? 'Черновик' : 'Финальный'}
-                        size="small"
-                      />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      Из шаблона:{' '}
-                      {doc.template_name || (doc.template_id ? doc.template_id : 'Без шаблона')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Обновлён: {new Date(doc.updated_at).toLocaleString('ru-RU')}
-                    </Typography>
-                    <Divider sx={{ my: 1 }} />
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={1.5}
-                      alignItems={{ xs: 'flex-start', sm: 'center' }}
-                    >
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => navigate(`/contract/${doc.id}`)}
-                      >
-                        Открыть
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        disabled={isRenaming}
-                        onClick={() => {
-                          const nextTitle = prompt('Новое название договора', doc.title);
-                          if (nextTitle && nextTitle.trim()) {
-                            renameContract({ documentId: doc.id, title: nextTitle.trim() });
-                          }
-                        }}
-                        sx={{ width: { xs: '100%', sm: 'auto' } }}
-                      >
-                        Переименовать
-                      </Button>
-                      <Button
-                        size="small"
-                        color="error"
-                        variant="text"
-                        disabled={isDeleting}
-                        onClick={() => {
-                          if (confirm('Удалить договор? Это действие необратимо.')) {
-                            deleteContract(doc.id);
-                          }
-                        }}
-                        sx={{ width: { xs: '100%', sm: 'auto' } }}
-                      >
-                        Удалить
-                      </Button>
-                      {latest && (
-                        <Typography variant="body2" color="text.secondary">
-                          Текущая версия: {latest.version}
-                        </Typography>
-                      )}
+                    <Stack spacing={2}>
+                      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                        <TextField
+                          label="Поиск по названию"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          fullWidth
+                        />
+                        <FormControl sx={{ minWidth: 160 }}>
+                          <InputLabel>Статус</InputLabel>
+                          <Select
+                            value={statusFilter}
+                            label="Статус"
+                            onChange={(e) =>
+                              setStatusFilter(e.target.value as 'all' | 'draft' | 'final')
+                            }
+                          >
+                            <MenuItem value="all">Все</MenuItem>
+                            <MenuItem value="draft">Черновик</MenuItem>
+                            <MenuItem value="final">Финальный</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <FormControl sx={{ minWidth: 200 }}>
+                          <InputLabel>Сортировка</InputLabel>
+                          <Select
+                            value={sortBy}
+                            label="Сортировка"
+                            onChange={(e) =>
+                              setSortBy(
+                                e.target.value as
+                                  | 'updated_desc'
+                                  | 'updated_asc'
+                                  | 'title_asc'
+                                  | 'title_desc'
+                              )
+                            }
+                          >
+                            <MenuItem value="updated_desc">По обновлению (новые)</MenuItem>
+                            <MenuItem value="updated_asc">По обновлению (старые)</MenuItem>
+                            <MenuItem value="title_asc">Название А→Я</MenuItem>
+                            <MenuItem value="title_desc">Название Я→А</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Stack>
+                      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                        <TextField
+                          label="Дата с"
+                          type="date"
+                          InputLabelProps={{ shrink: true }}
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          sx={{ minWidth: 200 }}
+                        />
+                        <TextField
+                          label="Дата по"
+                          type="date"
+                          InputLabelProps={{ shrink: true }}
+                          value={dateTo}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          sx={{ minWidth: 200 }}
+                        />
+                      </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
-              );
-            })}
 
-            {filtered.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                У вас пока нет документов. Создайте первый договор.
-              </Typography>
+                {filtered.map((doc) => {
+                  const latest = doc.versions?.[doc.versions.length - 1];
+                  return (
+                    <Card key={doc.id} variant="outlined">
+                      <CardContent>
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                          <Description fontSize="small" />
+                          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                            {doc.title}
+                          </Typography>
+                          <Chip
+                            label={doc.status === 'draft' ? 'Черновик' : 'Финальный'}
+                            size="small"
+                          />
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                          Из шаблона:{' '}
+                          {doc.template_name || (doc.template_id ? doc.template_id : 'Без шаблона')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Обновлён: {new Date(doc.updated_at).toLocaleString('ru-RU')}
+                        </Typography>
+                        <Divider sx={{ my: 1 }} />
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          spacing={1.5}
+                          alignItems={{ xs: 'flex-start', sm: 'center' }}
+                        >
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => navigate(`/contract/${doc.id}`)}
+                          >
+                            Открыть
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={isRenaming}
+                            onClick={() => {
+                              const nextTitle = prompt('Новое название договора', doc.title);
+                              if (nextTitle && nextTitle.trim()) {
+                                renameContract({ documentId: doc.id, title: nextTitle.trim() });
+                              }
+                            }}
+                            sx={{ width: { xs: '100%', sm: 'auto' } }}
+                          >
+                            Переименовать
+                          </Button>
+                          <Button
+                            size="small"
+                            color="error"
+                            variant="text"
+                            disabled={isDeleting}
+                            onClick={() => {
+                              if (confirm('Удалить договор? Это действие необратимо.')) {
+                                deleteContract(doc.id);
+                              }
+                            }}
+                            sx={{ width: { xs: '100%', sm: 'auto' } }}
+                          >
+                            Удалить
+                          </Button>
+                          {latest && (
+                            <Typography variant="body2" color="text.secondary">
+                              Текущая версия: {latest.version}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+
+                {filtered.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    У вас пока нет документов. Создайте первый договор.
+                  </Typography>
+                )}
+              </Stack>
+            ) : (
+              <Box
+                sx={{
+                  mt: 4,
+                  minHeight: { xs: '50vh', md: '60vh' },
+                  py: 6,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  gap: 2,
+                }}
+              >
+                <Typography variant="h6">У вас пока нет договоров</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Создайте первый договор, чтобы начать работу
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  size="large"
+                  onClick={() => navigate('/new-contract')}
+                  sx={{ px: 4, py: 1.5 }}
+                >
+                  Создать новый договор
+                </Button>
+              </Box>
             )}
-          </Stack>
+          </>
         )}
 
         <Snackbar
