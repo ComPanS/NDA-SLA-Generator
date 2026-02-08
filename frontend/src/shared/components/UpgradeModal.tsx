@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { Check, Warning, Star } from '@mui/icons-material';
 import { useState } from 'react';
-import { useSubscribe, usePurchaseSingleContract } from '@/features/billing/hooks/useBilling';
+import { useSubscribe, usePurchaseSingleContract, usePlans } from '@/features/billing/hooks/useBilling';
 import { UpgradeOption, SubscriptionPlan } from '@/shared/types';
 import {
   SUBSCRIPTION_FEATURES,
@@ -54,6 +54,7 @@ export const UpgradeModal = ({
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const subscribeMutation = useSubscribe();
   const purchaseSingleMutation = usePurchaseSingleContract();
+  const { data: plansData } = usePlans();
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     setSelectedPlan(plan);
@@ -169,13 +170,43 @@ export const UpgradeModal = ({
                 <Typography variant="h6" gutterBottom>
                   {option.name}
                 </Typography>
-                <Typography variant="h4" color="primary" gutterBottom>
-                  {option.price} ₽
-                  <Typography component="span" variant="body2" color="text.secondary">
-                    {' '}
-                    / месяц
-                  </Typography>
-                </Typography>
+                {(() => {
+                  const planFromApi = plansData?.plans?.find((p) => p.id === option.plan);
+                  const hasDiscount =
+                    !!planFromApi?.first_month_discount_available &&
+                    planFromApi.first_month_price !== null &&
+                    planFromApi.first_month_price !== undefined &&
+                    option.price > 0 &&
+                    (planFromApi.first_month_price as number) < option.price;
+                  const discountPercent = hasDiscount
+                    ? Math.round(
+                        (1 - (planFromApi?.first_month_price as number) / option.price) * 100,
+                      )
+                    : null;
+                  const displayPrice =
+                    hasDiscount && planFromApi?.first_month_price !== null
+                      ? planFromApi.first_month_price
+                      : option.price;
+
+                  return (
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {displayPrice} ₽
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        {' '}
+                        / месяц
+                      </Typography>
+                      {hasDiscount && (
+                        <Typography variant="body2" color="text.secondary" component="div">
+                          <span style={{ textDecoration: 'line-through' }}>{option.price} ₽</span>{' '}
+                          {discountPercent !== null ? `-${discountPercent}%` : ''}
+                          <Typography variant="caption" color="text.secondary" component="div">
+                            Скидка только на первый месяц
+                          </Typography>
+                        </Typography>
+                      )}
+                    </Typography>
+                  );
+                })()}
 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {limitType === 'contracts' && (

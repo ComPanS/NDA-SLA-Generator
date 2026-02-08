@@ -7,6 +7,8 @@ export type SubscriptionPlanType = 'freemium' | 'basic' | 'standard' | 'pro';
 
 export interface PlanLimits {
   price: number; // in rubles
+  /** Optional discounted price for the first month */
+  firstMonthPrice?: number;
   contractsPerMonth: number; // -1 = unlimited
   maxTemplates: number; // -1 = unlimited
   exportFormats: readonly string[];
@@ -30,6 +32,7 @@ export const SINGLE_CONTRACT_PRICE = 99; // rubles
 export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
   freemium: {
     price: 0,
+    firstMonthPrice: 0,
     contractsPerMonth: 3,
     maxTemplates: 1,
     exportFormats: ['pdf'],
@@ -41,6 +44,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
   },
   basic: {
     price: 290,
+    firstMonthPrice: 99,
     contractsPerMonth: 20,
     maxTemplates: 3,
     exportFormats: ['pdf', 'docx'],
@@ -52,6 +56,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
   },
   standard: {
     price: 790,
+    firstMonthPrice: 390,
     contractsPerMonth: 100,
     maxTemplates: 10,
     exportFormats: ['pdf', 'docx'],
@@ -63,6 +68,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanType, PlanLimits> = {
   },
   pro: {
     price: 1490,
+    firstMonthPrice: 790,
     contractsPerMonth: -1, // unlimited
     maxTemplates: -1, // unlimited
     exportFormats: ['pdf', 'docx'],

@@ -7,6 +7,8 @@ import { SubscriptionPlan } from '@/shared/types';
 
 export interface PlanLimits {
   price: number;
+  /** Optional discounted price for the first month */
+  firstMonthPrice?: number;
   contractsPerMonth: number; // -1 = unlimited
   maxTemplates: number; // -1 = unlimited
   exportFormats: readonly string[];
@@ -23,6 +25,7 @@ export const SINGLE_CONTRACT_PRICE = 99;
 export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   freemium: {
     price: 0,
+    firstMonthPrice: 0,
     contractsPerMonth: 3,
     maxTemplates: 1,
     exportFormats: ['pdf'],
@@ -34,6 +37,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   },
   basic: {
     price: 290,
+    firstMonthPrice: 100,
     contractsPerMonth: 20,
     maxTemplates: 3,
     exportFormats: ['pdf', 'docx'],
@@ -45,6 +49,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   },
   standard: {
     price: 790,
+    firstMonthPrice: 100,
     contractsPerMonth: 100,
     maxTemplates: 10,
     exportFormats: ['pdf', 'docx'],
@@ -56,6 +61,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   },
   pro: {
     price: 1490,
+    firstMonthPrice: 100,
     contractsPerMonth: -1,
     maxTemplates: -1,
     exportFormats: ['pdf', 'docx'],

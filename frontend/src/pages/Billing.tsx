@@ -368,6 +368,17 @@ export const Billing = () => {
               const isPro = plan.id === 'pro';
               const isFreePlan = plan.id === 'freemium';
               const disableFreeWhileActive = isFreePlan && currentPlan !== 'freemium';
+              const hasDiscount =
+                !!plan.first_month_discount_available &&
+                plan.first_month_price !== null &&
+                plan.first_month_price !== undefined &&
+                plan.price > 0 &&
+                plan.first_month_price < plan.price;
+              const discountPercent = hasDiscount
+                ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
+                : null;
+              const displayPrice =
+                hasDiscount && plan.first_month_price !== null ? plan.first_month_price : plan.price;
 
               return (
                 <Grid item xs={12} sm={6} md={3} key={plan.id}>
@@ -396,12 +407,21 @@ export const Billing = () => {
                       </Typography>
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="h3" component="span" color="primary">
-                          {plan.price === 0 ? 'Бесплатно' : `${plan.price} ₽`}
+                          {displayPrice === 0 ? 'Бесплатно' : `${displayPrice} ₽`}
                         </Typography>
                         {plan.price > 0 && (
                           <Typography variant="body2" color="text.secondary" component="span">
                             {' '}
                             / месяц
+                          </Typography>
+                        )}
+                        {hasDiscount && (
+                          <Typography variant="body2" color="text.secondary" component="div">
+                            <span style={{ textDecoration: 'line-through' }}>{plan.price} ₽</span>{' '}
+                            {discountPercent !== null ? `-${discountPercent}%` : ''}
+                            <Typography variant="caption" color="text.secondary" component="div">
+                              Скидка только на первый месяц
+                            </Typography>
                           </Typography>
                         )}
                       </Box>

@@ -19,6 +19,7 @@ import {
 } from '../lib/yookassa';
 import { getUsageSummary, addExtraContractPaid } from '../lib/limits';
 import { env } from '../config/env';
+import { verifyToken } from '../lib/jwt';
 
 const router = Router();
 
@@ -27,6 +28,13 @@ const router = Router();
 const logBilling = (..._args: unknown[]) => {
   void _args;
 };
+
+async function hasSucceededSubscriptionPayment(userId: string): Promise<boolean> {
+  const count = await prisma.payment.count({
+    where: { userId, type: 'subscription', status: 'succeeded' },
+  });
+  return count > 0;
+}
 
 /**
  * Make sure return_url includes payment=success to trigger client fallback flow.
@@ -91,10 +99,32 @@ router.get('/usage', requireAuth, async (req: AuthRequest, res) => {
  * GET /billing/plans - Get available plans
  */
 router.get('/plans', async (_req, res) => {
+  // Determine if user is eligible for first-month discount (first successful subscription payment not yet made)
+  let userId: string | null = null;
+  let firstMonthDiscountAvailable = true;
+
+  const auth = _req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    const token = auth.substring('Bearer '.length);
+    try {
+      userId = verifyToken(token, 'access');
+    } catch {
+      // ignore invalid token, treat as anonymous
+    }
+  }
+
+  if (userId) {
+    const hasPaid = await hasSucceededSubscriptionPayment(userId);
+    firstMonthDiscountAvailable = !hasPaid;
+  }
+
   const plans = Object.entries(SUBSCRIPTION_PLANS).map(([key, config]) => ({
     id: key,
     name: SUBSCRIPTION_NAMES[key as SubscriptionPlanType],
     price: config.price,
+    first_month_price: config.firstMonthPrice ?? null,
+    first_month_discount_available:
+      firstMonthDiscountAvailable && config.firstMonthPrice !== undefined,
     features: SUBSCRIPTION_FEATURES[key as SubscriptionPlanType],
     limits: {
       contracts_per_month: config.contractsPerMonth,
@@ -125,8 +155,15 @@ router.post('/subscribe', requireAuth, async (req: AuthRequest, res) => {
     }
 
     const { plan, return_url } = parsed.data;
+    const planConfig = SUBSCRIPTION_PLANS[plan];
 
     const finalReturnUrl = buildReturnUrlWithSuccess(return_url || `${env.frontendUrl}/billing`);
+
+    // Determine if user is eligible for first-month discount
+    const hasPaidBefore = await hasSucceededSubscriptionPayment(req.userId);
+    const isFirstMonthDiscountAvailable =
+      !hasPaidBefore && planConfig.firstMonthPrice !== undefined && planConfig.firstMonthPrice > 0;
+    const amountToCharge = isFirstMonthDiscountAvailable ? planConfig.firstMonthPrice! : planConfig.price;
 
     // Check if user already has an active subscription of same or higher tier
     const existingSub = await prisma.subscription.findFirst({
@@ -148,6 +185,7 @@ router.post('/subscribe', requireAuth, async (req: AuthRequest, res) => {
       req.userId,
       plan,
       finalReturnUrl,
+      amountToCharge,
     );
 
     logBilling('subscription payment created', {
@@ -155,13 +193,15 @@ router.post('/subscribe', requireAuth, async (req: AuthRequest, res) => {
       plan,
       paymentId,
       returnUrl: finalReturnUrl,
+      amount: amountToCharge,
+      firstMonthDiscountApplied: isFirstMonthDiscountAvailable,
     });
 
     // Create pending payment record
     await prisma.payment.create({
       data: {
         userId: req.userId,
-        amount: SUBSCRIPTION_PLANS[plan].price * 100, // convert to kopeks
+        amount: amountToCharge * 100, // convert to kopeks
         type: 'subscription',
         status: 'pending',
         yookassaPaymentId: paymentId,

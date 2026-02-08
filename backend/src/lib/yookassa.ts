@@ -79,13 +79,14 @@ export async function createSubscriptionPayment(
   userId: string,
   plan: SubscriptionPlanType,
   returnUrl?: string,
+  amountOverrideRubles?: number,
 ): Promise<{ paymentUrl: string; paymentId: string }> {
   const planConfig = SUBSCRIPTION_PLANS[plan];
   if (planConfig.price === 0) {
     throw new Error('Cannot create payment for free plan');
   }
 
-  const amountInRubles = planConfig.price;
+  const amountInRubles = amountOverrideRubles ?? planConfig.price;
 
   const payload: YooKassaPaymentRequest = {
     amount: {
@@ -102,6 +103,7 @@ export async function createSubscriptionPayment(
       user_id: userId,
       plan: plan,
       type: 'subscription',
+      amount: amountInRubles.toString(),
     },
     save_payment_method: true, // Save for recurring payments
   };

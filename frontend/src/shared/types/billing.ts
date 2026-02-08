@@ -70,6 +70,8 @@ export interface PlanInfo {
   id: SubscriptionPlan;
   name: string;
   price: number;
+  first_month_price?: number | null;
+  first_month_discount_available?: boolean;
   features: string[];
   limits: PlanLimits;
 }
