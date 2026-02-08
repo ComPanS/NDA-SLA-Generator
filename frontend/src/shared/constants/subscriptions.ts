@@ -16,6 +16,7 @@ export interface PlanLimits {
   hasRiskCheck: boolean;
   hasSections: boolean;
   hasStatuses: boolean;
+  hasVersions: boolean;
   hasPrioritySupport: boolean;
 }
 
@@ -33,6 +34,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     hasRiskCheck: false,
     hasSections: false,
     hasStatuses: false,
+    hasVersions: false,
     hasPrioritySupport: false,
   },
   basic: {
@@ -45,6 +47,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     hasRiskCheck: false,
     hasSections: true,
     hasStatuses: true,
+    hasVersions: false,
     hasPrioritySupport: false,
   },
   standard: {
@@ -57,6 +60,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     hasRiskCheck: true,
     hasSections: true,
     hasStatuses: true,
+    hasVersions: false,
     hasPrioritySupport: false,
   },
   pro: {
@@ -69,6 +73,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     hasRiskCheck: true,
     hasSections: true,
     hasStatuses: true,
+    hasVersions: true,
     hasPrioritySupport: true,
   },
 };

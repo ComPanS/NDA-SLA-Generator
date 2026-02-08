@@ -397,6 +397,7 @@ export async function getUsageSummary(userId: string) {
       hasSections: planConfig.hasSections,
       hasStatuses: planConfig.hasStatuses,
       hasDocxExport: planConfig.exportFormats.includes('docx'),
+      hasVersions: planConfig.hasVersions,
       hasPrioritySupport: planConfig.hasPrioritySupport,
     },
     periodStart: usage.periodStart,

@@ -25,6 +25,7 @@ export interface FeaturesInfo {
   hasSections: boolean;
   hasStatuses: boolean;
   hasDocxExport: boolean;
+  hasVersions: boolean;
   hasPrioritySupport: boolean;
 }
 

@@ -11,6 +11,7 @@ import {
   checkContractLimit,
   checkClarificationLimit,
   checkFeatureAccess,
+  getUserPlan,
   incrementContractUsage,
   incrementClarificationUsage,
 } from '../lib/limits';
@@ -50,6 +51,16 @@ type ContractSectionDraft = {
   title: string;
   order: number;
 };
+
+function pruneVersions<T extends { versions?: Array<{ version: number }> }>(
+  doc: T,
+  allowHistory: boolean,
+): T {
+  if (!doc || allowHistory) return doc;
+  if (!doc.versions || doc.versions.length <= 1) return doc;
+  const latest = doc.versions[doc.versions.length - 1];
+  return { ...doc, versions: [latest] };
+}
 
 function contractFieldsFromTemplate(template: TemplateWithFields): ContractFieldDraft[] {
   const groups = template.groups || [];
@@ -424,7 +435,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: 'Invalid document id' });
   }
   const docId = parsedId.data.id;
-  const doc = (await prisma.document.findUnique({
+  const docRaw = (await prisma.document.findUnique({
     where: { id: docId },
     include: {
       template: { select: { id: true, name: true } },
@@ -434,9 +445,12 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
     },
   })) as DocWithRelations | null;
 
-  if (!doc || doc.ownerId !== req.userId) {
+  if (!docRaw || docRaw.ownerId !== req.userId) {
     return res.status(404).json({ detail: 'Document not found' });
   }
+
+  const plan = await getUserPlan(req.userId);
+  const doc = pruneVersions(docRaw, plan === 'pro');
 
   return res.json({ document: toDocument(doc) });
 });
@@ -446,7 +460,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
 
-  const docs = await prisma.document.findMany({
+  const docsRaw = await prisma.document.findMany({
     where: { ownerId: req.userId },
     orderBy: { updatedAt: 'desc' },
     include: {
@@ -456,6 +470,10 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       sections: { orderBy: { order: 'asc' } },
     },
   });
+
+  const plan = await getUserPlan(req.userId);
+  const allowHistory = plan === 'pro';
+  const docs = docsRaw.map((d) => pruneVersions(d, allowHistory));
 
   return res.json({ documents: docs.map(toDocument) });
 });

@@ -75,6 +75,7 @@ export const ContractView = () => {
   const hasStatusesAccess = usage?.features?.hasStatuses ?? false;
   const hasDocxExportAccess = usage?.features?.hasDocxExport ?? false;
   const hasRiskCheckAccess = usage?.features?.hasRiskCheck ?? false;
+  const hasVersionsAccess = usage?.features?.hasVersions ?? false;
 
   const { mutate: refineContract, isPending: isRefining } = useRefineContract(id || '');
   const { mutate: exportContract, isPending: isExporting } = useExportContract();
@@ -88,7 +89,7 @@ export const ContractView = () => {
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
   const [sections, setSections] = useState<ContractSectionInput[]>([]);
 
-  const versions = document?.versions || [];
+  const versions = hasVersionsAccess ? document?.versions || [] : (document?.versions?.slice(-1) || []);
   const latestVersion = versions[versions.length - 1];
   const selectedVersion =
     (selectedVersionId && versions.find((v) => v.id === selectedVersionId)) || latestVersion;
@@ -405,7 +406,7 @@ export const ContractView = () => {
             </Button>
           </Stack>
 
-          {versions.length > 0 && (
+          {hasVersionsAccess && versions.length > 1 && (
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <FormControl size="small" sx={{ minWidth: 260 }}>
                 <InputLabel>Версия</InputLabel>
