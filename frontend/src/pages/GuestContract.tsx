@@ -16,6 +16,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Chip,
 } from '@mui/material';
 import { HelpOutline, Download } from '@mui/icons-material';
 import { Layout, PageMeta } from '@/shared/components';
@@ -28,6 +29,7 @@ import {
   useGuestGenerateContract,
 } from '@/features/contracts/hooks/useContracts';
 import { AxiosError } from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const storageKey = 'guest-contract-state-v1';
 
@@ -47,6 +49,7 @@ const defaultSections: ContractSectionInput[] = [
 ];
 
 export const GuestContract = () => {
+  const navigate = useNavigate();
   const [prompt, setPrompt] = useState('');
   const [riskCheck, setRiskCheck] = useState(false);
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
@@ -58,6 +61,7 @@ export const GuestContract = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
+  const [isGenerated, setIsGenerated] = useState(false);
 
   const { mutate: guestGenerate, isPending: isGenerating } = useGuestGenerateContract();
   const { mutate: guestExport, isPending: isExporting } = useGuestExportContract();
@@ -81,6 +85,7 @@ export const GuestContract = () => {
       setContent(parsed.content || '');
       setExportTitle(parsed.exportTitle || parsed.title || '');
       setRiskSummary(parsed.riskSummary || null);
+      setIsGenerated(!!parsed.content);
     } catch {
       /* ignore corrupted state */
     }
@@ -96,6 +101,7 @@ export const GuestContract = () => {
       content,
       exportTitle,
       riskSummary,
+      isGenerated,
     };
     sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
   }, [
@@ -107,6 +113,7 @@ export const GuestContract = () => {
     content,
     exportTitle,
     riskSummary,
+    isGenerated,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -136,6 +143,7 @@ export const GuestContract = () => {
           setRiskSummary(data.risk_assessment || null);
           setSuccessMessage('Документ сгенерирован. Можно отредактировать и экспортировать.');
           setShowValidation(false);
+          setIsGenerated(true);
         },
         onError: (error) => {
           const err = error as AxiosError<{ detail?: string }>;
@@ -196,9 +204,10 @@ export const GuestContract = () => {
           </Alert>
         )}
 
-        <Card>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
+        {!isGenerated && (
+          <Card>
+            <CardContent>
+              <form onSubmit={handleSubmit}>
               <Tooltip title="Шаблоны доступны после регистрации или входа">
                 <span>
                   <FormControl fullWidth margin="normal" disabled>
@@ -359,66 +368,134 @@ export const GuestContract = () => {
                     setErrorMessage(null);
                     setSuccessMessage(null);
                     setShowValidation(false);
+                    setIsGenerated(false);
                   }}
                 >
                   Очистить
                 </Button>
               </Box>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Alert severity="info" sx={{ mt: 3 }}>
-          <Typography variant="body2">
-            Договор сохраняется только в этой вкладке браузера. Скачайте файл, чтобы не потерять
-            результат.
-          </Typography>
-        </Alert>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {content && (
-          <Box sx={{ mt: 3 }}>
-            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Button
-                variant="contained"
-                startIcon={<Download />}
-                disabled={isExporting}
-                onClick={() => handleExport('docx')}
-              >
-                Скачать DOCX
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Download />}
-                disabled={isExporting}
-                onClick={() => handleExport('pdf')}
-              >
-                Скачать PDF
-              </Button>
-            </Stack>
+          <>
+            <Alert severity="info" sx={{ mt: 3 }}>
+              <Typography variant="body2">
+                Договор сохраняется только в этой вкладке браузера. Скачайте файл, чтобы не потерять
+                результат.
+              </Typography>
+            </Alert>
 
-            {riskSummary && (
-              <Card sx={{ mb: 2 }} variant="outlined">
-                <CardContent>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ mb: 1 }}
-                  >
-                    <Typography variant="h6">Юридические риски</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Получено при генерации
+          <Card sx={{ mt: 3 }} variant="outlined">
+            <CardContent>
+              <Stack spacing={2}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                  justifyContent="space-between"
+                  spacing={2}
+                >
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Сгенерированный договор
                     </Typography>
+                    <TextField
+                      fullWidth
+                      label="Название"
+                      value={exportTitle || derivedTitle}
+                      onChange={(e) => setExportTitle(e.target.value)}
+                      helperText="Название попадёт в экспорт и сохранится в этой сессии"
+                      size="small"
+                      sx={{ maxWidth: 420 }}
+                    />
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      <Chip label="Гостевой режим" size="small" color="default" />
+                      <Tooltip title="Сохранение, версии и совместная работа доступны после регистрации">
+                        <Chip label="Не сохранено" size="small" variant="outlined" />
+                      </Tooltip>
+                    </Stack>
+                  </Box>
+                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                    <Button
+                      variant="outlined"
+                      onClick={() => navigate('/login')}
+                      size="small"
+                    >
+                      Войти
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => navigate('/register')}
+                      size="small"
+                    >
+                      Зарегистрироваться
+                    </Button>
                   </Stack>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {riskSummary}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
+                </Stack>
 
-            <ContractEditor content={content} onChange={setContent} readOnly={false} />
-          </Box>
+                <Stack direction="row" spacing={2} flexWrap="wrap">
+                  <Button
+                    variant="contained"
+                    startIcon={<Download />}
+                    disabled={isExporting}
+                    onClick={() => handleExport('docx')}
+                  >
+                    Скачать DOCX
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Download />}
+                    disabled={isExporting}
+                    onClick={() => handleExport('pdf')}
+                  >
+                    Скачать PDF
+                  </Button>
+                  <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                    Файл не сохраняется в аккаунте — скачайте, чтобы не потерять его.
+                  </Typography>
+                </Stack>
+
+                {riskSummary && (
+                  <Card sx={{ mb: 1 }} variant="outlined">
+                    <CardContent>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{ mb: 1 }}
+                      >
+                        <Typography variant="h6">Юридические риски</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Получено при генерации
+                        </Typography>
+                      </Stack>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {riskSummary}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <ContractEditor content={content} onChange={setContent} readOnly={false} />
+
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setIsGenerated(false);
+                      setSuccessMessage(null);
+                    }}
+                  >
+                    Создать заново
+                  </Button>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+          </>
         )}
       </Box>
     </Layout>
