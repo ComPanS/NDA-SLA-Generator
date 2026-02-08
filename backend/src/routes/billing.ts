@@ -29,11 +29,19 @@ const logBilling = (..._args: unknown[]) => {
   void _args;
 };
 
-async function hasSucceededSubscriptionPayment(userId: string): Promise<boolean> {
-  const count = await prisma.payment.count({
-    where: { userId, type: 'subscription', status: 'succeeded' },
-  });
-  return count > 0;
+async function hasAnyPaidSubscriptionHistory(userId: string): Promise<boolean> {
+  const [paymentsCount, subscriptionCount] = await Promise.all([
+    prisma.payment.count({
+      where: { userId, type: 'subscription', status: 'succeeded' },
+    }),
+    prisma.subscription.count({
+      where: {
+        userId,
+        plan: { not: 'freemium' },
+      },
+    }),
+  ]);
+  return paymentsCount > 0 || subscriptionCount > 0;
 }
 
 /**
@@ -114,7 +122,7 @@ router.get('/plans', async (_req, res) => {
   }
 
   if (userId) {
-    const hasPaid = await hasSucceededSubscriptionPayment(userId);
+    const hasPaid = await hasAnyPaidSubscriptionHistory(userId);
     firstMonthDiscountAvailable = !hasPaid;
   }
 
@@ -160,7 +168,7 @@ router.post('/subscribe', requireAuth, async (req: AuthRequest, res) => {
     const finalReturnUrl = buildReturnUrlWithSuccess(return_url || `${env.frontendUrl}/billing`);
 
     // Determine if user is eligible for first-month discount
-    const hasPaidBefore = await hasSucceededSubscriptionPayment(req.userId);
+    const hasPaidBefore = await hasAnyPaidSubscriptionHistory(req.userId);
     const isFirstMonthDiscountAvailable =
       !hasPaidBefore && planConfig.firstMonthPrice !== undefined && planConfig.firstMonthPrice > 0;
     const amountToCharge = isFirstMonthDiscountAvailable ? planConfig.firstMonthPrice! : planConfig.price;
