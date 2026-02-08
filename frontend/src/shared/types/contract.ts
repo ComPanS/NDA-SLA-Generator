@@ -117,3 +117,15 @@ export interface GuestExportRequest {
   title: string;
   format: 'docx' | 'pdf';
 }
+
+export interface GuestClarifyRequest {
+  title: string;
+  content: string;
+  prompt: string;
+  risk_check?: boolean;
+}
+
+export interface GuestClarifyResponse {
+  content: string;
+  risk_assessment?: string | null;
+}

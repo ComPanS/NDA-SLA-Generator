@@ -8,6 +8,7 @@ import {
   GenerateContractRequest,
   RefineContractRequest,
   GuestGenerateRequest,
+  GuestClarifyRequest,
   GuestExportRequest,
 } from '@/shared/types';
 import { authStore } from '@/features/auth/store/authStore';
@@ -165,5 +166,11 @@ export const useGuestExportContract = () => {
 
       return { success: true };
     },
+  });
+};
+
+export const useGuestClarifyContract = () => {
+  return useMutation({
+    mutationFn: (request: GuestClarifyRequest) => contractsApi.guestClarify(request),
   });
 };

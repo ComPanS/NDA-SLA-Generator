@@ -27,6 +27,7 @@ import { ContractFieldInput, ContractSectionInput } from '@/shared/types';
 import {
   useGuestExportContract,
   useGuestGenerateContract,
+  useGuestClarifyContract,
 } from '@/features/contracts/hooks/useContracts';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -62,9 +63,12 @@ export const GuestContract = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
+  const [clarifyPrompt, setClarifyPrompt] = useState('');
+  const [isClarified, setIsClarified] = useState(false);
 
   const { mutate: guestGenerate, isPending: isGenerating } = useGuestGenerateContract();
   const { mutate: guestExport, isPending: isExporting } = useGuestExportContract();
+  const { mutate: guestClarify, isPending: isClarifying } = useGuestClarifyContract();
 
   const derivedTitle = useMemo(
     () => (prompt.trim() ? prompt.trim().slice(0, 80) : 'Гостевой договор'),
@@ -86,6 +90,7 @@ export const GuestContract = () => {
       setExportTitle(parsed.exportTitle || parsed.title || '');
       setRiskSummary(parsed.riskSummary || null);
       setIsGenerated(!!parsed.content);
+      setIsClarified(!!parsed.isClarified);
     } catch {
       /* ignore corrupted state */
     }
@@ -102,6 +107,8 @@ export const GuestContract = () => {
       exportTitle,
       riskSummary,
       isGenerated,
+      isClarified,
+      clarifyPrompt,
     };
     sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
   }, [
@@ -114,6 +121,8 @@ export const GuestContract = () => {
     exportTitle,
     riskSummary,
     isGenerated,
+    isClarified,
+    clarifyPrompt,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -144,6 +153,7 @@ export const GuestContract = () => {
           setSuccessMessage('Документ сгенерирован. Можно отредактировать и экспортировать.');
           setShowValidation(false);
           setIsGenerated(true);
+          setIsClarified(false);
         },
         onError: (error) => {
           const err = error as AxiosError<{ detail?: string }>;
@@ -369,6 +379,8 @@ export const GuestContract = () => {
                     setSuccessMessage(null);
                     setShowValidation(false);
                     setIsGenerated(false);
+                    setIsClarified(false);
+                    setClarifyPrompt('');
                   }}
                 >
                   Очистить
@@ -474,6 +486,62 @@ export const GuestContract = () => {
                       <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                         {riskSummary}
                       </Typography>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {!isClarified && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Stack spacing={1}>
+                        <Typography variant="subtitle1">Уточнить с помощью AI (1 раз)</Typography>
+                        <TextField
+                          fullWidth
+                          label="Что изменить или уточнить?"
+                          value={clarifyPrompt}
+                          onChange={(e) => setClarifyPrompt(e.target.value)}
+                          multiline
+                          rows={3}
+                          placeholder="Например: сократи раздел оплаты, добавь пункт о конфиденциальности..."
+                        />
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            disabled={isClarifying || !clarifyPrompt.trim()}
+                            onClick={() => {
+                              if (!clarifyPrompt.trim() || !content) return;
+                              setErrorMessage(null);
+                              setSuccessMessage(null);
+                              guestClarify(
+                                {
+                                  title: exportTitle || derivedTitle,
+                                  content,
+                                  prompt: clarifyPrompt,
+                                  risk_check: riskCheck,
+                                },
+                                {
+                                  onSuccess: (data) => {
+                                    setContent(data.content);
+                                    setRiskSummary(data.risk_assessment || null);
+                                    setIsClarified(true);
+                                    setClarifyPrompt('');
+                                    setSuccessMessage('Уточнение применено. Можно скачать обновлённый файл.');
+                                  },
+                                  onError: () => {
+                                    setErrorMessage('Не удалось применить уточнение. Попробуйте позже.');
+                                  },
+                                }
+                              );
+                            }}
+                          >
+                            {isClarifying ? 'Применяем...' : 'Применить уточнение'}
+                          </Button>
+                          <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                            Доступно один раз в гостевом режиме
+                          </Typography>
+                        </Stack>
+                      </Stack>
                     </CardContent>
                   </Card>
                 )}

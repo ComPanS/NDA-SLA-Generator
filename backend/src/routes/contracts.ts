@@ -400,6 +400,13 @@ const guestExportSchema = z.object({
   html: z.string().min(1),
 });
 
+const guestClarifySchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+  prompt: z.string().min(1),
+  risk_check: z.boolean().optional(),
+});
+
 const statusUpdateSchema = z.object({
   status: z.enum(['draft', 'final']),
 });
@@ -589,6 +596,45 @@ router.post('/guest/export/:fmt', async (req, res) => {
     console.error('Guest export error:', error);
     return res.status(500).json({ detail: 'Failed to export document' });
   }
+});
+
+router.post('/guest/clarify', async (req, res) => {
+  const parsed = guestClarifySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: parsed.error.flatten() });
+  }
+
+  const { title, content: baseContent, prompt, risk_check } = parsed.data;
+
+  const refinePrompt = [
+    'Ты редактор юридических договоров.',
+    'На входе HTML договора; верни только обновлённый HTML без пояснений.',
+    'Сохрани структуру и стили: заголовки h1/h2, параграфы p, списки ul/li, выделения strong/em.',
+    'Вноси только запрошенные изменения, остальное оставь без изменений.',
+    'Если изменения противоречат закону, переформулируй корректно, но без комментариев.',
+    '--- Исходный договор ---',
+    baseContent,
+    '--- Правки ---',
+    prompt,
+  ].join('\n');
+
+  const rawContent = await generateText(refinePrompt);
+  const updatedContent = sanitizeGeneratedHtml(rawContent, title);
+
+  let riskAssessmentText: string | null = null;
+  if (risk_check) {
+    try {
+      const riskPrompt = buildRiskPrompt(title, updatedContent);
+      riskAssessmentText = (await generateText(riskPrompt)).trim();
+    } catch (error) {
+      console.error('Guest clarify risk assessment failed:', error);
+    }
+  }
+
+  return res.json({
+    content: updatedContent,
+    risk_assessment: riskAssessmentText,
+  });
 });
 
 router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
