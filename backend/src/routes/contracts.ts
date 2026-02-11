@@ -19,6 +19,17 @@ import { SINGLE_CONTRACT_PRICE } from '../config/subscriptions';
 
 const router = Router();
 
+// Public stats endpoint for landing page
+router.get('/public-stats', async (_req, res) => {
+  try {
+    const contractsTotal = await prisma.document.count();
+    return res.json({ contracts_total: contractsTotal+200 });
+  } catch (error) {
+    console.error('Failed to fetch public stats', error);
+    return res.status(500).json({ error: 'Failed to fetch public stats' });
+  }
+});
+
 type DocWithRelations = Prisma.DocumentGetPayload<{
   include: {
     template: { select: { id: true; name: true } };

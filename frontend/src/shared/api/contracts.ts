@@ -100,4 +100,9 @@ export const contractsApi = {
     const response = await apiClient.post<GuestClarifyResponse>('/contracts/guest/clarify', request);
     return response.data;
   },
+
+  getPublicStats: async (): Promise<{ contracts_total: number }> => {
+    const response = await apiClient.get<{ contracts_total: number }>('/contracts/public-stats');
+    return response.data;
+  },
 };

@@ -17,35 +17,57 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Description, Speed, Security, ExpandMore, Check, Star } from '@mui/icons-material';
+import {
+  Description,
+  Speed,
+  Security,
+  ExpandMore,
+  Check,
+  Star,
+  WarningAmber,
+  AccessTime,
+  Savings,
+  Shield,
+  PeopleAlt,
+  Layers,
+  FlashOn,
+  TableChart,
+} from '@mui/icons-material';
 import { Layout } from '@/shared/components';
 import { useAuthStore } from '@/features/auth/hooks/useAuth';
 import { PageMeta } from '@/shared/components/PageMeta';
 import { useQuery } from '@tanstack/react-query';
-import { billingApi } from '@/shared/api';
+import { billingApi, contractsApi } from '@/shared/api';
 
 const faqItems = [
   {
-    q: 'Как быстро я получу договор?',
-    a: 'Обычно генерация занимает 5–15 минут. Готовый текст можно сразу отредактировать и экспортировать.',
+    q: 'Сколько времени занимает подготовка договора?',
+    a: 'Обычно генерация и базовые правки занимают 3–7 минут. Дальше можно сразу экспортировать в PDF/DOCX.',
   },
   {
     q: 'Нужна ли регистрация?',
-    a: 'Первый тестовый договор можно сделать без регистрации. Для сохранения истории и экспорта лучше войти в аккаунт.',
+    a: 'Первый тестовый договор можно сделать без регистрации. Для истории, версий и экспорта лучше войти.',
   },
   {
     q: 'Можно ли менять структуру разделов?',
-    a: 'Да, разделы и поля шаблона можно включать/выключать и переупорядочивать перед генерацией.',
+    a: 'Да, разделы и поля можно включать/выключать и менять порядок перед генерацией.',
   },
   {
     q: 'Что такое шаблон и договор?',
-    a: 'Шаблон задаёт поля и разделы. Договор создаётся на основе шаблона и хранится в вашем аккаунте.',
+    a: 'Шаблон задаёт поля и разделы. Договор создаётся на основе шаблона и хранится в аккаунте.',
   },
   {
     q: 'Как внести правки после генерации?',
-    a: 'Откройте договор в редакторе, отредактируйте текст и сохраните новую версию или экспортируйте файл.',
+    a: 'Откройте договор в редакторе, поправьте текст и экспортируйте обновлённую версию.',
   },
   {
     q: 'Какой формат экспорта доступен?',
@@ -53,10 +75,10 @@ const faqItems = [
   },
   {
     q: 'Работает ли без шаблона?',
-    a: 'Да, можно сгенерировать договор без шаблона: укажите заголовок и подсказку, AI предложит структуру.',
+    a: 'Да, можно сгенерировать договор без шаблона: укажите заголовок и подсказку — AI предложит структуру.',
   },
   {
-    q: 'Можно ли использовать собственные данные сторон?',
+    q: 'Можно ли использовать свои данные сторон?',
     a: 'Да, заполните поля в шаблоне или договоре перед генерацией — они попадут в финальный текст.',
   },
 ];
@@ -92,6 +114,78 @@ const whyUsItems = [
   },
 ];
 
+const audience = ['Самозанятые', 'Фрилансеры', 'ИП', 'IT', 'Маркетинг', 'Дизайн'];
+
+const painItems = [
+  {
+    title: 'Клиент не заплатил',
+    desc: 'Без договора сложно доказать, что работа выполнена и должна быть оплачена.',
+  },
+  {
+    title: 'Спор по объёму работ',
+    desc: 'Нет зафиксированных условий — заказчик может требовать больше или оспорить результат.',
+  },
+  {
+    title: 'Срывы сроков',
+    desc: 'Нечёткие даты и ответственность — рискуете штрафами или потерей проекта.',
+  },
+  {
+    title: 'Ничего не доказать в суде',
+    desc: 'Переписка в мессенджере — слабое доказательство, нужна юридическая форма.',
+  },
+];
+
+const howItWorks = [
+  {
+    icon: Layers,
+    title: 'Выбираете тип договора',
+    desc: 'NDA, ГПХ, SLA, оферта или свой шаблон под задачу.',
+  },
+  {
+    icon: Description,
+    title: 'Отвечаете на вопросы',
+    desc: 'Без юртерминов: просто заполните ключевые детали — мы сформулируем сами.',
+  },
+  {
+    icon: Speed,
+    title: 'Получаете готовый документ',
+    desc: 'PDF/DOCX за 5 минут вместо часов поиска и правок.',
+  },
+];
+
+const comparisonRows = [
+  {
+    label: 'Стоимость',
+    lawyer: '3 000–10 000 ₽',
+    template: 'Бесплатно, но риски',
+    ai: 'От 0 ₽, экономия до 90%',
+  },
+  {
+    label: 'Скорость',
+    lawyer: '1–2 дня',
+    template: 'Часы правок',
+    ai: '≈5 минут',
+  },
+  {
+    label: 'Адаптация под задачу',
+    lawyer: 'Да',
+    template: 'Часто нет',
+    ai: 'Под ваши ответы',
+  },
+  {
+    label: 'Риски ошибок',
+    lawyer: 'Низкие',
+    template: 'Высокие',
+    ai: 'Подсветка рисков',
+  },
+  {
+    label: 'Удобство',
+    lawyer: 'Переписка и правки',
+    template: 'Копирование вручную',
+    ai: 'Редактор + экспорт',
+  },
+];
+
 export const Landing = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
@@ -99,6 +193,11 @@ export const Landing = () => {
     queryKey: ['landing', 'plans'],
     queryFn: () => billingApi.getPlans(),
   });
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['contracts', 'public-stats'],
+    queryFn: () => contractsApi.getPublicStats(),
+  });
+  const contractsTotal = statsData?.contracts_total ?? null;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -115,81 +214,339 @@ export const Landing = () => {
       <Box
         sx={{
           textAlign: 'center',
-          py: 8,
+          py: 10,
+          px: 2,
+          bgcolor: 'background.paper',
         }}
       >
+        <Chip label="Без договора вы юридически не защищены" color="warning" sx={{ mb: 2 }} />
         <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
-          Создавайте договоры с помощью AI
+          Работаете без договора? Рискуете деньгами.
         </Typography>
         <Typography variant="h5" color="text.secondary" paragraph sx={{ mb: 4 }}>
-          AI-конструктор договоров за минуты: NDA, SLA, ГПХ, оферты и любые индивидуальные соглашения.
+          Создайте юридически корректный договор за 5 минут без юриста. Экономия до 90% по сравнению
+          с юристом за 3 000–10 000 ₽.
         </Typography>
-        <Stack direction="row" spacing={2} justifyContent="center">
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          justifyContent="center"
+          sx={{ mb: 3 }}
+        >
           <Button variant="contained" size="large" onClick={() => navigate('/register')}>
-            Запустить AI-конструктор
-          </Button>
-          <Button variant="outlined" size="large" onClick={() => navigate('/login')}>
-            Войти
+            Создать договор бесплатно
           </Button>
           <Button variant="outlined" size="large" onClick={() => navigate('/guest-contract')}>
             Создать без регистрации
           </Button>
+          <Button variant="text" size="large" onClick={() => navigate('/login')}>
+            Войти
+          </Button>
+        </Stack>
+        <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+          {audience.map((item) => (
+            <Chip key={item} label={item} variant="outlined" />
+          ))}
+        </Stack>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          justifyContent="center"
+          alignItems="center"
+          sx={{ mt: 4 }}
+        >
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Security color="primary" />
+            <Typography variant="body1">Защита оплаты и условий</Typography>
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Speed color="primary" />
+            <Typography variant="body1">Готовый документ за ≈5 минут</Typography>
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Savings color="primary" />
+            <Typography variant="body1">Экономия до 90% без юриста</Typography>
+          </Stack>
         </Stack>
       </Box>
 
       <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Grid container spacing={4}>
+        <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', textAlign: 'center' }}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
-                <Speed sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h5" gutterBottom>
-                  Черновик за минуты
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Генерация текста и структуры за 2–5 минут вместо недель согласований
-                </Typography>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <Shield color="primary" />
+                  <Box>
+                    <Typography variant="h6">Докажете свои договорённости</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Переписка в мессенджере — не защита. Договор фиксирует оплату, сроки и объём.
+                    </Typography>
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
           </Grid>
-
           <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', textAlign: 'center' }}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
-                <Security sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h5" gutterBottom>
-                  Создавайте свои шаблоны
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Вы сами настраиваете шаблон под свой процесс, а AI помогает с текстом.
-                </Typography>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <AccessTime color="primary" />
+                  <Box>
+                    <Typography variant="h6">5 минут вместо часов</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Отвечаете на вопросы — сервис формулирует юридический текст и готовит
+                      PDF/DOCX.
+                    </Typography>
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
           </Grid>
-
           <Grid item xs={12} md={4}>
-            <Card sx={{ height: '100%', textAlign: 'center' }}>
+            <Card sx={{ height: '100%' }}>
               <CardContent>
-                <Description sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h5" gutterBottom>
-                  Экспорт и контроль
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Экспорт DOCX/PDF, хранение версий и управление договорами в одном месте
-                </Typography>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <Savings color="primary" />
+                  <Box>
+                    <Typography variant="h6">Экономия до 90%</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Юрист стоит 3 000–10 000 ₽. Здесь — от 0 ₽ по подписке.
+                    </Typography>
+                  </Box>
+                </Stack>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
       </Container>
 
+      <Container maxWidth="lg" sx={{ pb: 8 }}>
+        <Card sx={{ p: { xs: 3, md: 4 } }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center">
+            <PeopleAlt color="primary" sx={{ fontSize: 48 }} />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h5" gutterBottom>
+                Социальное доказательство
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                Уже создано реальных договоров пользователями сервиса.
+              </Typography>
+              <Stack direction="row" spacing={3} alignItems="baseline">
+                <Typography variant="h3" color="primary" fontWeight={800}>
+                  {statsLoading ? '...' : (contractsTotal ?? '—')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  договоров создано
+                </Typography>
+              </Stack>
+            </Box>
+          </Stack>
+        </Card>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Stack spacing={3}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <WarningAmber color="warning" />
+            <Typography variant="h4" component="h2">
+              Что будет, если договора нет
+            </Typography>
+          </Stack>
+          <Grid container spacing={2}>
+            {painItems.map((item) => (
+              <Grid item xs={12} md={3} key={item.title}>
+                <Card variant="outlined" sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                      {item.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {item.desc}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Stack>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Stack spacing={3}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <FlashOn color="primary" />
+            <Typography variant="h4" component="h2">
+              Как это работает
+            </Typography>
+          </Stack>
+          <Grid container spacing={2}>
+            {howItWorks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Grid item xs={12} md={4} key={item.title}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Stack direction="row" spacing={2} alignItems="flex-start">
+                        <Icon color="primary" />
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={700}>
+                            {item.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {item.desc}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Stack>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Description color="primary" />
+                <Typography variant="h4" component="h2">
+                  Пример реального договора
+                </Typography>
+              </Stack>
+              <Typography variant="body1" color="text.secondary">
+                Фрагмент с типовой структурой: так выглядит документ после генерации, готовый к
+                экспорту.
+              </Typography>
+              <Box
+                component="pre"
+                sx={{
+                  bgcolor: 'grey.100',
+                  color: 'grey.900',
+                  borderRadius: 2,
+                  p: 2,
+                  fontSize: 13,
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {`1. Преамбула
+«___» _________ 20__ г. между Стороной 1, в лице Самозанятого, действующего на основании свидетельства о постановке на учёт в качестве плательщика налога на профессиональный доход, и Стороной 2, в лице Физического лица, действующего на основании паспорта, заключён настоящий Договор о нижеследующем:
+
+2. Предмет договора
+2.1. Сторона 1 обязуется оказать Стороне 2 услуги, а Сторона 2 обязуется оплатить эти услуги в порядке и на условиях, предусмотренных настоящим Договором.
+
+2.2. Перечень и объём оказываемых услуг указаны в Приложении №1 к настоящему Договору.
+
+3. Права и обязанности сторон
+3.1. Сторона 1 обязуется:
+
+3.1.1. Оказать услуги в соответствии с условиями настоящего Договора.
+3.1.2. Обеспечить качество и соответствие оказываемых услуг требованиям законодательства.
+3.2. Сторона 2 обязуется:
+
+3.2.1. Оплатить оказанные услуги в порядке и на условиях, предусмотренных настоящим Договором.
+3.2.2. Предоставить Стороне 1 всю необходимую информацию и документы для оказания услуг.
+4. Ответственность сторон
+4.1. Стороны несут ответственность за неисполнение или ненадлежащее исполнение своих обязательств по настоящему Договору в соответствии с действующим законодательством.
+
+4.2. В случае просрочки оплаты услуг Сторона 2 обязуется уплатить Стороне 1 пени в размере __% от суммы задолженности за каждый день просрочки.
+
+5. Срок действия и порядок расторжения
+5.1. Настоящий Договор вступает в силу с момента его подписания обеими Сторонами и действует до выполнения Сторонами своих обязательств.
+
+5.2. Договор может быть расторгнут по соглашению Сторон или в одностороннем порядке через суд при наличии оснований, предусмотренных действующим законодательством.
+
+6. Урегулирование споров
+6.1. Все споры и разногласия, возникающие из настоящего Договора или в связи с ним, разрешаются Сторонами путём переговоров.
+
+6.2. В случае невозможности урегулирования споров путём переговоров они подлежат рассмотрению в суде в соответствии с действующим законодательством.
+
+7. Заключительные положения
+7.1. Любые изменения и дополнения к настоящему Договору должны быть совершены в письменной форме и подписаны обеими Сторонами.
+
+7.2. Настоящий Договор составлен в двух экземплярах, по одному для каждой из Сторон, имеющих равную юридическую силу.
+
+8. Реквизиты и подписи сторон
+Сторона 1:
+
+Наименование: _________________________________________
+
+ИНН: _________________________________________________
+
+Адрес: _______________________________________________
+
+Подпись: _____________________________________________
+
+Дата: «___» _________ 20__ г.
+
+Расшифровка подписи: ________________________________
+
+Сторона 2:
+
+ФИО: _______________________________________________
+
+Паспорт: ___________________________________________
+
+Адрес: _______________________________________________
+
+Подпись: _____________________________________________
+
+Дата: «___» _________ 20__ г.
+
+Расшифровка подписи: ________________________________`}
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Container>
+
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Stack spacing={3}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TableChart color="primary" />
+            <Typography variant="h4" component="h2">
+              Чем ДоговорAI лучше альтернатив
+            </Typography>
+          </Stack>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell />
+                  <TableCell>Юрист</TableCell>
+                  <TableCell>Шаблон из интернета</TableCell>
+                  <TableCell>ДоговорAI</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {comparisonRows.map((row) => (
+                  <TableRow key={row.label}>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
+                      {row.label}
+                    </TableCell>
+                    <TableCell>{row.lawyer}</TableCell>
+                    <TableCell>{row.template}</TableCell>
+                    <TableCell>{row.ai}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </Container>
+
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Stack spacing={3}>
           <Typography variant="h4" component="h2">
-            Почему мы?
+            Наши абсолютные преимущества
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Чтобы не тратить недели на переписки, мы собрали инструменты, которые реально экономят время юристов и продактов.
+            Чтобы не тратить недели на переписки, мы собрали инструменты, которые реально экономят
+            время юристов и продактов.
           </Typography>
           <Grid container spacing={2}>
             {whyUsItems.map((item) => (
@@ -265,10 +622,11 @@ export const Landing = () => {
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Stack spacing={3} sx={{ mb: 4 }}>
           <Typography variant="h4" component="h2">
-            Тарифы
+            Тарифы без разовых оплат
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Прозрачные планы: бесплатный старт и гибкие лимиты для бизнеса.
+            Подписка: бесплатный старт, гибкие лимиты, экспорт в PDF/DOCX. Экономия до 90% по
+            сравнению с юристом за 3 000–10 000 ₽.
           </Typography>
         </Stack>
         {plansLoading ? (
@@ -289,7 +647,9 @@ export const Landing = () => {
                 ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
                 : null;
               const displayPrice =
-                hasDiscount && plan.first_month_price !== null ? plan.first_month_price : plan.price;
+                hasDiscount && plan.first_month_price !== null
+                  ? plan.first_month_price
+                  : plan.price;
               return (
                 <Grid item xs={12} sm={6} md={3} key={plan.id}>
                   <Card
@@ -333,9 +693,9 @@ export const Landing = () => {
                           <Typography variant="body2" color="text.secondary" component="div">
                             <span style={{ textDecoration: 'line-through' }}>{plan.price} ₽</span>{' '}
                             {discountPercent !== null ? `-${discountPercent}%` : ''}
-                          <Typography variant="caption" color="text.secondary" component="div">
-                            Скидка только на первый месяц
-                          </Typography>
+                            <Typography variant="caption" color="text.secondary" component="div">
+                              Скидка только на первый месяц
+                            </Typography>
                           </Typography>
                         )}
                       </Box>
@@ -370,7 +730,7 @@ export const Landing = () => {
                         variant={isPro ? 'contained' : 'outlined'}
                         onClick={() => navigate('/register')}
                       >
-                        Попробовать
+                        Создать договор бесплатно
                       </Button>
                     </Box>
                   </Card>
@@ -386,7 +746,7 @@ export const Landing = () => {
           Готовы начать?
         </Typography>
         <Typography variant="body1" color="text.secondary" paragraph>
-          Первый документ бесплатно, без регистрации
+          Первый документ бесплатно, без регистрации. Подписка вместо разовых оплат.
         </Typography>
         <Button variant="contained" size="large" onClick={() => navigate('/register')}>
           Создать договор
