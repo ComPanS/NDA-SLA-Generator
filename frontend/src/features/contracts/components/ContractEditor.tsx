@@ -1,7 +1,27 @@
-import { Paper } from '@mui/material';
-import { useRef } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Box, Divider, IconButton, Paper, Stack, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
+import {
+  FormatAlignCenter,
+  FormatAlignJustify,
+  FormatAlignLeft,
+  FormatAlignRight,
+  FormatBold,
+  FormatItalic,
+  FormatListBulleted,
+  FormatListNumbered,
+  FormatUnderlined,
+  Remove,
+  ViewStream,
+  TextFields,
+  ViewColumn,
+} from '@mui/icons-material';
+import { useEffect } from 'react';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import { TextStyle } from '@tiptap/extension-text-style';
+import TextAlign from '@tiptap/extension-text-align';
+import { ColumnBreak, ColumnSpan, Columns } from '../extensions/columns';
+import { DashList } from '../extensions/dashList';
 import './ContractEditor.css';
 
 interface ContractEditorProps {
@@ -10,83 +30,288 @@ interface ContractEditorProps {
   readOnly?: boolean;
 }
 
-/**
- * Компонент редактора договоров с Quill.js
- */
 export const ContractEditor = ({ content, onChange, readOnly = false }: ContractEditorProps) => {
-  const quillRef = useRef<ReactQuill>(null);
-
-  const modules = {
-    toolbar: readOnly
-      ? false
-      : [
-          [{ header: [1, 2, 3, false] }],
-          ['bold', 'italic', 'underline', 'strike'],
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          [{ indent: '-1' }, { indent: '+1' }],
-          [{ align: [] }],
-          ['blockquote', 'code-block'],
-          ['link'],
-          ['clean'],
-        ],
-    clipboard: {
-      matchVisual: false,
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          heading: {
+            levels: [1, 2, 3],
+          },
+        }),
+        Underline,
+        TextStyle,
+        DashList,
+        ColumnSpan,
+        ColumnBreak,
+        Columns,
+        TextAlign.configure({
+          types: ['heading', 'paragraph'],
+          alignments: ['left', 'center', 'right', 'justify'],
+        }),
+      ],
+      content,
+      editable: !readOnly,
+      onUpdate: ({ editor }) => {
+        onChange?.(editor.getHTML());
+      },
+      onCreate: ({ editor }) => {
+        const normalized = editor.getHTML();
+        if (normalized !== content) {
+          onChange?.(normalized);
+        }
+      },
     },
-  };
+    [readOnly]
+  );
 
-  const formats = [
-    'header',
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    'list',
-    'bullet',
-    'indent',
-    'align',
-    'blockquote',
-    'code-block',
-    'link',
-  ];
+  useEffect(() => {
+    if (!editor) return;
+    const current = editor.getHTML();
+    if (content !== current) {
+      const { from, to } = editor.state.selection;
+      editor.commands.setContent(content, { emitUpdate: false });
+      // try to restore selection to prevent scroll jumps, but guard against invalid positions
+      try {
+        const docSize = editor.state.doc.content.size;
+        const clampedFrom = Math.min(from, docSize);
+        const clampedTo = Math.min(to, docSize);
+        const $from = editor.state.doc.resolve(clampedFrom);
+        // Only restore if selection is inside a textblock; otherwise skip
+        if ($from.parent.isTextblock) {
+          editor.commands.setTextSelection({ from: clampedFrom, to: clampedTo });
+        }
+      } catch (_err) {
+        // ignore selection restore errors
+      }
+    }
+  }, [content, editor]);
+
+  if (!editor) {
+    return null;
+  }
+
+  const logColumnsAction = (_action: string) => {};
+
+  const handle = (fn: () => boolean, action?: string) => {
+    const result = fn();
+    if (action) {
+      logColumnsAction(action);
+    }
+    return result;
+  };
 
   return (
     <Paper
       sx={{
         p: 0,
-        '& .ql-container': {
-          minHeight: { xs: '320px', sm: '400px', md: '500px' },
+        width: '100%',
+        maxWidth: { xs: '100%', md: '210mm' },
+        margin: '0 auto',
+        '& .ProseMirror': {
+          padding: {
+            xs: '20mm 10mm 20mm 30mm',
+            sm: '20mm 10mm 20mm 30mm',
+            md: '20mm 10mm 20mm 30mm',
+          },
+          lineHeight: '1.8',
           fontSize: '14px',
           fontFamily: '"Times New Roman", serif',
+          backgroundColor: '#fff',
+          border: '1px solid #e0e0e0',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          maxWidth: '210mm',
+          width: { xs: '100%', md: '210mm' },
+          margin: '0 auto',
         },
-        '& .ql-editor': {
-          minHeight: { xs: '320px', sm: '400px', md: '500px' },
-          padding: { xs: '12px', sm: '16px', md: '20px' },
-          lineHeight: '1.8',
-        },
-        '& .ql-toolbar': {
-          borderTopLeftRadius: '8px',
-          borderTopRightRadius: '8px',
-          backgroundColor: '#f5f5f5',
+        '& .editor-toolbar': {
           position: 'sticky',
           top: 0,
           zIndex: 1,
-        },
-        '& .ql-container.ql-snow': {
-          borderBottomLeftRadius: '8px',
-          borderBottomRightRadius: '8px',
+          backgroundColor: '#f5f5f5',
+          borderTopLeftRadius: '8px',
+          borderTopRightRadius: '8px',
+          maxWidth: '210mm',
+          width: { xs: '100%', md: '210mm' },
+          margin: '0 auto',
         },
       }}
     >
-      <ReactQuill
-        ref={quillRef}
-        theme="snow"
-        value={content}
-        onChange={onChange}
-        readOnly={readOnly}
-        modules={modules}
-        formats={formats}
-        placeholder={readOnly ? '' : 'Содержимое документа...'}
-      />
+      {!readOnly && (
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{ px: 1, py: 0.75 }}
+          className="editor-toolbar"
+        >
+          <ToggleButtonGroup size="small" exclusive>
+            <ToggleButton
+              value="bold"
+              selected={editor.isActive('bold')}
+              onClick={() => handle(() => editor.chain().focus().toggleBold().run())}
+            >
+              <Tooltip title="Жирный">
+                <FormatBold fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="italic"
+              selected={editor.isActive('italic')}
+              onClick={() => handle(() => editor.chain().focus().toggleItalic().run())}
+            >
+              <Tooltip title="Курсив">
+                <FormatItalic fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="underline"
+              selected={editor.isActive('underline')}
+              onClick={() => handle(() => editor.chain().focus().toggleUnderline().run())}
+            >
+              <Tooltip title="Подчеркивание">
+                <FormatUnderlined fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <ToggleButtonGroup size="small" exclusive>
+            <ToggleButton
+              value="h1"
+              selected={editor.isActive('heading', { level: 1 })}
+              onClick={() => handle(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
+            >
+              <Tooltip title="Заголовок H1">
+                <TextFields fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="h2"
+              selected={editor.isActive('heading', { level: 2 })}
+              onClick={() => handle(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}
+            >
+              H2
+            </ToggleButton>
+            <ToggleButton
+              value="h3"
+              selected={editor.isActive('heading', { level: 3 })}
+              onClick={() => handle(() => editor.chain().focus().toggleHeading({ level: 3 }).run())}
+            >
+              H3
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+          <ToggleButtonGroup size="small" exclusive>
+            <ToggleButton
+              value="left"
+              selected={editor.isActive({ textAlign: 'left' })}
+              onClick={() => handle(() => editor.chain().focus().setTextAlign('left').run())}
+            >
+              <Tooltip title="По левому краю">
+                <FormatAlignLeft fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="center"
+              selected={editor.isActive({ textAlign: 'center' })}
+              onClick={() => handle(() => editor.chain().focus().setTextAlign('center').run())}
+            >
+              <Tooltip title="По центру">
+                <FormatAlignCenter fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="right"
+              selected={editor.isActive({ textAlign: 'right' })}
+              onClick={() => handle(() => editor.chain().focus().setTextAlign('right').run())}
+            >
+              <Tooltip title="По правому краю">
+                <FormatAlignRight fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="justify"
+              selected={editor.isActive({ textAlign: 'justify' })}
+              onClick={() => handle(() => editor.chain().focus().setTextAlign('justify').run())}
+            >
+              <Tooltip title="По ширине">
+                <FormatAlignJustify fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+          <ToggleButtonGroup size="small" exclusive>
+            <ToggleButton
+              value="ordered"
+              selected={editor.isActive('orderedList')}
+              onClick={() => handle(() => editor.chain().focus().toggleOrderedList().run())}
+            >
+              <Tooltip title="Нумерованный список">
+                <FormatListNumbered fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="bullet"
+              selected={editor.isActive('bulletList')}
+              onClick={() => handle(() => editor.chain().focus().toggleBulletList().run())}
+            >
+              <Tooltip title="Маркированный список">
+                <FormatListBulleted fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton
+              value="dash"
+              selected={editor.isActive('dashList')}
+              onClick={() => handle(() => editor.chain().focus().toggleDashList().run())}
+            >
+              <Tooltip title="Список через тире">
+                <Remove fontSize="small" />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+          <IconButton
+            size="small"
+            color={editor.isActive('columns') ? 'primary' : 'default'}
+            onClick={() =>
+              handle(() => {
+                const chain = editor.chain().focus();
+                if (editor.isActive('columnSpan')) {
+                  chain.lift('columnSpan');
+                }
+                return chain.toggleColumns(2).run();
+              }, 'create-2-columns')
+            }
+          >
+            <Tooltip title="Создать 2 колонки">
+              <ViewColumn fontSize="small" />
+            </Tooltip>
+          </IconButton>
+          <IconButton
+            size="small"
+            color={editor.isActive('columnSpan') ? 'primary' : 'default'}
+            onClick={() =>
+              handle(() => editor.chain().focus().toggleColumnSpan().run(), 'span-all')
+            }
+          >
+            <Tooltip
+              title={editor.isActive('columnSpan') ? 'Вернуть в колонки' : 'Блок на всю ширину'}
+            >
+              <ViewStream fontSize="small" />
+            </Tooltip>
+          </IconButton>
+        </Stack>
+      )}
+
+      <Box sx={{ borderTop: readOnly ? '1px solid #e0e0e0' : 'none' }}>
+        <EditorContent editor={editor} />
+      </Box>
     </Paper>
   );
 };

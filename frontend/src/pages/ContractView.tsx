@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -36,6 +36,7 @@ import {
   useRenameContract,
   useDeleteContract,
   useUpdateContractStatus,
+  useUpdateContractContent,
 } from '@/features/contracts/hooks/useContracts';
 import { ContractEditor } from '@/features/contracts/components/ContractEditor';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
@@ -43,11 +44,58 @@ import {
   ContractFieldInput,
   ContractSectionInput,
   DocumentStatus,
+  GenerateContractResponse,
   LimitReachedError,
 } from '@/shared/types';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 import { useUsage } from '@/features/billing/hooks/useBilling';
 import { AxiosError } from 'axios';
+
+const normalizeColumnsContent = (html: string) => {
+  if (!html) return html;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const blockSelector = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, div';
+
+    doc.querySelectorAll('[data-columns]').forEach((container) => {
+      const columns = Array.from(container.children).filter((el) => el.tagName === 'DIV');
+      if (columns.length < 2) return;
+
+      // убрать старые вставки
+      columns.forEach((col) => {
+        col.querySelectorAll('[data-column-filler="true"]').forEach((el) => {
+          el.remove();
+        });
+      });
+
+      const counts = columns.map((col) => {
+        const blocks = (col as HTMLElement).querySelectorAll(blockSelector).length;
+        const textFallback = (col.textContent || '').trim().length > 0 ? 1 : 0;
+        return Math.max(blocks, textFallback);
+      });
+
+      const target = Math.max(...counts);
+      columns.forEach((col, idx) => {
+        const count = counts[idx] ?? 0;
+        const missing = target - count;
+        if (missing <= 0) return;
+        const fragment = doc.createDocumentFragment();
+        for (let i = 0; i < missing+2; i += 1) {
+          const p = doc.createElement('p');
+          p.setAttribute('data-column-filler', 'true');
+          p.innerHTML = '&nbsp;';
+          fragment.appendChild(p);
+        }
+        col.appendChild(fragment);
+      });
+    });
+
+    return doc.body.innerHTML;
+  } catch (_err) {
+    return html;
+  }
+};
 
 export const ContractView = () => {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +127,7 @@ export const ContractView = () => {
 
   const { mutate: refineContract, isPending: isRefining } = useRefineContract(id || '');
   const { mutate: exportContract, isPending: isExporting } = useExportContract();
+  const { mutateAsync: saveContent } = useUpdateContractContent(id || '');
   const { mutate: updateFields, isPending: isUpdatingFields } = useUpdateContractFields(id || '');
   const { mutate: updateSections, isPending: isUpdatingSections } = useUpdateContractSections(
     id || ''
@@ -88,6 +137,7 @@ export const ContractView = () => {
   const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateContractStatus();
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
   const [sections, setSections] = useState<ContractSectionInput[]>([]);
+  const [contentReady, setContentReady] = useState(false);
 
   const versions = hasVersionsAccess ? document?.versions || [] : (document?.versions?.slice(-1) || []);
   const latestVersion = versions[versions.length - 1];
@@ -95,6 +145,31 @@ export const ContractView = () => {
     (selectedVersionId && versions.find((v) => v.id === selectedVersionId)) || latestVersion;
   const isLatestSelected = selectedVersion?.id === latestVersion?.id;
   const riskAssessment = selectedVersion?.risk_assessment;
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlightSaveRef = useRef<Promise<GenerateContractResponse> | null>(null);
+  const lastSavedRef = useRef<string>('');
+
+  const logColumnsClient = (_label: string, _html?: string) => {};
+
+  const applyContentIfNeeded = (html: string | null | undefined) => {
+    const next = normalizeColumnsContent(html || '');
+    const hasUnsavedChanges = contentReady && currentContent !== lastSavedRef.current;
+    const needContentUpdate = next !== currentContent;
+
+    // Не затираем свежие правки, пока они не сохранены
+    if (hasUnsavedChanges && next !== lastSavedRef.current) {
+      return;
+    }
+    const needReady = !contentReady;
+    if (needContentUpdate) {
+      setCurrentContent(next);
+      lastSavedRef.current = next;
+    }
+    if (needReady) {
+      setContentReady(true);
+    }
+  };
 
   // Обновляем контент когда документ загружен
   useEffect(() => {
@@ -104,10 +179,10 @@ export const ContractView = () => {
         selectedVersionId && document.versions.find((v) => v.id === selectedVersionId);
 
       if (existingSelection) {
-        setCurrentContent(existingSelection.content || '');
+        applyContentIfNeeded(existingSelection.content);
       } else if (!selectedVersionId && latestVersion) {
         setSelectedVersionId(latestVersion.id);
-        setCurrentContent(latestVersion.content || '');
+        applyContentIfNeeded(latestVersion.content);
       }
       // Если selectedVersionId уже установлен, но версия еще не успела попасть в список,
       // ничего не делаем и ждём следующего обновления данных, чтобы не переключать вкладку назад.
@@ -147,7 +222,8 @@ export const ContractView = () => {
 
   useEffect(() => {
     if (selectedVersion) {
-      setCurrentContent(selectedVersion.content || '');
+      applyContentIfNeeded(selectedVersion.content);
+      logColumnsClient('select-version-effect', selectedVersion.content || '');
     }
   }, [selectedVersion]);
 
@@ -163,6 +239,7 @@ export const ContractView = () => {
           if (newVersion) {
             setSelectedVersionId(newVersion.id);
             setCurrentContent(newVersion.content);
+            logColumnsClient('refine-success', newVersion.content);
           }
           setRefinePrompt('');
           setShowRefineForm(false);
@@ -214,8 +291,35 @@ export const ContractView = () => {
     );
   };
 
-  const handleExport = (format: 'docx' | 'pdf') => {
+  const flushPendingSave = async () => {
+    if (!isLatestSelected || !id) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      const promise = saveContent(currentContent, {
+        onSuccess: () => {
+          lastSavedRef.current = currentContent;
+        },
+        onError: () => {
+          showSnackbar('Не удалось сохранить изменения');
+        },
+      });
+
+      inFlightSaveRef.current = promise.finally(() => {
+        inFlightSaveRef.current = null;
+      });
+    }
+
+    if (inFlightSaveRef.current) {
+      await inFlightSaveRef.current;
+    }
+  };
+
+  const handleExport = async (format: 'docx' | 'pdf') => {
     if (!id || !document) return;
+
+    await flushPendingSave();
 
     exportContract(
       { documentId: id, format, title: document.title },
@@ -231,8 +335,43 @@ export const ContractView = () => {
   };
 
   const handleContentChange = (newContent: string) => {
+    if (!contentReady) return;
+    logColumnsClient('content-change', newContent);
     setCurrentContent(newContent);
+
+    if (!isLatestSelected || !id) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+
+      if (newContent === lastSavedRef.current) return;
+
+      const promise = saveContent(newContent, {
+        onSuccess: () => {
+          lastSavedRef.current = newContent;
+        },
+        onError: () => {
+          showSnackbar('Не удалось сохранить изменения');
+        },
+      });
+
+      inFlightSaveRef.current = promise.finally(() => {
+        inFlightSaveRef.current = null;
+      });
+    }, 800);
   };
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleVersionChange = (versionId: string) => {
     if (!document?.versions?.length) return;
@@ -241,6 +380,7 @@ export const ContractView = () => {
     const next = version || fallback;
     setSelectedVersionId(next?.id || null);
     setCurrentContent(next?.content || '');
+    logColumnsClient('version-change', next?.content || '');
   };
 
   const showSnackbar = (message: string) => {

@@ -23,7 +23,7 @@ const router = Router();
 router.get('/public-stats', async (_req, res) => {
   try {
     const contractsTotal = await prisma.document.count();
-    return res.json({ contracts_total: contractsTotal+200 });
+    return res.json({ contracts_total: contractsTotal + 200 });
   } catch (error) {
     console.error('Failed to fetch public stats', error);
     return res.status(500).json({ error: 'Failed to fetch public stats' });
@@ -147,8 +147,117 @@ function buildRiskPrompt(title: string, htmlContent: string) {
   ].join('\n');
 }
 
+function logColumnsDebug(_label: string, _html?: string) {
+  void _label;
+  void _html;
+  // logging disabled
+}
+
+const MAX_TITLE_LENGTH = 200;
+const MAX_REGEX_ESCAPE_LENGTH = 1024;
+
 export function sanitizeGeneratedHtml(raw: string, title: string): string {
   let content = raw.trim();
+
+  const trimmedTitle = title.trim();
+  const safeTitle =
+    trimmedTitle.length > MAX_TITLE_LENGTH
+      ? trimmedTitle.slice(0, MAX_TITLE_LENGTH)
+      : trimmedTitle;
+  const lowerSafeTitle = safeTitle.toLowerCase();
+
+  const isWhitespace = (char: string) => /\s/.test(char);
+
+  const trimLeadingWhitespace = (input: string) => {
+    let idx = 0;
+    while (idx < input.length && isWhitespace(input[idx])) {
+      idx += 1;
+    }
+    return { trimmed: input.slice(idx), offset: idx };
+  };
+
+  const collapsePlainTitlePrefix = (value: string) => {
+    if (!safeTitle) return value;
+    const { trimmed, offset } = trimLeadingWhitespace(value);
+    let remainder = trimmed;
+    let occurrences = 0;
+    let consumed = 0;
+
+    while (remainder.toLowerCase().startsWith(lowerSafeTitle)) {
+      occurrences += 1;
+      remainder = remainder.slice(safeTitle.length);
+      consumed += safeTitle.length;
+      while (remainder.length && isWhitespace(remainder[0])) {
+        remainder = remainder.slice(1);
+        consumed += 1;
+      }
+    }
+
+    if (occurrences > 1) {
+      const suffix = trimmed.slice(consumed).trimStart();
+      return `${value.slice(0, offset)}${safeTitle}\n${suffix}`;
+    }
+
+    return value;
+  };
+
+  const stripLeadingPlainTitleLine = (value: string) => {
+    if (!safeTitle) return value;
+    const { trimmed, offset } = trimLeadingWhitespace(value);
+    if (!trimmed.toLowerCase().startsWith(lowerSafeTitle)) {
+      return value;
+    }
+
+    let cursor = safeTitle.length;
+    while (
+      cursor < trimmed.length &&
+      isWhitespace(trimmed[cursor]) &&
+      trimmed[cursor] !== '\n' &&
+      trimmed[cursor] !== '\r'
+    ) {
+      cursor += 1;
+    }
+
+    const nextChar = trimmed[cursor];
+    if (nextChar === '\r' && trimmed[cursor + 1] === '\n') {
+      return `${value.slice(0, offset)}${trimmed.slice(cursor + 2)}`;
+    }
+    if (nextChar === '\n') {
+      return `${value.slice(0, offset)}${trimmed.slice(cursor + 1)}`;
+    }
+
+    return value;
+  };
+
+  const removeTitleAfterH1 = (value: string) => {
+    if (!safeTitle) return value;
+    const lowerValue = value.toLowerCase();
+    const closeIdx = lowerValue.indexOf('</h1>');
+    if (closeIdx === -1) return value;
+
+    const after = value.slice(closeIdx + '</h1>'.length);
+    const { trimmed, offset } = trimLeadingWhitespace(after);
+    const lowerTrimmed = trimmed.toLowerCase();
+
+    if (lowerTrimmed.startsWith(lowerSafeTitle)) {
+      const remaining = trimmed.slice(safeTitle.length).trimStart();
+      return `${value.slice(0, closeIdx + '</h1>'.length)}${after.slice(0, offset)}${remaining}`;
+    }
+
+    if (lowerTrimmed.startsWith('<p')) {
+      const openEnd = trimmed.indexOf('>');
+      const closeTagIdx = trimmed.toLowerCase().indexOf('</p>');
+      if (openEnd !== -1 && closeTagIdx !== -1 && closeTagIdx > openEnd) {
+        const paragraphContent = trimmed.slice(openEnd + 1, closeTagIdx).trim();
+        if (paragraphContent.toLowerCase() === lowerSafeTitle) {
+          const afterParagraph = trimmed.slice(closeTagIdx + '</p>'.length).trimStart();
+          return `${value.slice(0, closeIdx + '</h1>'.length)}${after.slice(0, offset)}${afterParagraph}`;
+        }
+      }
+    }
+
+    return value;
+  };
 
   // Убираем обёртку ```html ... ```
   if (content.startsWith('```')) {
@@ -161,6 +270,20 @@ export function sanitizeGeneratedHtml(raw: string, title: string): string {
   // Если модель вернула лишние бэктики в конце
   content = content.replace(/```$/, '').trim();
 
+  // Если пришёл полный HTML с <body>, берем только содержимое body
+  const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch) {
+    content = bodyMatch[1].trim();
+  } else {
+    // Убираем обертки doctype/html/head/body если они есть
+    content = content
+      .replace(/<!DOCTYPE[^>]*>/gi, '')
+      .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+      .replace(/<\/?html[^>]*>/gi, '')
+      .replace(/<\/?body[^>]*>/gi, '')
+      .trim();
+  }
+
   // Если модель продублировала <h1> с тем же заголовком, оставим первый
   const h1Regex = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
   const matches = [...content.matchAll(h1Regex)];
@@ -171,21 +294,20 @@ export function sanitizeGeneratedHtml(raw: string, title: string): string {
   }
 
   // Убираем дублирование заголовка без тэгов в начале (часто модель повторяет)
-  const escapedTitle = escapeRegExp(title.trim());
   const textOnly = content.replace(/<[^>]+>/g, '').trim();
-  const repeatedPlain = new RegExp(`^(${escapedTitle}\\s*){2,}`, 'i');
-  if (repeatedPlain.test(textOnly)) {
-    content = content.replace(new RegExp(`^(\\s*${escapedTitle}\\s*)+`, 'i'), `${title.trim()}\n`);
+  if (
+    safeTitle &&
+    textOnly.toLowerCase().startsWith(lowerSafeTitle) &&
+    textOnly.toLowerCase().slice(lowerSafeTitle.length).trimStart().startsWith(lowerSafeTitle)
+  ) {
+    content = collapsePlainTitlePrefix(content);
   }
 
-  // Если сразу после h1 идёт тот же заголовок текстом — уберём дубль
-  content = content.replace(new RegExp(`</h1>\\s*${escapedTitle}`, 'i'), '</h1>');
-
-  // Убираем параграф сразу после заголовка, если он повторяет название
-  content = content.replace(new RegExp(`</h1>\\s*<p>\\s*${escapedTitle}\\s*</p>`, 'i'), '</h1>');
+  // Если сразу после h1 идёт тот же заголовок текстом или в параграфе — уберём дубль
+  content = removeTitleAfterH1(content);
 
   // Удаляем явный дубликат названия на первой строке без тегов
-  content = content.replace(new RegExp(`^\\s*${escapedTitle}\\s*\\n`, 'i'), '');
+  content = stripLeadingPlainTitleLine(content);
 
   // Нормализуем первый <h1>: если он есть — переписываем текст на точное название договора
   content = content.replace(/<title[^>]*>[\s\S]*?<\/title>/i, '');
@@ -228,7 +350,26 @@ export function sanitizeGeneratedHtml(raw: string, title: string): string {
     ],
     allowedAttributes: {
       a: ['href', 'name', 'target', 'rel'],
-      '*': ['class'],
+      '*': [
+        'class',
+        'style',
+        'data-columns',
+        'data-list-style',
+        'data-gutter',
+        'data-equal-width',
+        'data-area-height',
+        'data-span-columns',
+        'data-column-break',
+      ],
+    },
+    allowedStyles: {
+      '*': {
+        'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
+        'font-size': [/^\d+(px|pt)$/],
+        'column-count': [/^\d+$/],
+        'column-gap': [/^\d+(px|pt)$/],
+        'column-span': [/^all$/],
+      },
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowedSchemesByTag: {
@@ -259,8 +400,15 @@ export function sanitizeGeneratedHtml(raw: string, title: string): string {
 }
 
 function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const safeValue =
+    value.length > MAX_REGEX_ESCAPE_LENGTH
+      ? value.slice(0, MAX_REGEX_ESCAPE_LENGTH)
+      : value;
+  // Escaping is limited to a bounded input to avoid ReDoS when used in dynamic patterns.
+  return safeValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+void escapeRegExp;
 
 function sanitizeFilename(title: string) {
   const slug = title
@@ -316,15 +464,22 @@ function buildInstruction(title: string) {
     'Структура документа:',
     '- <h1> — полное название договора (определи его самостоятельно на основе сути запроса, например, «Договор оказания услуг», «Договор купли-продажи» и т.д.);',
     '- <h2> — заголовки разделов;',
-    '- <p> — текст пунктов;',
-    '- <ol> или <ul> с <li> — нумерованные или маркированные перечисления (используй по смыслу);',
-    '- при необходимости — вложенная нумерация пунктов внутри разделов (например, 1.1, 1.2).',
+    '- <p> — текст пунктов (разрешено style="text-align: left|right|center|justify");',
+    '- <span style="font-size: 18px"> для изменения размера текста;',
+    '- Выделение: <strong>/<b>, <em>/<i>, <u>;',
+    '- Списки: <ol>/<ul> с <li>; для списка через тире используй <ul data-list-style="dash"><li>...</li></ul>;',
+    '- Две колонки используй ТОЛЬКО в блоке реквизитов в конце и нигде более: оберни реквизиты в <div data-columns="2" style="column-count: 2; column-gap: 24px">, внутри два вложенных <div> — левая колонка (Сторона 1/роль по контексту) и правая колонка (Сторона 2/роль по контексту); при необходимости вставь <div data-column-break="true"></div> между колонками, чтобы избежать балансировки строк. Если одна колонка короче другой по количеству строк, добавь в неё столько пустых параграфоф вида <p>&nbsp;</p>, чтобы их количество строк было одинаково.',
+    '- В блоке реквизитов обязательно выведи обе стороны: не пропускай правую колонку (Сторона 2/контекстная роль), укажи плейсхолдеры ровно из 40 символов «_» для названия, ИНН, ОГРН, адреса, представителя и основания, подписи и расшифровки. Если стороны разных типов (юрлицо/физлицо/ИП или другое), адаптируй реквизиты под тип: для физлица минимум — Ф.И.О., паспортные данные, адрес регистрации, подпись; для юрлица минимум — наименование, ИНН/ОГРН/КПП, адрес, представитель, основание, подпись и печать при необходимости; для всех остальных случаев - по ситуации.',
+    '- Преамбула: только дата и краткое обозначение сторон без повторения реквизитов (к примеру ИНН/ОГРН/адрес/представители/подписи оставь в финальном блоке реквизитов).',
+    '- Подразделы нумеруй внутри соответствующего раздела (1.1, 1.2, 2.1 и т.д.), не выводи номера подразделов раньше заголовка раздела и не сбивай нумерацию.',
+    '- При необходимости — вложенная нумерация пунктов внутри разделов (например, 1.1, 1.2).',
     'Требования к содержанию:',
     '- Определи тип договора на основе запроса пользователя и самостоятельно подбери подходящую структуру и набор разделов, характерных для данного вида гражданско-правовых договоров в РФ.',
     '- Обязательно включи ключевые разделы, типичные для большинства договоров: Преамбула, Предмет договора, Права и обязанности сторон, Ответственность сторон, Срок действия и порядок расторжения, Урегулирование споров, Заключительные положения, Реквизиты и подписи сторон.',
+    '- В разделе с реквизитами/подписями сторон (не преамбула) обязательно отобрази ДВЕ стороны в двух колонках: используй <div data-columns="2" style="column-count: 2; column-gap: 24px">, левая колонка — Сторона 1 (или «Заказчик/Продавец/Арендодатель» по контексту), правая колонка — Сторона 2 (или «Исполнитель/Покупатель/Арендатор»). В каждой колонке укажи плейсхолдеры с ровно 40 символами нижнего подчеркивания с полями, которые больше всего подходят под договор, к примеру: полное наименование, ИНН, ОГРН, адрес, «в лице ________________________________________», «на основании ________________________________________», место для подписи и расшифровки.',
     '- Добавляй дополнительные разделы, если они уместны для данного типа договора (например, «Порядок расчетов», «Гарантии», «Форс-мажор», «Интеллектуальная собственность», «Конфиденциальность» и т.д.).',
     '- Удаляй или не включай разделы, которые явно не нужны для данного вида договора.',
-    '- Если тип договора предполагает специфические роли сторон, используй соответствующие плейсхолдеры: «Заказчик» и «Исполнитель» — для услуг, «Продавец» и «Покупатель» — для купли-продажи, «Арендодатель» и «Арендатор» — для аренды и т.д. При отсутствии конкретики используй нейтральные «Сторона 1» и «Сторона 2» или наиболее подходящие по контексту.',
+    '- Если тип договора предполагает специфические роли сторон, используй соответствующие плейсхолдеры: «Заказчик» и «Исполнитель» — для услуг, «Продавец» и «Покупатель» — для купли-продажи, «Арендодатель» и «Арендатор» — для аренды и т.д. При отсутствии конкретики используй нейтральные «Сторона 1» и «Сторона 2» или наиболее подходящие по контексту. Для разных типов сторон (юрлицо vs физлицо/ИП) реквизиты должны отличаться и соответствовать типу.',
     'Стиль изложения: строго официальный, юридически точный и нейтральный, без эмоциональной окраски, разговорных выражений и избыточной «воды».',
     'Используй формулировки, характерные для типовых договоров российского гражданского права (ссылки на ГК РФ при необходимости).',
     'Обеспечь отсутствие двусмысленностей и логическую последовательность положений.',
@@ -350,12 +505,12 @@ function buildSectionsPrompt(title: string, sectionsSource: ContractSectionDraft
 • Каждый раздел должен быть детализированным, содержать все логически необходимые подразделы (нумерация 1.1., 1.2., 1.2.1. и т.д.) и исключать двусмысленности.
 • Не оставляй разделы пустыми или состоящими из 1–2 общих фраз — каждый пункт должен нести конкретную юридическую нагрузку и минимизировать риски сторон.
 • Обязательно включи:
-  - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами: наименование, ИНН, ОГРН, адрес, в лице ___________, действующего на основании ___________),
+  - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами и линиями ровно из 40 символов «_»: наименование, ИНН, ОГРН, адрес, «в лице ________________________________________», «действующего на основании ________________________________________»),
   - Финальный раздел «Реквизиты и подписи сторон» (или аналогичное название).
 • В разделе с подписями сторон обязательно предусмотри чётко оформленные поля:
   - дата (««___» _________ 20__ г.»),
-  - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны,
-  - расшифровки подписей под линиями,
+  - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны с линиями ровно из 40 символов «_»,
+  - расшифровки подписей под линиями ровно из 40 символов «_»,
   - место для оттиска печати (при необходимости).
 • Используй тег <h2> для названий основных разделов, нумеруй их арабскими цифрами (1., 2., …).
 • Подразделы внутри разделов нумеруй последовательно (1.1., 1.2., 1.2.1. и т.д.).
@@ -549,7 +704,9 @@ router.post('/guest/generate', async (req, res) => {
     .join('\n\n');
 
   const rawContent = await generateText(finalPrompt);
+  logColumnsDebug('guest-generate raw', rawContent);
   const content = sanitizeGeneratedHtml(rawContent, title);
+  logColumnsDebug('guest-generate sanitized', content);
   const exportTitle = extractTitleFromHtml(content, title);
   let riskAssessmentText: string | null = null;
 
@@ -638,7 +795,10 @@ router.post('/guest/clarify', async (req, res) => {
   const refinePrompt = [
     'Ты редактор юридических договоров.',
     'На входе HTML договора; верни только обновлённый HTML без пояснений.',
-    'Сохрани структуру и стили: заголовки h1/h2, параграфы p, списки ul/li, выделения strong/em.',
+    'Сохрани структуру и стили: заголовки h1/h2, параграфы p (разрешено style="text-align: left|right|center|justify"), выделения strong/em/u, изменение размера через <span style="font-size: Npx">, списки ol/ul/li и ul с data-list-style="dash", разрывы колонок <div data-column-break="true"></div> и полноширинные блоки <div data-span-columns="all">...</div>. Колонки <div data-columns="2"> используй ТОЛЬКО в блоке реквизитов в конце: внутри две вложенные <div> (левая — Сторона 1/роль по контексту, правая — Сторона 2/роль по контексту); при необходимости поставь <div data-column-break="true"></div> между ними, чтобы избежать балансировки строк; если одна колонка короче, добавь в неё 1–3 пустых <p>&nbsp;</p> для выравнивания высоты. Не добавляй колонки в других разделах.',
+    'Обязательно сохрани или восстанови блок с реквизитами/подписями двух сторон в двух колонках: левая колонка — Сторона 1 (или контекстная роль), правая колонка — Сторона 2 (или контекстная роль), с плейсхолдерами длиной ровно 40 символов «_» для реквизитов, даты, подписи и расшифровки; правую колонку не пропускай. Адаптируй набор реквизитов под тип стороны (юрлицо/физлицо/ИП), не делай одинаковые колонки, если стороны разные.',
+    'Преамбула должна содержать только дату и краткое обозначение сторон, без повторения реквизитов (ИНН/ОГРН/адрес/представитель/подпись остаются в финальном блоке реквизитов).',
+    'Подразделы нумеруй внутри соответствующего раздела (1.1, 1.2, 2.1 и т.д.), не выводи номера подразделов раньше заголовка раздела и не сбивай нумерацию.',
     'Вноси только запрошенные изменения, остальное оставь без изменений.',
     'Если изменения противоречат закону, переформулируй корректно, но без комментариев.',
     '--- Исходный договор ---',
@@ -648,7 +808,9 @@ router.post('/guest/clarify', async (req, res) => {
   ].join('\n');
 
   const rawContent = await generateText(refinePrompt);
+  logColumnsDebug('guest-clarify raw', rawContent);
   const updatedContent = sanitizeGeneratedHtml(rawContent, title);
+  logColumnsDebug('guest-clarify sanitized', updatedContent);
 
   let riskAssessmentText: string | null = null;
   if (risk_check) {
@@ -784,7 +946,9 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     .join('\n\n');
 
   const rawContent = await generateText(finalPrompt);
+  logColumnsDebug('contract-generate raw', rawContent);
   const content = sanitizeGeneratedHtml(rawContent, title);
+  logColumnsDebug('contract-generate sanitized', content);
   let riskAssessmentText: string | null = null;
 
   if (hasRiskCheckAccess && parsed.data.risk_check) {
@@ -885,7 +1049,11 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   const refinePrompt = [
     'Ты редактор юридических договоров.',
     'На входе HTML договора; верни только обновлённый HTML без пояснений.',
-    'Сохрани структуру и стили: заголовки h1/h2, параграфы p, списки ul/li, выделения strong/em.',
+    'Сохрани структуру и стили: заголовки h1/h2, параграфы p (разрешено style="text-align: left|right|center|justify"), выделения strong/em/u, изменение размера через <span style="font-size: Npx">, списки ol/ul/li и ul с data-list-style="dash", разрывы колонок <div data-column-break="true"></div> и полноширинные блоки <div data-span-columns="all">...</div>.',
+    'Колонки <div data-columns="2"> используй ТОЛЬКО для блока реквизитов в конце: внутри две вложенные <div> (левая — Сторона 1/роль по контексту, правая — Сторона 2/роль по контексту); при необходимости поставь <div data-column-break="true"></div> между ними, чтобы избежать балансировки строк; если одна колонка короче, добавь в неё 1–3 пустых <p>&nbsp;</p> для выравнивания высоты. Не добавляй колонки в других разделах.',
+    'Обязательно сохрани или восстанови блок с реквизитами/подписями двух сторон в двух колонках, с плейсхолдерами длиной ровно 40 символов «_» для реквизитов, даты, подписи и расшифровки; правую колонку не пропускай. Реквизиты адаптируй под тип стороны (юрлицо/физлицо/ИП), колонки не должны быть идентичными, если типы сторон различаются.',
+    'Преамбула должна содержать только дату и краткое обозначение сторон, без повторения реквизитов (ИНН/ОГРН/адрес/представитель/подпись оставь в финальном блоке реквизитов).',
+    'Подразделы нумеруй внутри соответствующего раздела (1.1, 1.2, 2.1 и т.д.), не выводи номера подразделов раньше заголовка раздела и не сбивай нумерацию.',
     'Вноси только запрошенные изменения, остальное оставь без изменений.',
     'Если изменения противоречат закону, переформулируй корректно, но без комментариев.',
     '--- Исходный договор ---',
@@ -895,7 +1063,9 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   ].join('\n');
 
   const rawContent = await generateText(refinePrompt);
+  logColumnsDebug('contract-clarify raw', rawContent);
   const content = sanitizeGeneratedHtml(rawContent, doc.title);
+  logColumnsDebug('contract-clarify sanitized', content);
   let riskAssessmentText: string | null = null;
 
   if (hasRiskCheckAccess && parsed.data.risk_check) {
@@ -1048,6 +1218,79 @@ router.put('/:id/sections', requireAuth, async (req: AuthRequest, res) => {
     console.error('Update contract sections error:', error);
     return res.status(500).json({ detail: 'Failed to update sections' });
   }
+});
+
+const updateContentSchema = z.object({
+  content: z.string().min(1, 'content is required'),
+});
+
+router.patch('/:id/content', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
+
+  const parsedId = docIdParamsSchema.safeParse(req.params);
+  if (!parsedId.success) {
+    return res.status(400).json({ detail: 'Invalid document id' });
+  }
+
+  const parsedBody = updateContentSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    return res.status(400).json({ detail: parsedBody.error.flatten() });
+  }
+
+  const docId = parsedId.data.id;
+  const doc = (await prisma.document.findUnique({
+    where: { id: docId },
+    include: {
+      versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
+    },
+  })) as DocWithVersions | null;
+
+  if (!doc || doc.ownerId !== req.userId) {
+    return res.status(404).json({ detail: 'Document not found' });
+  }
+
+  const latestVersion = doc.versions?.[doc.versions.length - 1];
+  if (!latestVersion) {
+    return res.status(400).json({ detail: 'Document has no versions to update' });
+  }
+
+  const sanitizedContent = sanitizeGeneratedHtml(parsedBody.data.content, doc.title);
+  const extractedTitle = extractTitleFromHtml(sanitizedContent, doc.title);
+
+  const updated = (await prisma.$transaction(async (tx) => {
+    await tx.document.update({
+      where: { id: doc.id },
+      data: {
+        title: extractedTitle,
+      },
+    });
+
+    await tx.documentVersion.update({
+      where: { id: latestVersion.id },
+      data: {
+        content: sanitizedContent,
+        updatedAt: new Date(),
+      },
+    });
+
+    return (await tx.document.findUnique({
+      where: { id: doc.id },
+      include: {
+        template: { select: { id: true, name: true } },
+        versions: { orderBy: { version: 'asc' }, include: { riskAssessment: true } },
+        fields: true,
+        sections: true,
+      },
+    })) as DocWithRelations | null;
+  })) as DocWithRelations | null;
+
+  if (!updated) {
+    return res.status(500).json({ detail: 'Failed to update document' });
+  }
+
+  return res.json({ document: toDocument(updated) });
 });
 
 router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {

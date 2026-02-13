@@ -1,64 +1,111 @@
-/* Дополнительные стили для Quill редактора */
-
-.ql-editor {
+/* TipTap / ProseMirror styles */
+.ProseMirror {
   font-family: 'Times New Roman', serif;
   font-size: 14px;
   line-height: 1.8;
+  outline: none;
 }
 
-.ql-editor h1 {
-  font-size: 24px;
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror p,
+.ProseMirror li {
+  font-size: 14px;
+}
+
+.ProseMirror h1 {
   font-weight: bold;
   text-align: center;
   margin: 20px 0;
 }
 
-.ql-editor h2 {
-  font-size: 18px;
+.ProseMirror h2 {
   font-weight: bold;
   margin: 16px 0 8px 0;
+  text-align: left;
 }
 
-.ql-editor h3 {
-  font-size: 16px;
+.ProseMirror h3 {
   font-weight: bold;
   margin: 12px 0 6px 0;
+  text-align: left;
 }
 
-.ql-editor p {
+.ProseMirror p {
   margin-bottom: 12px;
-  text-align: justify;
 }
 
-.ql-editor strong {
-  font-weight: bold;
+.ProseMirror [style*='font-size'] {
+  font-size: 14px !important;
 }
 
-.ql-editor em {
-  font-style: italic;
-}
-
-.ql-editor ul,
-.ql-editor ol {
+.ProseMirror ul,
+.ProseMirror ol {
   margin-bottom: 12px;
   padding-left: 30px;
 }
 
-.ql-editor li {
+.ProseMirror li {
   margin-bottom: 6px;
 }
 
-.ql-editor blockquote {
+.ProseMirror blockquote {
   border-left: 4px solid #ccc;
   margin-bottom: 12px;
   padding-left: 16px;
   color: #666;
 }
 
-.ql-toolbar.ql-snow {
-  border-color: #e0e0e0;
+.ProseMirror ul[data-list-style='dash'] {
+  list-style-type: none;
+  padding-left: 30px;
 }
 
-.ql-container.ql-snow {
-  border-color: #e0e0e0;
+.ProseMirror ul[data-list-style='dash'] li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.ProseMirror ul[data-list-style='dash'] li::before {
+  content: '-';
+  position: absolute;
+  left: 0;
+}
+
+.ProseMirror [data-columns] {
+  column-gap: 24px;
+  column-fill: balance;
+}
+
+.ProseMirror [data-columns] p {
+  /* отключаем выравнивание по ширине в колонках */
+  text-align: left !important;
+}
+
+.ProseMirror [data-column-filler='true'] {
+  margin: 0;
+  padding: 0;
+}
+
+.ProseMirror [data-columns] > *:first-child {
+  /* убираем стартовый отступ, чтобы обе колонки начинались на одной линии */
+  margin-top: 0;
+}
+
+.ProseMirror [data-columns] > * {
+  break-inside: avoid;
+}
+
+.ProseMirror [data-span-columns='all'] {
+  column-span: all;
+  break-before: column;
+}
+
+.ProseMirror [data-column-break='true'] {
+  break-before: column;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
 }

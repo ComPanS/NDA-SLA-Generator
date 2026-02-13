@@ -143,6 +143,17 @@ export const useUpdateContractStatus = () => {
   });
 };
 
+export const useUpdateContractContent = (documentId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) => contractsApi.updateContent(documentId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+};
+
 export const useGuestGenerateContract = () => {
   return useMutation({
     mutationFn: (request: GuestGenerateRequest) => contractsApi.guestGenerate(request),

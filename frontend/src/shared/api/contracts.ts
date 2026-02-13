@@ -67,6 +67,13 @@ export const contractsApi = {
     return response.data;
   },
 
+  updateContent: async (documentId: string, content: string): Promise<GenerateContractResponse> => {
+    const response = await apiClient.patch<GenerateContractResponse>(`/contracts/${documentId}/content`, {
+      content,
+    });
+    return response.data;
+  },
+
   delete: async (documentId: string): Promise<void> => {
     await apiClient.delete(`/contracts/${documentId}`);
   },
