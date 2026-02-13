@@ -203,7 +203,13 @@ export const Billing = () => {
             )}
           </Stack>
           <Typography variant="body2" color={isNearLimit ? 'error' : 'text.secondary'}>
-            {displayLimitOnly ? formatLimitDisplay() : `${used} / ${formatLimitDisplay()}`}
+            {displayLimitOnly ? (
+              formatLimitDisplay()
+            ) : (
+              <>
+                {used} / {formatLimitDisplay()}
+              </>
+            )}
           </Typography>
         </Box>
         {!unlimited && !hideProgress && (
