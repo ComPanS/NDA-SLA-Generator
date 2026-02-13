@@ -13,7 +13,17 @@ interface PageMetaProps {
   image?: string;
 }
 
-const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://dogovarai.ru';
+const ENV_SITE_URL = import.meta.env.VITE_SITE_URL?.trim();
+const getBaseUrl = () => {
+  // Prefer explicit env value if it looks like a full URL, otherwise fall back to current origin
+  if (ENV_SITE_URL && /^https?:\/\//i.test(ENV_SITE_URL)) {
+    return ENV_SITE_URL;
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'https://dogovarai.ru';
+};
 const SITE_NAME = 'ДоговорAI';
 
 function ensureMetaTag(name: string, content: string) {
@@ -50,7 +60,16 @@ export const PageMeta = ({ title, description, path, image }: PageMetaProps) => 
   useEffect(() => {
     document.title = title;
 
-    const url = new URL(path || window.location.pathname, SITE_URL).toString();
+    const baseUrl = getBaseUrl();
+    // Gracefully handle malformed env base URLs to avoid crashing the whole app
+    let url = baseUrl;
+    try {
+      url = new URL(path || window.location.pathname, baseUrl).toString();
+    } catch {
+      const sanitizedBase = baseUrl.replace(/\/+$/, '');
+      const resolvedPath = path || window.location?.pathname || '/';
+      url = `${sanitizedBase}${resolvedPath.startsWith('/') ? '' : '/'}${resolvedPath}`;
+    }
 
     if (description) {
       ensureMetaTag('description', description);

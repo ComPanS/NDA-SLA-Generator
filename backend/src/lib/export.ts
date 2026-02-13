@@ -1,4 +1,18 @@
-import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun } from 'docx';
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  HeadingLevel,
+  Packer,
+  Paragraph,
+  SectionType,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  VerticalAlign,
+  WidthType,
+} from 'docx';
 import puppeteer from 'puppeteer';
 import { load, CheerioAPI, Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
@@ -66,6 +80,13 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
   const parseFontSize = (_style?: string) => {
     // Фиксируем шрифт 14px (28 half-points) для всего текста
     return 28;
+  };
+
+  const pageMarginsTwips = {
+    top: Math.round(20 * 56.6929), // 20mm
+    right: Math.round(10 * 56.6929), // 10mm
+    bottom: Math.round(20 * 56.6929), // 20mm
+    left: Math.round(30 * 56.6929), // 30mm
   };
 
   const parseAlignment = (style?: string) => {
@@ -140,14 +161,15 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
 
   type DomElement = AnyNode & { tagName?: string; attribs?: Record<string, string> };
 
-  const makeParagraphFromElement = (el: DomElement): Paragraph => {
+  const makeParagraphFromElement = (el: DomElement, forceLeftAlign = false): Paragraph => {
     const $el = $(el);
     const tag = el.tagName?.toLowerCase?.();
-    const alignment = parseAlignment($el.attr('style'));
+    const alignment = forceLeftAlign ? AlignmentType.LEFT : parseAlignment($el.attr('style'));
     const baseFontSize = 28;
+    const isHeading = tag === 'h1' || tag === 'h2' || tag === 'h3';
 
     const runs = collectTextRuns($el.contents() as any, {
-      bold: false,
+      bold: isHeading,
       italics: false,
       underline: false,
       fontSize: baseFontSize,
@@ -207,7 +229,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
             reference,
             level,
           },
-          alignment: parseAlignment($li.attr('style')),
+          alignment: parseAlignment($li.attr('style')) ?? AlignmentType.JUSTIFIED,
         }),
       );
 
@@ -226,27 +248,17 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     return paragraphs;
   };
 
+  type SectionChild = Paragraph | Table;
+
   type SectionBlock = {
-    columns?: {
-      count: number;
-      gapTwips: number;
-    };
-    children: Paragraph[];
+    children: SectionChild[];
   };
 
   const sections: SectionBlock[] = [{ children: [] }];
 
-  const appendToCurrentSection = (paras: Paragraph[]) => {
-    if (!paras.length) return;
-    sections[sections.length - 1].children.push(...paras);
-  };
-
-  const flushSection = (payload: Paragraph[], columns?: { count: number; gapTwips: number }) => {
-    if (!payload.length) return;
-    sections.push({
-      columns,
-      children: payload,
-    });
+  const appendToCurrentSection = (items: SectionChild[]) => {
+    if (!items.length) return;
+    sections[sections.length - 1].children.push(...items);
   };
 
   const parseColumnsAttrs = (node: DomElement) => {
@@ -258,115 +270,193 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     return { count: safeCount, gapTwips };
   };
 
-  const collectInlineChildren = (node: DomElement) => {
-    const innerParagraphs: Paragraph[] = [];
-    $(node)
-      .contents()
-      .each((_, inner) => {
-        const innerAny = inner as any;
-        const innerTag = innerAny?.tagName?.toLowerCase?.();
-        if (innerAny.type === 'text') {
-          const text = (innerAny.data || '').trim();
-          if (text) {
-            innerParagraphs.push(
-              new Paragraph({
-                children: [new TextRun({ text, font: 'Times New Roman', size: 28 })],
-              }),
-            );
+  // Рекурсивная функция обработки любого узла DOM → SectionChild[]
+  const processNode = (node: any): void => {
+    if (node.type === 'text') {
+      const text = ((node as any).data || '').trim();
+      if (text) {
+        appendToCurrentSection([
+          new Paragraph({
+            children: [new TextRun({ text, font: 'Times New Roman', size: 28 })],
+          }),
+        ]);
+      }
+      return;
+    }
+
+    const tag = (node as DomElement).tagName?.toLowerCase?.();
+    if (!tag) return;
+
+    // Стандартные блочные элементы
+    if (['p', 'h1', 'h2', 'h3'].includes(tag)) {
+      appendToCurrentSection([makeParagraphFromElement(node as DomElement)]);
+      return;
+    }
+    if (tag === 'ol') {
+      appendToCurrentSection(processList(node as DomElement, 0, 'numbered'));
+      return;
+    }
+    if (tag === 'ul') {
+      const sa = $(node).attr('data-list-style');
+      appendToCurrentSection(
+        processList(node as DomElement, 0, sa === 'dash' ? 'dash' : 'bulleted'),
+      );
+      return;
+    }
+
+    // ===== Колонки: div[data-columns] → невидимая таблица =====
+    if (tag === 'div' && $(node).attr('data-columns')) {
+      const columnsProps = parseColumnsAttrs(node as DomElement);
+
+      // Шаг 1: собираем параграфы, разбивая по column-break
+      const groups: Paragraph[][] = [[]];
+
+      const walkColumnChildren = (parent: any) => {
+        $(parent)
+          .contents()
+          .each((_, child) => {
+            const ct = (child as DomElement).tagName?.toLowerCase?.();
+
+            if (ct === 'div' && $(child).attr('data-column-break')) {
+              groups.push([]);
+              return;
+            }
+            if (ct === 'div') {
+              walkColumnChildren(child); // рекурсия в div-обёртки
+              return;
+            }
+            if (['p', 'h1', 'h2', 'h3'].includes(ct || '')) {
+              groups[groups.length - 1].push(makeParagraphFromElement(child as DomElement, true));
+              return;
+            }
+            if (ct === 'ol') {
+              groups[groups.length - 1].push(...processList(child as DomElement, 0, 'numbered'));
+              return;
+            }
+            if (ct === 'ul') {
+              const sa = $(child).attr('data-list-style');
+              groups[groups.length - 1].push(
+                ...processList(child as DomElement, 0, sa === 'dash' ? 'dash' : 'bulleted'),
+              );
+              return;
+            }
+            if (child.type === 'text') {
+              const text = ((child as any).data || '').trim();
+              if (text) {
+                groups[groups.length - 1].push(
+                  new Paragraph({
+                    children: [new TextRun({ text, font: 'Times New Roman', size: 28 })],
+                    alignment: AlignmentType.LEFT,
+                  }),
+                );
+              }
+              return;
+            }
+            if (ct) {
+              groups[groups.length - 1].push(makeParagraphFromElement(child as DomElement, true));
+            }
+          });
+      };
+
+      walkColumnChildren(node);
+
+      // Шаг 2: формируем содержимое ячеек
+      let cellContents: Paragraph[][];
+
+      if (groups.length > 1) {
+        // Есть column-break — берём первые N групп, лишние сливаем в последнюю
+        cellContents = groups.slice(0, columnsProps.count);
+        for (let i = columnsProps.count; i < groups.length; i++) {
+          cellContents[cellContents.length - 1].push(...groups[i]);
+        }
+      } else {
+        // Нет column-break — делим контент поровну
+        const all = groups[0];
+        if (all.length > 0) {
+          const perCol = Math.ceil(all.length / columnsProps.count);
+          cellContents = [];
+          for (let i = 0; i < columnsProps.count; i++) {
+            cellContents.push(all.slice(i * perCol, (i + 1) * perCol));
           }
-          return;
+        } else {
+          cellContents = [[]];
         }
-        if (innerTag === 'p' || innerTag === 'h1' || innerTag === 'h2' || innerTag === 'h3') {
-          innerParagraphs.push(makeParagraphFromElement(inner as DomElement));
-          return;
-        }
-        if (innerTag === 'ol') {
-          innerParagraphs.push(...processList(inner as DomElement, 0, 'numbered'));
-          return;
-        }
-        if (innerTag === 'ul') {
-          const styleAttr = $(inner).attr('data-list-style');
-          const reference = styleAttr === 'dash' ? 'dash' : 'bulleted';
-          innerParagraphs.push(...processList(inner as DomElement, 0, reference));
-          return;
-        }
+      }
+
+      // Дополняем до нужного числа колонок
+      while (cellContents.length < columnsProps.count) {
+        cellContents.push([]);
+      }
+
+      // Шаг 3: строим невидимую таблицу
+      const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+      const pageWidthTwips = 11906;
+      const availableWidth = pageWidthTwips - pageMarginsTwips.left - pageMarginsTwips.right;
+      const cellWidth = Math.floor(availableWidth / columnsProps.count);
+      const gapHalf = Math.floor(columnsProps.gapTwips / 2);
+
+      const emptyPara = () =>
+        new Paragraph({ children: [new TextRun({ text: '', font: 'Times New Roman', size: 28 })] });
+
+      const cells = cellContents.map(
+        (paras, colIdx) =>
+          new TableCell({
+            children: paras.length > 0 ? paras : [emptyPara()],
+            width: { size: cellWidth, type: WidthType.DXA },
+            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+            verticalAlign: VerticalAlign.TOP,
+            margins: {
+              marginUnitType: WidthType.DXA,
+              left: colIdx > 0 ? gapHalf : 0,
+              right: colIdx < columnsProps.count - 1 ? gapHalf : 0,
+              top: 0,
+              bottom: 0,
+            },
+          }),
+      );
+
+      const table = new Table({
+        rows: [new TableRow({ children: cells })],
+        columnWidths: Array(columnsProps.count).fill(cellWidth),
+        width: { size: availableWidth, type: WidthType.DXA },
+        borders: {
+          top: noBorder,
+          bottom: noBorder,
+          left: noBorder,
+          right: noBorder,
+          insideHorizontal: noBorder,
+          insideVertical: noBorder,
+        },
       });
-    return innerParagraphs;
+
+      appendToCurrentSection([table]);
+      return;
+    }
+
+    // column-break вне колонок — новая секция
+    if (tag === 'div' && $(node).attr('data-column-break')) {
+      sections.push({ children: [] });
+      return;
+    }
+
+    // Любой другой div — рекурсивно обходим детей
+    if (tag === 'div') {
+      $(node)
+        .contents()
+        .each((_, child) => {
+          processNode(child);
+        });
+      return;
+    }
+
+    // Фоллбек: любое другое содержимое как параграф
+    appendToCurrentSection([makeParagraphFromElement(node as DomElement)]);
   };
 
   $('body')
     .contents()
     .each((_, node) => {
-      if (node.type === 'text') {
-        const text = (node.data || '').trim();
-        if (text) {
-          appendToCurrentSection([
-            new Paragraph({
-              children: [new TextRun({ text, font: 'Times New Roman', size: 28 })],
-            }),
-          ]);
-        }
-        return;
-      }
-
-      const tag = (node as DomElement).tagName?.toLowerCase?.();
-      if (!tag) return;
-
-      if (['p', 'h1', 'h2', 'h3'].includes(tag)) {
-        appendToCurrentSection([makeParagraphFromElement(node as DomElement)]);
-        return;
-      }
-
-      if (tag === 'ol') {
-        appendToCurrentSection(processList(node as DomElement, 0, 'numbered'));
-        return;
-      }
-
-      if (tag === 'ul') {
-        const styleAttr = $(node).attr('data-list-style');
-        const reference = styleAttr === 'dash' ? 'dash' : 'bulleted';
-        appendToCurrentSection(processList(node as DomElement, 0, reference));
-        return;
-      }
-
-      if (tag === 'div' && $(node).attr('data-columns')) {
-        const columnsProps = parseColumnsAttrs(node as DomElement);
-        let buffer: Paragraph[] = [];
-
-        $(node)
-          .contents()
-          .each((_, inner) => {
-            const innerTag = (inner as DomElement).tagName?.toLowerCase?.();
-            if (innerTag === 'div' && $(inner).attr('data-column-break')) {
-              flushSection(buffer, columnsProps);
-              buffer = [];
-              return;
-            }
-            if (innerTag === 'div' && $(inner).attr('data-span-columns')) {
-              const spanParas = collectInlineChildren(inner as DomElement);
-              flushSection(buffer, columnsProps);
-              buffer = [];
-              appendToCurrentSection([]);
-              sections.push({ children: spanParas });
-              sections.push({ children: [] });
-              return;
-            }
-            const paragraphs = collectInlineChildren(inner as DomElement);
-            buffer.push(...paragraphs);
-          });
-
-        flushSection(buffer, columnsProps);
-        sections.push({ children: [] }); // новый секционный блок для последующего текста
-        return;
-      }
-
-      if (tag === 'div' && $(node).attr('data-column-break')) {
-        sections.push({ children: [] });
-        return;
-      }
-
-      // Фоллбек: любое другое содержимое как параграф
-      appendToCurrentSection([makeParagraphFromElement(node as DomElement)]);
+      processNode(node);
     });
 
   const normalizedSections = sections.filter((s) => s.children.length > 0);
@@ -397,15 +487,14 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
         },
       },
     },
-    sections: normalizedSections.map((section) => ({
-      properties: section.columns
-        ? {
-            column: {
-              count: section.columns.count,
-              space: section.columns.gapTwips,
-            },
-          }
-        : {},
+    sections: normalizedSections.map((section, idx) => ({
+      properties: {
+        // Все секции кроме первой — непрерывные (без разрыва страницы)
+        ...(idx > 0 ? { type: SectionType.CONTINUOUS } : {}),
+        page: {
+          margin: pageMarginsTwips,
+        },
+      },
       children: section.children,
     })),
   });
@@ -431,7 +520,7 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
     }
     body {
       font-family: 'Times New Roman', serif;
-      font-size: 14px;
+      font-size: 22px;
       line-height: 1.6;
       color: #000;
       width: 210mm;
@@ -441,20 +530,20 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
     }
     h1 {
       text-align: center;
-      font-size: 24px;
+      font-size: 22px;
       margin: 20px 0;
       font-weight: bold;
       color: #000;
     }
     h2 {
-      font-size: 18px;
+      font-size: 22px;
       margin: 16px 0 8px 0;
       font-weight: bold;
       color: #000;
       text-align: left;
     }
     h3 {
-      font-size: 16px;
+      font-size: 22px;
       margin: 12px 0 6px 0;
       font-weight: bold;
       color: #000;
@@ -485,23 +574,33 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
       left: 0;
     }
     [data-columns] {
-      column-count: 2;
-      column-gap: 24px;
-      column-fill: balance;
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
     }
-    [data-columns] > * {
-      break-inside: avoid;
+    [data-columns] > .pdf-column-cell {
+      display: table-cell;
+      vertical-align: top;
+      padding: 0 12px;
+      width: 50%;
+    }
+    [data-columns] > .pdf-column-cell:first-child {
+      padding-left: 0;
+    }
+    [data-columns] > .pdf-column-cell:last-child {
+      padding-right: 0;
+    }
+    [data-columns] p,
+    [data-columns] li {
+      text-align: left;
     }
     [data-span-columns="all"] {
-      column-span: all;
-      break-before: column;
+      display: block;
+      width: 100%;
     }
     [data-column-break="true"] {
-      break-before: column;
-      height: 0;
-      padding: 0;
-      margin: 0;
-      border: none;
+      display: none;
     }
   </style>
 </head>
@@ -511,6 +610,51 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
 </html>
   `;
 
+  // Трансформируем колонки: разбиваем по column-break на независимые table-cell
+  const $pdf = load(fullHtml);
+  $pdf('[data-columns]').each((_, columnsEl) => {
+    const $cols = $pdf(columnsEl);
+    const colCount = parseInt($cols.attr('data-columns') || '2', 10) || 2;
+    const children = $cols.children().toArray();
+
+    // Разбиваем детей по data-column-break
+    const groups: (typeof children)[] = [[]];
+    for (const child of children) {
+      if ($pdf(child).attr('data-column-break') !== undefined) {
+        groups.push([]);
+      } else {
+        groups[groups.length - 1].push(child);
+      }
+    }
+
+    // Если разрывов не было, делим контент поровну
+    if (groups.length === 1 && colCount > 1) {
+      const all = groups[0];
+      const perCol = Math.ceil(all.length / colCount);
+      groups.length = 0;
+      for (let i = 0; i < colCount; i++) {
+        groups.push(all.slice(i * perCol, (i + 1) * perCol));
+      }
+    }
+
+    // Дополняем пустыми группами
+    while (groups.length < colCount) {
+      groups.push([]);
+    }
+
+    // Очищаем содержимое и вставляем ячейки
+    $cols.empty();
+    for (let i = 0; i < colCount; i++) {
+      const cell = $pdf('<div class="pdf-column-cell"></div>');
+      for (const child of groups[i] || []) {
+        cell.append($pdf(child));
+      }
+      $cols.append(cell);
+    }
+  });
+
+  const transformedHtml = $pdf.html();
+
   // Запускаем Puppeteer
   const browser = await puppeteer.launch({
     headless: true,
@@ -519,7 +663,7 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
 
   try {
     const page = await browser.newPage();
-    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+    await page.setContent(transformedHtml, { waitUntil: 'networkidle0' });
 
     // Генерируем PDF
     const pdfBuffer = await page.pdf({

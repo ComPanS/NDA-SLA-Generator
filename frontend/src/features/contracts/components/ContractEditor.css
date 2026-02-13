@@ -1,7 +1,7 @@
 /* TipTap / ProseMirror styles */
 .ProseMirror {
   font-family: 'Times New Roman', serif;
-  font-size: 14px;
+  font-size: 18.67px;
   line-height: 1.8;
   outline: none;
 }
@@ -11,7 +11,7 @@
 .ProseMirror h3,
 .ProseMirror p,
 .ProseMirror li {
-  font-size: 14px;
+  font-size: 18.67px;
 }
 
 .ProseMirror h1 {
@@ -37,7 +37,7 @@
 }
 
 .ProseMirror [style*='font-size'] {
-  font-size: 14px !important;
+  font-size: 18.67px !important;
 }
 
 .ProseMirror ul,
