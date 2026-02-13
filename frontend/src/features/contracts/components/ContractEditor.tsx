@@ -38,6 +38,8 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
           heading: {
             levels: [1, 2, 3],
           },
+          // Disable built-in underline to avoid duplicate extension names; we add our own instance below
+          underline: false,
         }),
         Underline,
         TextStyle,
@@ -81,7 +83,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
         if ($from.parent.isTextblock) {
           editor.commands.setTextSelection({ from: clampedFrom, to: clampedTo });
         }
-      } catch (_err) {
+      } catch {
         // ignore selection restore errors
       }
     }
