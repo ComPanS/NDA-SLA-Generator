@@ -1,4 +1,4 @@
-export type SubscriptionPlan = 'freemium' | 'basic' | 'standard' | 'pro';
+export type SubscriptionPlan = 'freemium' | 'basic' | 'pro';
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due';
 export type PaymentType = 'subscription' | 'single_contract';
 export type PaymentStatus = 'pending' | 'succeeded' | 'canceled' | 'refunded';

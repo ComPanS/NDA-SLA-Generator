@@ -158,9 +158,15 @@ export function toBilling(sub?: Subscription | null) {
     subscription.autoRenew !== undefined && subscription.autoRenew !== null
       ? Boolean(subscription.autoRenew)
       : true;
+  const planMap: Record<Subscription['plan'], 'freemium' | 'basic' | 'pro'> = {
+    free: 'freemium',
+    pay_per_use: 'basic',
+    pro: 'pro',
+  };
+  const plan = planMap[sub.plan] ?? 'freemium';
   return {
     id: sub.id,
-    plan: sub.plan,
+    plan,
     status: sub.status,
     expires_at: sub.expiresAt?.toISOString() || null,
     auto_renew: autoRenew,

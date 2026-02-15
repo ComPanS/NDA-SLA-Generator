@@ -2,16 +2,11 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box,
-  Card,
-  CardContent,
+  Card as MuiCard,
+  CardContent as MuiCardContent,
   Typography,
-  Grid,
-  Button,
+  Button as MuiButton,
   Chip,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   LinearProgress,
   Alert,
   Divider,
@@ -20,14 +15,7 @@ import {
   Tooltip,
   Stack,
 } from '@mui/material';
-import {
-  Check,
-  Star,
-  AllInclusive,
-  CancelOutlined,
-  Autorenew,
-  HelpOutline,
-} from '@mui/icons-material';
+import { Check, Star, AllInclusive, CancelOutlined, Autorenew, HelpOutline } from '@mui/icons-material';
 import {
   Layout,
   ProtectedRoute,
@@ -47,6 +35,13 @@ import {
 import { SubscriptionPlan } from '@/shared/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/store/authStore';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/shared/ui';
+
+const formatPrice = (value: number | null | undefined) => {
+  if (value === null || value === undefined) return '—';
+  if (value === 0) return 'Бесплатно';
+  return `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
+};
 
 export const Billing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -233,8 +228,8 @@ export const Billing = () => {
 
           {/* Current subscription info */}
           {subscription && subscription.plan !== 'freemium' && (
-            <Card sx={{ mb: 4 }}>
-              <CardContent>
+            <MuiCard sx={{ mb: 4 }}>
+              <MuiCardContent>
                 <Box
                   sx={{
                     display: 'flex',
@@ -269,7 +264,7 @@ export const Billing = () => {
                   </Box>
                   <Box>
                     {subscription.auto_renew ? (
-                      <Button
+                      <MuiButton
                         variant="outlined"
                         color="error"
                         startIcon={<CancelOutlined />}
@@ -277,9 +272,9 @@ export const Billing = () => {
                         disabled={cancelMutation.isPending}
                       >
                         Отменить подписку
-                      </Button>
+                      </MuiButton>
                     ) : (
-                      <Button
+                      <MuiButton
                         variant="outlined"
                         startIcon={<Autorenew />}
                         onClick={handleReactivate}
@@ -290,18 +285,18 @@ export const Billing = () => {
                         ) : (
                           'Возобновить подписку'
                         )}
-                      </Button>
+                      </MuiButton>
                     )}
                   </Box>
                 </Box>
-              </CardContent>
-            </Card>
+              </MuiCardContent>
+            </MuiCard>
           )}
 
           {/* Usage stats */}
           {usage && (
-            <Card sx={{ mb: 4 }}>
-              <CardContent>
+            <MuiCard sx={{ mb: 4 }}>
+              <MuiCardContent>
                 <Typography variant="h6" gutterBottom>
                   Использование за месяц
                 </Typography>
@@ -359,8 +354,8 @@ export const Billing = () => {
                     />
                   )}
                 </Box>
-              </CardContent>
-            </Card>
+              </MuiCardContent>
+            </MuiCard>
           )}
 
           {/* Plans */}
@@ -368,10 +363,10 @@ export const Billing = () => {
             Доступные тарифы
           </Typography>
 
-          <Grid container spacing={3}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {plans.map((plan) => {
               const isCurrent = plan.id === currentPlan;
-              const isPro = plan.id === 'pro';
+              const isHighlighted = plan.id === 'basic';
               const isFreePlan = plan.id === 'freemium';
               const disableFreeWhileActive = isFreePlan && currentPlan !== 'freemium';
               const hasDiscount =
@@ -383,119 +378,79 @@ export const Billing = () => {
               const discountPercent = hasDiscount
                 ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
                 : null;
-              const displayPrice =
-                hasDiscount && plan.first_month_price !== null ? plan.first_month_price : plan.price;
+
+              const priceLabel = hasDiscount ? plan.first_month_price : plan.price;
 
               return (
-                <Grid item xs={12} sm={6} md={3} key={plan.id}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      position: 'relative',
-                      border: isPro ? 2 : 1,
-                      borderColor: isPro ? 'primary.main' : 'divider',
-                    }}
-                  >
-                    {isPro && (
-                      <Chip
-                        icon={<Star />}
-                        label="Популярный"
-                        color="primary"
-                        size="small"
-                        sx={{ position: 'absolute', top: 12, right: 12 }}
-                      />
-                    )}
-                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="h5" gutterBottom>
-                        {plan.name}
-                      </Typography>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="h3" component="span" color="primary">
-                          {displayPrice === 0 ? 'Бесплатно' : `${displayPrice} ₽`}
-                        </Typography>
-                        {plan.price > 0 && (
-                          <Typography variant="body2" color="text.secondary" component="span">
-                            {' '}
-                            / месяц
-                          </Typography>
-                        )}
-                        {hasDiscount && (
-                          <Typography variant="body2" color="text.secondary" component="div">
-                            <span style={{ textDecoration: 'line-through' }}>{plan.price} ₽</span>{' '}
+                <Card
+                  key={plan.id}
+                  className={`relative ${isHighlighted ? 'border-2 border-blue-500 shadow-xl scale-[1.02]' : 'border border-gray-200'} ${
+                    isCurrent ? 'ring-2 ring-green-500/40' : ''
+                  }`}
+                >
+                  {isHighlighted && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">Самый популярный</Badge>
+                    </div>
+                  )}
+                  {isCurrent && !isFreePlan && (
+                    <div className="absolute -top-4 right-4">
+                      <Badge variant="secondary" className="px-3 py-1">Текущий тариф</Badge>
+                    </div>
+                  )}
+
+                  <CardHeader>
+                    <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
+                    <div className="mb-2">
+                      <span className="text-4xl font-bold">{formatPrice(priceLabel)}</span>
+                      {plan.price > 0 && <span className="text-gray-600 ml-2">/ месяц</span>}
+                    </div>
+                    {hasDiscount && (
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div>
+                          <span className="line-through text-gray-400">{formatPrice(plan.price)}</span>{' '}
+                          <span className="font-semibold text-green-700">
                             {discountPercent !== null ? `-${discountPercent}%` : ''}
-                            <Typography variant="caption" color="text.secondary" component="div">
-                              Скидка только на первый месяц
-                            </Typography>
-                          </Typography>
-                        )}
-                      </Box>
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">Скидка на первый месяц</div>
+                      </div>
+                    )}
+                  </CardHeader>
 
-                      {/* <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Договоров: {formatLimit(plan.limits.contracts_per_month)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Шаблонов: {formatLimit(plan.limits.max_templates)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Уточнений: {formatLimit(plan.limits.ai_clarifications)}
-                        </Typography>
-                      </Box> */}
+                  <CardContent>
+                    <Button
+                      className={`w-full mb-6 ${isHighlighted ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                      size="lg"
+                      disabled={isCurrent || disableFreeWhileActive || subscribeMutation.isPending}
+                      onClick={() => handleSubscribe(plan.id)}
+                    >
+                      {selectedPlan === plan.id && subscribeMutation.isPending ? (
+                        <CircularProgress size={20} />
+                      ) : isCurrent ? (
+                        'Текущий тариф'
+                      ) : disableFreeWhileActive ? (
+                        'Недоступно'
+                      ) : plan.price === 0 ? (
+                        'Попробовать бесплатно'
+                      ) : (
+                        'Выбрать тариф'
+                      )}
+                    </Button>
 
-                      <List dense sx={{ flexGrow: 1 }}>
-                        {plan.features.map((feature, index) => (
-                          <ListItem key={index} disableGutters sx={{ py: 0.25 }}>
-                            <ListItemIcon sx={{ minWidth: 32 }}>
-                              <Check color="primary" fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={feature}
-                              primaryTypographyProps={{ variant: 'body2' }}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-
-                      <Tooltip
-                        title={
-                          disableFreeWhileActive
-                            ? 'Чтобы вернуться на бесплатный, отмените текущую подписку. После окончания оплаченного периода вы будете на бесплатном тарифе.'
-                            : ''
-                        }
-                        disableHoverListener={!disableFreeWhileActive}
-                        disableFocusListener={!disableFreeWhileActive}
-                        disableTouchListener={!disableFreeWhileActive}
-                      >
-                        <span>
-                          <Button
-                            fullWidth
-                            variant={isCurrent ? 'outlined' : isPro ? 'contained' : 'outlined'}
-                            disabled={
-                              isCurrent || disableFreeWhileActive || subscribeMutation.isPending
-                            }
-                            onClick={() => handleSubscribe(plan.id)}
-                            sx={{ mt: 2 }}
-                          >
-                            {selectedPlan === plan.id && subscribeMutation.isPending ? (
-                              <CircularProgress size={20} />
-                            ) : isCurrent ? (
-                              'Текущий тариф'
-                            ) : disableFreeWhileActive ? (
-                              'Недоступно'
-                            ) : (
-                              'Выбрать'
-                            )}
-                          </Button>
-                        </span>
-                      </Tooltip>
-                    </CardContent>
-                  </Card>
-                </Grid>
+                    <ul className="space-y-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
               );
             })}
-          </Grid>
+          </div>
 
           <Alert severity="info" sx={{ mt: 4 }}>
             При достижении лимита договоров вы можете приобрести дополнительные договоры по{' '}

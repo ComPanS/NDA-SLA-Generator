@@ -27,7 +27,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   freemium: {
     price: 0,
     firstMonthPrice: 0,
-    contractsPerMonth: 3,
+    contractsPerMonth: 5,
     maxTemplates: 1,
     exportFormats: ['pdf'],
     aiClarifications: 1,
@@ -39,7 +39,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   },
   basic: {
     price: 290,
-    firstMonthPrice: 100,
+    firstMonthPrice: 99,
     contractsPerMonth: 20,
     maxTemplates: 3,
     exportFormats: ['pdf', 'docx'],
@@ -50,22 +50,9 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     hasVersions: false,
     hasPrioritySupport: false,
   },
-  standard: {
-    price: 790,
-    firstMonthPrice: 100,
-    contractsPerMonth: 100,
-    maxTemplates: 10,
-    exportFormats: ['pdf', 'docx'],
-    aiClarifications: 10,
-    hasRiskCheck: true,
-    hasSections: true,
-    hasStatuses: true,
-    hasVersions: false,
-    hasPrioritySupport: false,
-  },
   pro: {
     price: 1490,
-    firstMonthPrice: 100,
+    firstMonthPrice: 900,
     contractsPerMonth: -1,
     maxTemplates: -1,
     exportFormats: ['pdf', 'docx'],
@@ -79,22 +66,20 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
 };
 
 export const SUBSCRIPTION_NAMES: Record<SubscriptionPlan, string> = {
-  freemium: 'Freemium',
-  basic: 'Basic',
-  standard: 'Standard',
-  pro: 'Pro',
+  freemium: 'Стартовый',
+  basic: 'Профессиональный',
+  pro: 'Бизнес',
 };
 
 export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlan, string> = {
-  freemium: 'Базовый бесплатный доступ',
-  basic: 'Для индивидуальных пользователей',
-  standard: 'Для активных пользователей',
-  pro: 'Безлимитный доступ для профессионалов',
+  freemium: 'Бесплатный старт для первых договоров',
+  basic: 'Все базовые функции без ограничений для фрилансера',
+  pro: 'Максимум возможностей и поддержки для бизнеса',
 };
 
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
   freemium: [
-    '3 договора в месяц',
+    '5 договоров в месяц',
     '1 шаблон',
     'Экспорт в PDF',
     '1 уточнение на документ от нейросети',
@@ -107,16 +92,8 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
     'Разделы договоров',
     'Статусы договоров',
   ],
-  standard: [
-    '100 договоров в месяц',
-    '10 шаблонов',
-    'Экспорт в PDF и DOCX',
-    '10 уточнений на документ от нейросети',
-    'Проверка на юридические риски',
-    'Разделы договоров',
-    'Статусы договоров',
-  ],
   pro: [
+    'Все из тарифа «Профессиональный»',
     'Безлимит договоров',
     'Безлимит шаблонов',
     'Экспорт в PDF и DOCX',
@@ -124,8 +101,8 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
     'Проверка на юридические риски',
     'Разделы договоров',
     'Статусы договоров',
-    'Приоритетная поддержка',
     'История версий договоров',
+    'Приоритетная поддержка',
   ],
 };
 
@@ -146,7 +123,7 @@ export function getPlanLimits(plan: SubscriptionPlan): PlanLimits {
 
 // Helper to get next upgrade plan
 export function getNextPlan(currentPlan: SubscriptionPlan): SubscriptionPlan | null {
-  const planOrder: SubscriptionPlan[] = ['freemium', 'basic', 'standard', 'pro'];
+  const planOrder: SubscriptionPlan[] = ['freemium', 'basic', 'pro'];
   const currentIndex = planOrder.indexOf(currentPlan);
   if (currentIndex === -1 || currentIndex === planOrder.length - 1) {
     return null;
@@ -156,7 +133,7 @@ export function getNextPlan(currentPlan: SubscriptionPlan): SubscriptionPlan | n
 
 // Get all available upgrade options from current plan
 export function getUpgradeOptions(currentPlan: SubscriptionPlan): SubscriptionPlan[] {
-  const planOrder: SubscriptionPlan[] = ['freemium', 'basic', 'standard', 'pro'];
+  const planOrder: SubscriptionPlan[] = ['freemium', 'basic', 'pro'];
   const currentIndex = planOrder.indexOf(currentPlan);
   return planOrder.slice(currentIndex + 1);
 }

@@ -428,7 +428,7 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {plans.map((plan) => {
-            const highlighted = plan.id === 'pro' || plan.id === 'standard';
+            const highlighted = plan.id === 'basic';
             const hasDiscount =
               !!plan.first_month_discount_available &&
               plan.first_month_price !== null &&
@@ -471,9 +471,7 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
                       <div className="text-xs text-gray-500">Скидка на первый месяц</div>
                     </div>
                   )}
-                  <p className="text-sm text-gray-600 mt-2">
-                    {plan.features[0] || 'Доступ ко всем основным функциям'}
-                  </p>
+                 
                 </CardHeader>
 
                 <CardContent>

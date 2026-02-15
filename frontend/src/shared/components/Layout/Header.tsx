@@ -88,18 +88,20 @@ export const Header = () => {
             </button>
           </div>
 
-          <div className="hidden md:flex items-center gap-8">
-            {anchorLinks.map((item) => (
-              <button
-                key={item.name}
-                type="button"
-                onClick={() => navigateAnchor(item.href)}
-                className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
-              >
-                {item.name}
-              </button>
-            ))}
-          </div>
+          {!isAuthenticated && (
+            <div className="hidden md:flex items-center gap-8">
+              {anchorLinks.map((item) => (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => navigateAnchor(item.href)}
+                  className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
@@ -152,16 +154,17 @@ export const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col gap-4">
-              {anchorLinks.map((item) => (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => navigateAnchor(item.href)}
-                  className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-2 text-left cursor-pointer"
-                >
-                  {item.name}
-                </button>
-              ))}
+              {!isAuthenticated &&
+                anchorLinks.map((item) => (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => navigateAnchor(item.href)}
+                    className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-2 text-left cursor-pointer"
+                  >
+                    {item.name}
+                  </button>
+                ))}
 
               <div className="pt-4 border-t border-gray-200 flex flex-col gap-3">
                 {isAuthenticated ? (
