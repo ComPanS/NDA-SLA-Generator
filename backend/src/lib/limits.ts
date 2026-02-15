@@ -12,6 +12,10 @@ import {
   SUBSCRIPTION_NAMES,
 } from '../config/subscriptions';
 
+const LEGACY_PLAN_MAPPING: Record<string, SubscriptionPlanType> = {
+  standard: 'pro',
+};
+
 function getCurrentPeriodStart(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -104,7 +108,8 @@ export async function getUserPlan(userId: string): Promise<SubscriptionPlanType>
     return 'freemium';
   }
 
-  return subscription.plan as SubscriptionPlanType;
+  const plan = subscription.plan as SubscriptionPlanType | keyof typeof LEGACY_PLAN_MAPPING;
+  return LEGACY_PLAN_MAPPING[plan] ?? (plan as SubscriptionPlanType);
 }
 
 /**

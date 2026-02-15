@@ -19,7 +19,6 @@ enum TemplateFieldType {
 enum SubscriptionPlan {
   freemium
   basic
-  standard
   pro
 }
 

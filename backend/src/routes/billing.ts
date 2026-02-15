@@ -60,7 +60,7 @@ const buildReturnUrlWithSuccess = (raw?: string): string => {
 
 // Validation schemas
 const subscribeSchema = z.object({
-  plan: z.enum(['basic', 'standard', 'pro']),
+  plan: z.enum(['basic', 'pro']),
   return_url: z.string().url().optional(),
 });
 
