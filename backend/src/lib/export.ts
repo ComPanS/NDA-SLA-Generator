@@ -85,6 +85,8 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     }
   };
 
+  type AlignmentValue = (typeof AlignmentType)[keyof typeof AlignmentType];
+
   const parseFontSize = (_style?: string) => {
     // Фиксируем шрифт 14px (28 half-points) для всего текста
     return 28;
@@ -97,7 +99,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     left: Math.round(30 * 56.6929), // 30mm
   };
 
-  const parseAlignment = (style?: string) => {
+  const parseAlignment = (style?: string): AlignmentValue | undefined => {
     if (!style) return undefined;
     const match = style.match(/text-align:\s*(left|right|center|justify)/i);
     if (!match) return undefined;
@@ -175,7 +177,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     const isHeading = tag === 'h1' || tag === 'h2' || tag === 'h3';
 
     // Для колонок - всегда left, для заголовков - свои правила, для остального - justify по умолчанию
-    let alignment: AlignmentType | undefined;
+    let alignment: AlignmentValue | undefined;
     if (forceLeftAlign) {
       alignment = AlignmentType.LEFT;
     } else {

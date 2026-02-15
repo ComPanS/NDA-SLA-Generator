@@ -158,12 +158,12 @@ export function toBilling(sub?: Subscription | null) {
     subscription.autoRenew !== undefined && subscription.autoRenew !== null
       ? Boolean(subscription.autoRenew)
       : true;
-  const planMap: Record<Subscription['plan'], 'freemium' | 'basic' | 'pro'> = {
-    free: 'freemium',
-    pay_per_use: 'basic',
-    pro: 'pro',
-  };
-  const plan = planMap[sub.plan] ?? 'freemium';
+  const plan =
+    sub.plan === 'basic' || sub.plan === 'pro' || sub.plan === 'freemium'
+      ? sub.plan
+      : sub.plan === 'pay_per_use'
+        ? 'basic'
+        : 'freemium';
   return {
     id: sub.id,
     plan,
