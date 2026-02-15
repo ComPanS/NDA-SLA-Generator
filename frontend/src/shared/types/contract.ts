@@ -129,3 +129,11 @@ export interface GuestClarifyResponse {
   content: string;
   risk_assessment?: string | null;
 }
+
+export interface GuestImportRequest {
+  title: string;
+  content: string;
+  fields?: ContractFieldInput[];
+  sections?: ContractSectionInput[];
+  risk_assessment?: string | null;
+}

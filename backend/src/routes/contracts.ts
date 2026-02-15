@@ -587,6 +587,14 @@ const guestClarifySchema = z.object({
   risk_check: z.boolean().optional(),
 });
 
+const guestImportSchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+  risk_assessment: z.string().nullable().optional(),
+  fields: z.array(createFieldSchema).optional(),
+  sections: z.array(createSectionSchema).optional(),
+});
+
 const statusUpdateSchema = z.object({
   status: z.enum(['draft', 'final']),
 });
@@ -829,6 +837,99 @@ router.post('/guest/clarify', async (req, res) => {
     content: updatedContent,
     risk_assessment: riskAssessmentText,
   });
+});
+
+router.post('/guest/import', requireAuth, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ detail: 'Unauthorized' });
+  }
+
+  const parsed = guestImportSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: parsed.error.flatten() });
+  }
+
+  const limitCheck = await checkContractLimit(req.userId);
+  if (!limitCheck.allowed) {
+    return res.status(402).json({
+      detail: 'Достигнут лимит договоров на этот месяц',
+      code: 'LIMIT_REACHED',
+      limit_type: 'contracts',
+      current_usage: limitCheck.currentUsage,
+      limit: limitCheck.limit,
+      upgrade_options: limitCheck.upgradeOptions,
+      single_contract_price: SINGLE_CONTRACT_PRICE,
+    });
+  }
+
+  const { title, content, fields: incomingFields, sections: incomingSections, risk_assessment } = parsed.data;
+
+  const fieldCopies: ContractFieldDraft[] = [];
+  if (incomingFields && incomingFields.length) {
+    for (const [idx, field] of incomingFields.entries()) {
+      fieldCopies.push({
+        templateFieldId: field.template_field_id,
+        groupLabel: field.group_label,
+        groupOrder: field.group_order ?? idx,
+        label: field.label,
+        key: field.key,
+        value: field.value ?? '',
+        order: field.order ?? idx,
+      });
+    }
+  }
+
+  const sectionCopies: ContractSectionDraft[] = [];
+  if (incomingSections && incomingSections.length) {
+    for (const [idx, section] of incomingSections.entries()) {
+      sectionCopies.push({
+        templateSectionId: section.template_section_id,
+        title: section.title,
+        order: section.order ?? idx,
+      });
+    }
+  }
+
+  const sanitizedContent = sanitizeGeneratedHtml(content, title);
+
+  const document = await prisma.document.create({
+    data: {
+      title,
+      ownerId: req.userId,
+      status: 'draft',
+      versions: {
+        create: {
+          version: 1,
+          content: sanitizedContent,
+          riskAssessment: risk_assessment
+            ? {
+                create: { summary: risk_assessment },
+              }
+            : undefined,
+        },
+      },
+      fields: fieldCopies.length
+        ? {
+            create: fieldCopies,
+          }
+        : undefined,
+      sections: sectionCopies.length
+        ? {
+            create: sectionCopies,
+          }
+        : undefined,
+    },
+    include: {
+      template: { select: { id: true, name: true } },
+      versions: { include: { riskAssessment: true } },
+      fields: true,
+      sections: true,
+    },
+  });
+
+  await incrementContractUsage(req.userId);
+
+  return res.json({ document: toDocument(document) });
 });
 
 router.post('/generate', requireAuth, async (req: AuthRequest, res) => {

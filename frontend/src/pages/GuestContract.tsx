@@ -465,7 +465,7 @@ export const GuestContract = () => {
                     Скачать PDF
                   </Button>
                   <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                    Файл не сохраняется в аккаунте — скачайте, чтобы не потерять его.
+                    Чтобы сохранить договор в аккаунт, войдите или зарегистрируйтесь. В гостевом режиме файл не сохраняется — скачайте, чтобы не потерять его.
                   </Typography>
                 </Stack>
 

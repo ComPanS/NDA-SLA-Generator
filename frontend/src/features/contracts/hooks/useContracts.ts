@@ -10,6 +10,7 @@ import {
   GuestGenerateRequest,
   GuestClarifyRequest,
   GuestExportRequest,
+  GuestImportRequest,
 } from '@/shared/types';
 import { authStore } from '@/features/auth/store/authStore';
 
@@ -183,5 +184,15 @@ export const useGuestExportContract = () => {
 export const useGuestClarifyContract = () => {
   return useMutation({
     mutationFn: (request: GuestClarifyRequest) => contractsApi.guestClarify(request),
+  });
+};
+
+export const useImportGuestContract = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: GuestImportRequest) => contractsApi.guestImport(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
   });
 };

@@ -12,6 +12,7 @@ import {
   GuestExportRequest,
   GuestClarifyRequest,
   GuestClarifyResponse,
+  GuestImportRequest,
 } from '@/shared/types';
 
 export const contractsApi = {
@@ -105,6 +106,11 @@ export const contractsApi = {
 
   guestClarify: async (request: GuestClarifyRequest): Promise<GuestClarifyResponse> => {
     const response = await apiClient.post<GuestClarifyResponse>('/contracts/guest/clarify', request);
+    return response.data;
+  },
+
+  guestImport: async (request: GuestImportRequest): Promise<GenerateContractResponse> => {
+    const response = await apiClient.post<GenerateContractResponse>('/contracts/guest/import', request);
     return response.data;
   },
 
