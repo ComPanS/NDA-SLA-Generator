@@ -1,4 +1,13 @@
-import { Box, Divider, IconButton, Paper, Stack, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
+import {
+  Box,
+  Divider,
+  IconButton,
+  Paper,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+} from '@mui/material';
 import {
   FormatAlignCenter,
   FormatAlignJustify,
@@ -128,8 +137,8 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
         },
         '& .editor-toolbar': {
           position: 'sticky',
-          top: 0,
-          zIndex: 1,
+          top: 64,
+          zIndex: 40,
           backgroundColor: '#f5f5f5',
           borderTopLeftRadius: '8px',
           borderTopRightRadius: '8px',

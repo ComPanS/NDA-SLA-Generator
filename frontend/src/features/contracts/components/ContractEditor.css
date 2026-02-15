@@ -34,6 +34,7 @@
 
 .ProseMirror p {
   margin-bottom: 12px;
+  text-align: justify;
 }
 
 .ProseMirror [style*='font-size'] {
@@ -46,8 +47,20 @@
   padding-left: 30px;
 }
 
+.ProseMirror ul {
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
 .ProseMirror li {
   margin-bottom: 6px;
+  display: list-item;
+  text-align: justify;
 }
 
 .ProseMirror blockquote {
@@ -99,7 +112,6 @@
 
 .ProseMirror [data-span-columns='all'] {
   column-span: all;
-  break-before: column;
 }
 
 .ProseMirror [data-column-break='true'] {
