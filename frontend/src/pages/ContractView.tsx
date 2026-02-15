@@ -92,7 +92,7 @@ const normalizeColumnsContent = (html: string) => {
     });
 
     return doc.body.innerHTML;
-  } catch (_err) {
+  } catch {
     return html;
   }
 };

@@ -22,13 +22,5 @@
       <pubDate>Thu, 05 Feb 2026 14:00:00 +0000</pubDate>
       <guid isPermaLink="true">https://dogovarai.ru/news/2</guid>
     </item>
-
-    <item>
-      <title>Безопасность, подписки и админ-панель</title>
-      <link>https://dogovarai.ru/admin</link>
-      <description>Реализована проверка доступа, админский доступ к статистике пользователей и настройка подписок через Яндекс/ЮKassa.</description>
-      <pubDate>Wed, 04 Feb 2026 09:00:00 +0000</pubDate>
-      <guid isPermaLink="true">https://dogovarai.ru/news/3</guid>
-    </item>
   </channel>
 </rss>
