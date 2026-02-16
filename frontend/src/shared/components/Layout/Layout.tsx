@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react';
 import { ReactNode, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
+import { useAuthStore } from '@/features/auth/hooks/useAuth';
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface LayoutProps {
 const Footer = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
 
   const handleAnchor = (hash: string) => {
     if (location.pathname === '/') {
@@ -46,47 +48,49 @@ const Footer = () => {
             </p>
           </div>
 
-          <div>
-            <h4 className="text-white mb-3">Навигация</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleAnchor('#how-it-works')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Как работает
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleAnchor('#pricing')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Тарифы
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleAnchor('#reviews')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Отзывы
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => handleAnchor('#faq')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  FAQ
-                </button>
-              </li>
-            </ul>
-          </div>
+          {!isAuthenticated && (
+            <div>
+              <h4 className="text-white mb-3">Навигация</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleAnchor('#how-it-works')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    Как работает
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleAnchor('#pricing')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    Тарифы
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleAnchor('#reviews')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    Отзывы
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleAnchor('#faq')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    FAQ
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
 
           <div>
             <h4 className="text-white mb-3">Поддержка</h4>

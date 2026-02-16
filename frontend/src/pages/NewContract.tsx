@@ -323,7 +323,7 @@ export const NewContract = () => {
                       {!hasRiskCheckAccess && (
                         <Chip
                           icon={<Lock fontSize="small" />}
-                          label="Standard+"
+                          label="Бизнес"
                           size="small"
                           color="warning"
                           variant="outlined"
@@ -383,7 +383,7 @@ export const NewContract = () => {
                                 {!hasSectionsAccess && (
                                   <Chip
                                     icon={<Lock fontSize="small" />}
-                                    label="Basic+"
+                                    label="Профессиональный"
                                     size="small"
                                     color="warning"
                                     variant="outlined"

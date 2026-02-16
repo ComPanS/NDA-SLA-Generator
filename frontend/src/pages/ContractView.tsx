@@ -81,7 +81,7 @@ const normalizeColumnsContent = (html: string) => {
         const missing = target - count;
         if (missing <= 0) return;
         const fragment = doc.createDocumentFragment();
-        for (let i = 0; i < missing+2; i += 1) {
+        for (let i = 0; i < missing + 2; i += 1) {
           const p = doc.createElement('p');
           p.setAttribute('data-column-filler', 'true');
           p.innerHTML = '&nbsp;';
@@ -139,7 +139,9 @@ export const ContractView = () => {
   const [sections, setSections] = useState<ContractSectionInput[]>([]);
   const [contentReady, setContentReady] = useState(false);
 
-  const versions = hasVersionsAccess ? document?.versions || [] : (document?.versions?.slice(-1) || []);
+  const versions = hasVersionsAccess
+    ? document?.versions || []
+    : document?.versions?.slice(-1) || [];
   const latestVersion = versions[versions.length - 1];
   const selectedVersion =
     (selectedVersionId && versions.find((v) => v.id === selectedVersionId)) || latestVersion;
@@ -485,7 +487,9 @@ export const ContractView = () => {
                   sx={{ width: { xs: '100%', md: 'auto' } }}
                 >
                   Скачать DOCX
-                  {!hasDocxExportAccess && <Chip label="Basic+" size="small" sx={{ ml: 1 }} />}
+                  {!hasDocxExportAccess && (
+                    <Chip label="Профессиональный" size="small" sx={{ ml: 1 }} />
+                  )}
                 </Button>
               </span>
             </Tooltip>
@@ -593,7 +597,7 @@ export const ContractView = () => {
                   {!hasRiskCheckAccess && (
                     <Chip
                       icon={<Lock fontSize="small" />}
-                      label="Standard+"
+                      label="Бизнес"
                       size="small"
                       color="warning"
                       variant="outlined"
@@ -653,7 +657,7 @@ export const ContractView = () => {
                       {!hasRiskCheckAccess && (
                         <Chip
                           icon={<Lock fontSize="small" />}
-                          label="Standard+"
+                          label="Бизнес"
                           size="small"
                           color="warning"
                           variant="outlined"
@@ -747,7 +751,7 @@ export const ContractView = () => {
                         {!hasSectionsAccess && (
                           <Chip
                             icon={<Lock fontSize="small" />}
-                            label="Basic+"
+                            label="Профессиональный"
                             size="small"
                             color="warning"
                             variant="outlined"
