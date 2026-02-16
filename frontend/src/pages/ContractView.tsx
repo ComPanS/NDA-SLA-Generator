@@ -238,8 +238,10 @@ export const ContractView = () => {
           const newVersion = data.document.versions[data.document.versions.length - 1];
           if (newVersion) {
             setSelectedVersionId(newVersion.id);
-            setCurrentContent(newVersion.content);
-            logColumnsClient('refine-success', newVersion.content);
+            const normalized = normalizeColumnsContent(newVersion.content || '');
+            setCurrentContent(normalized);
+            lastSavedRef.current = normalized;
+            logColumnsClient('refine-success', normalized);
           }
           setRefinePrompt('');
           setShowRefineForm(false);
