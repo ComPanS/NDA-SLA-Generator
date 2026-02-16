@@ -79,7 +79,7 @@ export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlan, string> = {
 
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
   freemium: [
-    '5 договоров в месяц',
+    '3 договоров в месяц',
     '1 шаблон',
     'Экспорт в PDF',
     '1 уточнение на документ от нейросети',
