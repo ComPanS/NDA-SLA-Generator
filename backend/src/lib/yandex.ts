@@ -1,7 +1,15 @@
 import axios from 'axios';
 import { env } from '../config/env';
+import { generateText as neuroapiGenerateText } from './neuroapi';
 
+// Используем NeuroAPI
 export async function generateText(prompt: string): Promise<string> {
+  return neuroapiGenerateText(prompt);
+}
+
+/*
+// YandexGPT (закомментировано — используется NeuroAPI)
+export async function generateTextYandex(prompt: string): Promise<string> {
   if (!env.yandexApiKey || !env.yandexFolderId) {
     return `Draft content generated locally:\n\n${prompt}`;
   }
@@ -43,3 +51,4 @@ export async function generateText(prompt: string): Promise<string> {
     return `LLM generation failed.\n\n${prompt}`;
   }
 }
+*/

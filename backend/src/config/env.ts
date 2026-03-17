@@ -13,14 +13,20 @@ export const env = {
   corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
     .map((s) => s.trim()),
-  yandexApiKey: process.env.YANDEX_GPT_API_KEY || '',
-  yandexEndpoint:
-    process.env.YANDEX_GPT_ENDPOINT ||
-    'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
-  // Модель без folder — сам folder подставляем ниже в modelUri
-  yandexModel: process.env.YANDEX_GPT_MODEL || 'yandexgpt/latest',
-  yandexFolderId: process.env.YANDEX_GPT_FOLDER_ID || '',
-  yandexTimeoutMs: Number(process.env.YANDEX_GPT_TIMEOUT || 30000),
+  // NeuroAPI (LLM)
+  neuroapiApiKey: process.env.NEUROAPI_API_KEY || '',
+  neuroapiBaseUrl: process.env.NEUROAPI_BASE_URL || 'https://neuroapi.host/v1',
+  neuroapiModel: process.env.NEUROAPI_MODEL || 'grok-4-fast-non-reasoning',
+  neuroapiTimeoutMs: Number(process.env.NEUROAPI_TIMEOUT || 30000),
+  // YandexGPT (закомментировано — используется NeuroAPI)
+  // yandexApiKey: process.env.YANDEX_GPT_API_KEY || '',
+  // yandexEndpoint:
+  //   process.env.YANDEX_GPT_ENDPOINT ||
+  //   'https://llm.api.cloud.yandex.net/foundationModels/v1/completion',
+  // yandexModel: process.env.YANDEX_GPT_MODEL || 'yandexgpt/latest',
+  // yandexFolderId: process.env.YANDEX_GPT_FOLDER_ID || '',
+  // yandexTimeoutMs: Number(process.env.YANDEX_GPT_TIMEOUT || 30000),
+  yandexTimeoutMs: Number(process.env.YANDEX_GPT_TIMEOUT || 30000), // для Yandex OAuth
   yandexOauthClientId: process.env.YANDEX_OAUTH_CLIENT_ID || '',
   yandexOauthClientSecret: process.env.YANDEX_OAUTH_CLIENT_SECRET || '',
   yandexOauthRedirectUri: process.env.YANDEX_OAUTH_REDIRECT_URI || '',
