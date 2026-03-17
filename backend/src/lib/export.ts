@@ -225,6 +225,15 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
         heading: HeadingLevel.HEADING_3,
         alignment: paragraphOptions.alignment ?? AlignmentType.LEFT,
       };
+    } else if (tag === 'p' && $el.hasClass('list-level-3')) {
+      // Списки 3 уровня (2.1.1.): отступ слева 1,25 см, висячий отступ первой строки 0,75 см
+      paragraphOptions = {
+        ...paragraphOptions,
+        indent: {
+          left: Math.round(1.25 * 28.35 * 20), // 1.25 cm в twips
+          firstLine: -Math.round(0.75 * 28.35 * 20), // -0.75 cm (висячий)
+        },
+      };
     }
 
     return new Paragraph(paragraphOptions);
@@ -708,6 +717,11 @@ export async function exportToPdf(html: string, title: string): Promise<Buffer> 
       content: "-";
       position: absolute;
       left: 0;
+    }
+    p.list-level-3 {
+      margin-left: 1.25cm;
+      text-indent: -0.75cm;
+      padding-left: 0.75cm;
     }
     [data-columns] {
       display: table;
