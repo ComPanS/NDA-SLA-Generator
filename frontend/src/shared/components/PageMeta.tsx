@@ -4,6 +4,10 @@ interface PageMetaProps {
   title: string;
   description?: string;
   /**
+   * Optional keywords for meta keywords tag (used by Yandex and other search engines).
+   */
+  keywords?: string;
+  /**
    * Optional path for canonical/OG URL. Falls back to current pathname.
    */
   path?: string;
@@ -56,7 +60,7 @@ function ensureLinkTag(rel: string, href: string) {
   link.href = href;
 }
 
-export const PageMeta = ({ title, description, path, image }: PageMetaProps) => {
+export const PageMeta = ({ title, description, keywords, path, image }: PageMetaProps) => {
   useEffect(() => {
     document.title = title;
 
@@ -73,6 +77,10 @@ export const PageMeta = ({ title, description, path, image }: PageMetaProps) => 
 
     if (description) {
       ensureMetaTag('description', description);
+    }
+
+    if (keywords) {
+      ensureMetaTag('keywords', keywords);
     }
 
     ensureMetaTag('robots', 'index,follow');
@@ -93,7 +101,7 @@ export const PageMeta = ({ title, description, path, image }: PageMetaProps) => 
       ensurePropertyTag('og:image', image);
       ensureMetaTag('twitter:image', image);
     }
-  }, [title, description, path, image]);
+  }, [title, description, keywords, path, image]);
 
   return null;
 };
