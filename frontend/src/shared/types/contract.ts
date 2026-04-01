@@ -23,6 +23,8 @@ export interface Document {
   owner_id: string;
   template_id: string | null;
   template_name?: string | null;
+  jurisdiction_country: string;
+  output_language: string;
   status: DocumentStatus;
   created_at: string;
   updated_at: string;
@@ -38,6 +40,8 @@ export interface GenerateContractRequest {
   prompt: string;
   format_mode?: string;
   risk_check?: boolean;
+  country_code?: string;
+  output_language?: string;
   fields?: ContractFieldInput[];
   sections?: ContractSectionInput[];
 }
@@ -46,6 +50,8 @@ export interface RefineContractRequest {
   prompt: string;
   format_mode?: string;
   risk_check?: boolean;
+  country_code?: string;
+  output_language?: string;
 }
 
 export interface GenerateContractResponse {
@@ -102,6 +108,8 @@ export interface GuestGenerateRequest {
   title: string;
   prompt: string;
   risk_check?: boolean;
+  country_code?: string;
+  output_language?: string;
   fields?: ContractFieldInput[];
   sections?: ContractSectionInput[];
 }
@@ -123,6 +131,8 @@ export interface GuestClarifyRequest {
   content: string;
   prompt: string;
   risk_check?: boolean;
+  country_code?: string;
+  output_language?: string;
 }
 
 export interface GuestClarifyResponse {
@@ -136,4 +146,6 @@ export interface GuestImportRequest {
   fields?: ContractFieldInput[];
   sections?: ContractSectionInput[];
   risk_assessment?: string | null;
+  country_code?: string;
+  output_language?: string;
 }

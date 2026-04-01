@@ -7,6 +7,7 @@ import {
   PaymentsResponse,
   PaymentStatusResponse,
   SubscriptionPlan,
+  FxRatesResponse,
 } from '@/shared/types';
 
 export const billingApi = {
@@ -25,6 +26,11 @@ export const billingApi = {
   // Get available plans
   getPlans: async (): Promise<PlansResponse> => {
     const response = await apiClient.get<PlansResponse>('/billing/plans');
+    return response.data;
+  },
+
+  getFxRates: async (): Promise<FxRatesResponse> => {
+    const response = await apiClient.get<FxRatesResponse>('/billing/fx-rates');
     return response.data;
   },
 

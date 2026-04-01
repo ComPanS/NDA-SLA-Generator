@@ -14,8 +14,11 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PlanInfo } from '@/shared/types';
+import { PlanInfo, SubscriptionPlan } from '@/shared/types';
 import { icuLocaleFor } from '@/shared/i18n/icuLocale';
+import { useFxRates } from '@/features/billing/hooks/useBilling';
+import { useBillingDisplayCurrency } from '@/shared/money/useBillingDisplayCurrency';
+import { formatRubAmountForUi, BillingDisplayCurrency } from '@/shared/money/billingCurrency';
 import {
   Accordion,
   AccordionContent,
@@ -356,21 +359,63 @@ type PricingSectionProps = {
   onSelectPlan: () => void;
 };
 
+function landingPlanFeatures(
+  tb: (key: string, opts?: { returnObjects?: boolean }) => unknown,
+  planId: SubscriptionPlan,
+) {
+  const v = tb(`plans.${planId}.features`, { returnObjects: true });
+  return Array.isArray(v) ? (v as string[]) : [];
+}
+
 export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionProps) => {
   const { t, i18n } = useTranslation('landing');
+  const { t: tb } = useTranslation('billing');
   const localeTag = icuLocaleFor(i18n.language);
-
-  const formatPrice = (value: number | null | undefined) => {
-    if (value === null || value === undefined) return '—';
-    if (value === 0) return t('pricing.freeLabel');
-    return `${new Intl.NumberFormat(localeTag).format(value)} \u20BD`;
+  const { currency, setCurrency, currencies } = useBillingDisplayCurrency();
+  const { data: fxData, isError: fxError } = useFxRates();
+  const rates = fxData?.rates;
+  const priceOpts = {
+    currency,
+    rates,
+    fxFailed: fxError,
+    locale: localeTag,
+    freeLabel: tb('free'),
   };
 
   return (
     <section id="pricing" className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl md:text-5xl text-center mb-4">{t('pricing.title')}</h2>
-        <p className="text-center text-gray-600 mb-12 text-lg">{t('pricing.subtitle')}</p>
+        <p className="text-center text-gray-600 mb-6 text-lg">{t('pricing.subtitle')}</p>
+
+        {!loading && plans.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+            <label htmlFor="landing-pricing-currency" className="text-sm text-gray-600">
+              {tb('currency.label')}
+            </label>
+            <select
+              id="landing-pricing-currency"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as BillingDisplayCurrency)}
+            >
+              {currencies.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <p className="text-center text-sm text-gray-500 mb-8 max-w-2xl mx-auto">{tb('currency.helper')}</p>
+        {fxError && (
+          <p className="text-center text-amber-700 text-sm mb-6">{tb('fxStale')}</p>
+        )}
+        {currency !== 'RUB' && (
+          <p className="text-center text-blue-800 text-sm mb-8 max-w-xl mx-auto bg-blue-50 border border-blue-100 rounded-lg py-3 px-4">
+            {tb('paymentNonRub')}
+          </p>
+        )}
 
         {loading ? (
           <div className="text-center text-gray-600">{t('pricing.loading')}</div>
@@ -389,6 +434,7 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
               const discountPercent = hasDiscount
                 ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
                 : null;
+              const features = landingPlanFeatures(tb, plan.id);
 
               return (
                 <Card
@@ -406,10 +452,12 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
                   )}
 
                   <CardHeader>
-                    <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
+                    <CardTitle className="text-xl mb-2">{tb(`plans.${plan.id}.title`)}</CardTitle>
                     <div className="mb-2">
                       <span className="text-4xl font-bold">
-                        {hasDiscount ? formatPrice(plan.first_month_price) : formatPrice(plan.price)}
+                        {hasDiscount
+                          ? formatRubAmountForUi(plan.first_month_price, priceOpts)
+                          : formatRubAmountForUi(plan.price, priceOpts)}
                       </span>
                       {plan.price > 0 && (
                         <span className="text-gray-600 ml-2">{t('pricing.perMonth')}</span>
@@ -418,7 +466,9 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
                     {hasDiscount && (
                       <div className="text-sm text-gray-700 space-y-1">
                         <div>
-                          <span className="line-through text-gray-400">{formatPrice(plan.price)}</span>{' '}
+                          <span className="line-through text-gray-400">
+                            {formatRubAmountForUi(plan.price, priceOpts)}
+                          </span>{' '}
                           <span className="font-semibold text-green-700">
                             {discountPercent !== null ? `-${discountPercent}%` : ''}
                           </span>
@@ -438,7 +488,7 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
                     </Button>
 
                     <ul className="space-y-3">
-                      {plan.features.map((feature) => (
+                      {features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2">
                           <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                           <span className="text-sm">{feature}</span>

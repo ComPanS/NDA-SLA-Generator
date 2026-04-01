@@ -1,4 +1,4 @@
-import apiClient from './client';
+import apiClient, { CONTRACT_LLM_REQUEST_TIMEOUT_MS } from './client';
 import {
   GenerateContractRequest,
   GenerateContractResponse,
@@ -37,7 +37,8 @@ export const contractsApi = {
   ): Promise<GenerateContractResponse> => {
     const response = await apiClient.post<GenerateContractResponse>(
       `/contracts/${documentId}/refine`,
-      request
+      request,
+      { timeout: CONTRACT_LLM_REQUEST_TIMEOUT_MS },
     );
     return response.data;
   },
@@ -91,7 +92,11 @@ export const contractsApi = {
   },
 
   guestGenerate: async (request: GuestGenerateRequest): Promise<GuestGenerateResponse> => {
-    const response = await apiClient.post<GuestGenerateResponse>('/contracts/guest/generate', request);
+    const response = await apiClient.post<GuestGenerateResponse>(
+      '/contracts/guest/generate',
+      request,
+      { timeout: CONTRACT_LLM_REQUEST_TIMEOUT_MS },
+    );
     return response.data;
   },
 
@@ -105,7 +110,11 @@ export const contractsApi = {
   },
 
   guestClarify: async (request: GuestClarifyRequest): Promise<GuestClarifyResponse> => {
-    const response = await apiClient.post<GuestClarifyResponse>('/contracts/guest/clarify', request);
+    const response = await apiClient.post<GuestClarifyResponse>(
+      '/contracts/guest/clarify',
+      request,
+      { timeout: CONTRACT_LLM_REQUEST_TIMEOUT_MS },
+    );
     return response.data;
   },
 

@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Add, Delete, HelpOutline } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { ContractFieldInput } from '@/shared/types';
 
 interface ContractFieldsEditorProps {
@@ -20,10 +21,14 @@ interface ContractFieldsEditorProps {
 }
 
 export const ContractFieldsEditor = ({ fields, onChange, title }: ContractFieldsEditorProps) => {
+  const { t } = useTranslation('contracts');
+  const groupDefault = t('fieldsEditor.groupDefault');
+  const newFieldLabel = t('fieldsEditor.newField');
+
   const grouped = fields
     .reduce<Array<{ label: string; order?: number; fields: ContractFieldInput[] }>>(
       (acc, field) => {
-        const label = field.group_label || 'Дополнительно';
+        const label = field.group_label || groupDefault;
         const existing = acc.find((g) => g.label === label);
         if (existing) {
           existing.fields.push(field);
@@ -45,8 +50,8 @@ export const ContractFieldsEditor = ({ fields, onChange, title }: ContractFields
     onChange([
       ...fields,
       {
-        group_label: 'Дополнительно',
-        label: 'Новое поле',
+        group_label: groupDefault,
+        label: newFieldLabel,
         key: `field_${Date.now()}`,
         value: '',
         order: fields.length,
@@ -70,8 +75,8 @@ export const ContractFieldsEditor = ({ fields, onChange, title }: ContractFields
             rowGap={1}
           >
             <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-              <Typography variant="h6">{title || 'Поля договора'}</Typography>
-              <Tooltip title="Заполните фактические значения полей — они попадут в итоговый договор и в экспорт.">
+              <Typography variant="h6">{title || t('fieldsEditor.title')}</Typography>
+              <Tooltip title={t('fieldsEditor.tooltip')}>
                 <HelpOutline fontSize="small" color="action" />
               </Tooltip>
             </Stack>
@@ -80,7 +85,7 @@ export const ContractFieldsEditor = ({ fields, onChange, title }: ContractFields
               onClick={handleAddField}
               sx={{ alignSelf: { xs: 'stretch', sm: 'auto' }, width: { xs: '100%', sm: 'auto' } }}
             >
-              Добавить поле
+              {t('fieldsEditor.addField')}
             </Button>
           </Stack>
 
@@ -98,19 +103,19 @@ export const ContractFieldsEditor = ({ fields, onChange, title }: ContractFields
                       <Card variant="outlined" sx={{ p: 2 }}>
                         <Stack spacing={1}>
                           <TextField
-                            label="Группа"
+                            label={t('fieldsEditor.labels.group')}
                             value={field.group_label}
                             onChange={(e) =>
                               handleFieldChange(field, { group_label: e.target.value })
                             }
                           />
                           <TextField
-                            label="Название поля"
+                            label={t('fieldsEditor.labels.name')}
                             value={field.label}
                             onChange={(e) => handleFieldChange(field, { label: e.target.value })}
                           />
                           <TextField
-                            label="Значение"
+                            label={t('fieldsEditor.labels.value')}
                             value={field.value || ''}
                             onChange={(e) => handleFieldChange(field, { value: e.target.value })}
                             multiline

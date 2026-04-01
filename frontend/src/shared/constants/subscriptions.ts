@@ -27,7 +27,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
   freemium: {
     price: 0,
     firstMonthPrice: 0,
-    contractsPerMonth: 5,
+    contractsPerMonth: 3,
     maxTemplates: 1,
     exportFormats: ['pdf'],
     aiClarifications: 1,
@@ -51,8 +51,8 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanLimits> = {
     hasPrioritySupport: false,
   },
   pro: {
-    price: 1490,
-    firstMonthPrice: 900,
+    price: 990,
+    firstMonthPrice: 290,
     contractsPerMonth: -1,
     maxTemplates: -1,
     exportFormats: ['pdf', 'docx'],
@@ -79,7 +79,7 @@ export const SUBSCRIPTION_DESCRIPTIONS: Record<SubscriptionPlan, string> = {
 
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionPlan, string[]> = {
   freemium: [
-    '3 договоров в месяц',
+    '3 договора в месяц',
     '1 шаблон',
     'Экспорт в PDF',
     '1 уточнение на документ от нейросети',

@@ -20,6 +20,7 @@ import {
 import { getUsageSummary, addExtraContractPaid } from '../lib/limits';
 import { env } from '../config/env';
 import { verifyToken } from '../lib/jwt';
+import { getFxRatesRubBase } from '../lib/cbrFx';
 
 const router = Router();
 
@@ -100,6 +101,20 @@ router.get('/usage', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Error fetching usage:', error);
     return res.status(500).json({ detail: 'Failed to fetch usage info' });
+  }
+});
+
+/**
+ * GET /billing/fx-rates — RUB base, foreign units per 1 RUB (multiply RUB price by rate to convert).
+ * Cached ~1h server-side. Public (no auth).
+ */
+router.get('/fx-rates', async (_req, res) => {
+  try {
+    const data = await getFxRatesRubBase();
+    return res.json(data);
+  } catch (error) {
+    console.error('Error fetching FX rates:', error);
+    return res.status(502).json({ detail: 'Failed to load exchange rates' });
   }
 });
 

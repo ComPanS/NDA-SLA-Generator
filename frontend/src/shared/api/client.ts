@@ -3,12 +3,18 @@ import { authStore, waitForHydration } from '@/features/auth/store/authStore';
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+/**
+ * LLM-heavy contract routes (generate, refine, guest).
+ * One request may run two LLM calls (e.g. generation + risk); allow ~2× single LLM budget.
+ */
+export const CONTRACT_LLM_REQUEST_TIMEOUT_MS = 360_000;
+
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 30_000,
 });
 
 apiClient.interceptors.request.use(

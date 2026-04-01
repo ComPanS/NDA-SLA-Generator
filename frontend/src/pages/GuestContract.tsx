@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -17,6 +17,7 @@ import {
   Tooltip,
   Typography,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import { HelpOutline, Download } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
@@ -32,13 +33,22 @@ import {
 } from '@/features/contracts/hooks/useContracts';
 import { AxiosError } from 'axios';
 import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
+import { useGeoHint } from '@/shared/hooks/useGeoHint';
+import { defaultCountryFromAppLocale } from '@/shared/i18n/countryDefaults';
+import {
+  isValidOutputLanguageTag,
+  normalizeOutputLanguageTag,
+} from '@/shared/i18n/outputLanguageTag';
+import { ContractJurisdictionFormFields } from '@/features/contracts/components/ContractJurisdictionFormFields';
 
 const storageKey = 'guest-contract-state-v1';
 
 export const GuestContract = () => {
   const { t } = useTranslation('guest');
-  const { t: tc } = useTranslation('contracts');
+  const { t: tc, i18n } = useTranslation('contracts');
   const { t: tCommon } = useTranslation('common');
+  const { data: geo } = useGeoHint();
+  const countryTouchedRef = useRef(false);
   const navigate = useLocalizedNavigate();
 
   const defaultFromI18n = useMemo((): ContractSectionInput[] => {
@@ -61,6 +71,10 @@ export const GuestContract = () => {
   const [isGenerated, setIsGenerated] = useState(false);
   const [clarifyPrompt, setClarifyPrompt] = useState('');
   const [isClarified, setIsClarified] = useState(false);
+  const [countryCode, setCountryCode] = useState(() => defaultCountryFromAppLocale(i18n.language));
+  const [outputLanguage, setOutputLanguage] = useState(() =>
+    normalizeOutputLanguageTag(i18n.language),
+  );
 
   const { mutate: guestGenerate, isPending: isGenerating } = useGuestGenerateContract();
   const { mutate: guestExport, isPending: isExporting } = useGuestExportContract();
@@ -87,6 +101,18 @@ export const GuestContract = () => {
       setRiskSummary(parsed.riskSummary || null);
       setIsGenerated(!!parsed.content);
       setIsClarified(!!parsed.isClarified);
+      if (typeof parsed.countryCode === 'string' && /^[A-Z]{2}$/i.test(parsed.countryCode)) {
+        setCountryCode(parsed.countryCode.toUpperCase());
+        countryTouchedRef.current = true;
+      } else {
+        countryTouchedRef.current = false;
+      }
+      if (
+        typeof parsed.outputLanguage === 'string' &&
+        isValidOutputLanguageTag(parsed.outputLanguage)
+      ) {
+        setOutputLanguage(parsed.outputLanguage.trim().replace(/_/g, '-'));
+      }
     } catch {
       /* ignore corrupted state */
     }
@@ -105,6 +131,8 @@ export const GuestContract = () => {
       isGenerated,
       isClarified,
       clarifyPrompt,
+      countryCode,
+      outputLanguage,
     };
     sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
   }, [
@@ -119,7 +147,16 @@ export const GuestContract = () => {
     isGenerated,
     isClarified,
     clarifyPrompt,
+    countryCode,
+    outputLanguage,
   ]);
+
+  useEffect(() => {
+    if (countryTouchedRef.current) return;
+    if (geo?.countryCode) {
+      setCountryCode(geo.countryCode);
+    }
+  }, [geo?.countryCode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,11 +170,18 @@ export const GuestContract = () => {
       return;
     }
 
+    if (!isValidOutputLanguageTag(outputLanguage)) {
+      setErrorMessage(tc('new.outputLanguageError'));
+      return;
+    }
+
     guestGenerate(
       {
         title: derivedTitle,
         prompt,
         risk_check: riskCheck,
+        country_code: countryCode,
+        output_language: outputLanguage,
         fields,
         sections: sectionsEnabled ? sections : [],
       },
@@ -217,7 +261,11 @@ export const GuestContract = () => {
                 <span>
                   <FormControl fullWidth margin="normal" disabled>
                     <InputLabel>{t('templateLabel')}</InputLabel>
-                    <Select value="" label={t('templateLabel')}>
+                    <Select
+                      value=""
+                      label={t('templateLabel')}
+                      MenuProps={{ disablePortal: true }}
+                    >
                       <MenuItem value="">{t('templateGuest')}</MenuItem>
                     </Select>
                   </FormControl>
@@ -226,6 +274,18 @@ export const GuestContract = () => {
               <Typography variant="caption" color="text.secondary">
                 {t('templateNote')}
               </Typography>
+
+              <ContractJurisdictionFormFields
+                countryCode={countryCode}
+                outputLanguage={outputLanguage}
+                onCountryChange={(c) => {
+                  countryTouchedRef.current = true;
+                  setCountryCode(c);
+                }}
+                onOutputLanguageChange={setOutputLanguage}
+                outputLanguageError={showValidation && !isValidOutputLanguageTag(outputLanguage)}
+                disabled={isGenerating}
+              />
 
               <TextField
                 fullWidth
@@ -353,6 +413,11 @@ export const GuestContract = () => {
                   size="large"
                   disabled={isGenerating}
                   fullWidth
+                  startIcon={
+                    isGenerating ? (
+                      <CircularProgress color="inherit" size={22} thickness={4} />
+                    ) : undefined
+                  }
                 >
                   {isGenerating ? t('generatingShort') : tc('new.generate')}
                 </Button>
@@ -374,6 +439,9 @@ export const GuestContract = () => {
                     setIsGenerated(false);
                     setIsClarified(false);
                     setClarifyPrompt('');
+                    countryTouchedRef.current = false;
+                    setCountryCode(defaultCountryFromAppLocale(i18n.language));
+                    setOutputLanguage(normalizeOutputLanguageTag(i18n.language));
                   }}
                 >
                   {t('clear')}
@@ -509,6 +577,8 @@ export const GuestContract = () => {
                                   content,
                                   prompt: clarifyPrompt,
                                   risk_check: riskCheck,
+                                  country_code: countryCode,
+                                  output_language: outputLanguage,
                                 },
                                 {
                                   onSuccess: (data) => {

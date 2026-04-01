@@ -177,6 +177,7 @@ export const Dashboard = () => {
                             onChange={(e) =>
                               setStatusFilter(e.target.value as 'all' | 'draft' | 'final')
                             }
+                            MenuProps={{ disablePortal: true }}
                           >
                             <MenuItem value="all">{t('statusAll')}</MenuItem>
                             <MenuItem value="draft">{t('statusDraft')}</MenuItem>
@@ -197,6 +198,7 @@ export const Dashboard = () => {
                                   | 'title_desc'
                               )
                             }
+                            MenuProps={{ disablePortal: true }}
                           >
                             <MenuItem value="updated_desc">{t('sortUpdatedDesc')}</MenuItem>
                             <MenuItem value="updated_asc">{t('sortUpdatedAsc')}</MenuItem>

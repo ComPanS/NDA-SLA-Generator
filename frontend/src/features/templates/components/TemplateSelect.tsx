@@ -29,6 +29,7 @@ export const TemplateSelect = ({ value, onChange, error, required }: TemplateSel
         onChange={(e) => onChange(e.target.value)}
         disabled={isLoading}
         endAdornment={isLoading ? <CircularProgress size={20} /> : null}
+        MenuProps={{ disablePortal: true, PaperProps: { sx: { maxHeight: 320 } } }}
       >
         <MenuItem value="">
           <em>{t('noTemplateOption')}</em>

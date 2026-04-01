@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,11 +10,14 @@ import {
   Chip,
   LinearProgress,
   Alert,
-  Divider,
   CircularProgress,
   Snackbar,
   Tooltip,
   Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Check, Star, AllInclusive, CancelOutlined, Autorenew, HelpOutline } from '@mui/icons-material';
 import {
@@ -32,24 +35,28 @@ import {
   useCancelSubscription,
   useReactivateSubscription,
   useConfirmPayment,
+  useFxRates,
 } from '@/features/billing/hooks/useBilling';
 import { SubscriptionPlan } from '@/shared/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/store/authStore';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/shared/ui';
 import { icuLocaleFor } from '@/shared/i18n/icuLocale';
+import { useBillingDisplayCurrency } from '@/shared/money/useBillingDisplayCurrency';
+import { formatRubAmountForUi, BillingDisplayCurrency } from '@/shared/money/billingCurrency';
+
+function planFeatureList(t: (key: string, opts?: { returnObjects?: boolean }) => unknown, planId: SubscriptionPlan) {
+  const v = t(`plans.${planId}.features`, { returnObjects: true });
+  return Array.isArray(v) ? (v as string[]) : [];
+}
 
 export const Billing = () => {
   const { t, i18n } = useTranslation('billing');
   const locale = icuLocaleFor(i18n.language);
-  const formatPrice = useCallback(
-    (value: number | null | undefined) => {
-      if (value === null || value === undefined) return '—';
-      if (value === 0) return t('free');
-      return `${new Intl.NumberFormat(locale).format(value)} ₽`;
-    },
-    [locale, t],
-  );
+  const { currency, setCurrency, currencies, isPaymentEnabled } = useBillingDisplayCurrency();
+  const { data: fxData, isError: fxError } = useFxRates();
+  const rates = fxData?.rates;
+
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { data: subscription, isLoading: subLoading, error: subError } = useBilling();
@@ -65,29 +72,23 @@ export const Billing = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  // Get hydration state
   const hasHydrated = authStore((state) => state._hasHydrated);
   const isAuthenticated = authStore((state) => state.isAuthenticated);
 
-  // Handle payment success redirect - only after hydration
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
 
     if (paymentStatus === 'success' && hasHydrated && isAuthenticated) {
-      // Remove the query param first to prevent re-triggering
       setSearchParams({});
 
-      // Confirm payment on backend (applies changes if webhook missed it)
       confirmPaymentMutation.mutate(undefined, {
         onSuccess: (result) => {
           setSnackbarMessage(result.message || t('payOk'));
           setSnackbarOpen(true);
-          // Refresh billing and usage data
           queryClient.invalidateQueries({ queryKey: ['billing'] });
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
         },
         onError: () => {
-          // Fallback - just refresh
           queryClient.invalidateQueries({ queryKey: ['billing'] });
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
           setSnackbarMessage(t('payWait'));
@@ -107,31 +108,12 @@ export const Billing = () => {
 
   const isLoading = subLoading || usageLoading || plansLoading;
 
-  if (isLoading) {
-    return (
-      <ProtectedRoute>
-        <Layout>
-          <LoadingSpinner message={t('loading')} />
-        </Layout>
-      </ProtectedRoute>
-    );
-  }
-
-  if (subError) {
-    return (
-      <ProtectedRoute>
-        <Layout>
-          <ErrorMessage message={t('loadError')} />
-        </Layout>
-      </ProtectedRoute>
-    );
-  }
-
   const currentPlan = subscription?.plan || 'freemium';
   const plans = plansData?.plans || [];
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (plan === currentPlan) return;
+    if (plan !== 'freemium' && !isPaymentEnabled) return;
     setSelectedPlan(plan);
     try {
       const result = await subscribeMutation.mutateAsync({
@@ -177,7 +159,6 @@ export const Billing = () => {
     const percentage = unlimited ? 0 : Math.min((used / effectiveLimit) * 100, 100);
     const isNearLimit = !unlimited && !hideProgress && percentage >= 80;
 
-    // Format limit display: "3" or "3+1" if extraPaid
     const formatLimitDisplay = () => {
       if (unlimited) {
         return <AllInclusive fontSize="small" sx={{ verticalAlign: 'middle' }} />;
@@ -228,244 +209,278 @@ export const Billing = () => {
   return (
     <ProtectedRoute>
       <Layout>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            {t('title')}
-          </Typography>
+        {isLoading ? (
+          <LoadingSpinner message={t('loading')} />
+        ) : subError ? (
+          <ErrorMessage message={t('loadError')} />
+        ) : (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+              {t('title')}
+            </Typography>
 
-          {/* Current subscription info */}
-          {subscription && subscription.plan !== 'freemium' && (
-            <MuiCard sx={{ mb: 4 }}>
-              <MuiCardContent>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: 2,
-                  }}
-                >
-                  <Box>
-                    <Typography variant="h6" gutterBottom>
-                      {t('current')}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <Chip
-                        label={currentPlan.toUpperCase()}
-                        color="primary"
-                        icon={currentPlan === 'pro' ? <Star /> : undefined}
-                      />
-                      <Chip
-                        label={(() => {
-                          if (subscription.status === 'active') return t('active');
-                          return subscription.status;
-                        })()}
-                        color={subscription.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </Box>
-                    {subscription.expires_at && (
-                      <Typography variant="body2" color="text.secondary">
-                        {subscription.auto_renew ? t('nextCharge') : t('validUntil')}:{' '}
-                        {new Date(subscription.expires_at).toLocaleDateString(locale)}
+            {subscription && subscription.plan !== 'freemium' && (
+              <MuiCard sx={{ mb: 4 }}>
+                <MuiCardContent>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                      gap: 2,
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="h6" gutterBottom>
+                        {t('current')}
                       </Typography>
-                    )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                        <Chip
+                          label={t(`plans.${currentPlan}.title`)}
+                          color="primary"
+                          icon={currentPlan === 'pro' ? <Star /> : undefined}
+                        />
+                        <Chip
+                          label={(() => {
+                            if (subscription.status === 'active') return t('active');
+                            return subscription.status;
+                          })()}
+                          color={subscription.status === 'active' ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </Box>
+                      {subscription.expires_at && (
+                        <Typography variant="body2" color="text.secondary">
+                          {subscription.auto_renew ? t('nextCharge') : t('validUntil')}:{' '}
+                          {new Date(subscription.expires_at).toLocaleDateString(locale)}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box>
+                      {subscription.auto_renew ? (
+                        <MuiButton
+                          variant="outlined"
+                          color="error"
+                          startIcon={<CancelOutlined />}
+                          onClick={() => setCancelDialogOpen(true)}
+                          disabled={cancelMutation.isPending}
+                        >
+                          {t('cancelSub')}
+                        </MuiButton>
+                      ) : (
+                        <MuiButton
+                          variant="outlined"
+                          startIcon={<Autorenew />}
+                          onClick={handleReactivate}
+                          disabled={reactivateMutation.isPending}
+                        >
+                          {reactivateMutation.isPending ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            t('reactivateSub')
+                          )}
+                        </MuiButton>
+                      )}
+                    </Box>
                   </Box>
-                  <Box>
-                    {subscription.auto_renew ? (
-                      <MuiButton
-                        variant="outlined"
-                        color="error"
-                        startIcon={<CancelOutlined />}
-                        onClick={() => setCancelDialogOpen(true)}
-                        disabled={cancelMutation.isPending}
-                      >
-                        {t('cancelSub')}
-                      </MuiButton>
-                    ) : (
-                      <MuiButton
-                        variant="outlined"
-                        startIcon={<Autorenew />}
-                        onClick={handleReactivate}
-                        disabled={reactivateMutation.isPending}
-                      >
-                        {reactivateMutation.isPending ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          t('reactivateSub')
-                        )}
-                      </MuiButton>
-                    )}
-                  </Box>
-                </Box>
-              </MuiCardContent>
-            </MuiCard>
-          )}
+                </MuiCardContent>
+              </MuiCard>
+            )}
 
-          {/* Usage stats */}
-          {usage && (
-            <MuiCard sx={{ mb: 4 }}>
-              <MuiCardContent>
-                <Typography variant="h6" gutterBottom>
-                  {t('usageTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {t('periodFrom', { date: new Date(usage.periodStart).toLocaleDateString(locale) })}
-                </Typography>
-                {renderUsageBar(
-                  t('metricContracts'),
-                  usage.contracts.used,
-                  usage.contracts.limit,
-                  usage.contracts.isUnlimited,
-                  usage.contracts.extraPaid
-                )}
-                {renderUsageBar(
-                  t('metricTemplates'),
-                  usage.templates.used,
-                  usage.templates.limit,
-                  usage.templates.isUnlimited
-                )}
-                {renderUsageBar(
-                  t('metricClarifications'),
-                  usage.clarifications.used,
-                  usage.clarifications.limit,
-                  usage.clarifications.isUnlimited,
-                  undefined,
-                  t('clarificationsHint'),
-                  { displayLimitOnly: true, hideProgress: true }
-                )}
-
-                <Divider sx={{ my: 2 }} />
-
-                <Typography variant="subtitle2" gutterBottom>
-                  {t('featuresTitle')}
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  <Chip size="small" label={t('featPdf')} color="primary" variant="outlined" />
-                  {usage.features.hasDocxExport && (
-                    <Chip size="small" label={t('featDocx')} color="primary" variant="outlined" />
+            {usage && (
+              <MuiCard sx={{ mb: 4 }}>
+                <MuiCardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {t('usageTitle')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {t('periodFrom', { date: new Date(usage.periodStart).toLocaleDateString(locale) })}
+                  </Typography>
+                  {renderUsageBar(
+                    t('metricContracts'),
+                    usage.contracts.used,
+                    usage.contracts.limit,
+                    usage.contracts.isUnlimited,
+                    usage.contracts.extraPaid,
                   )}
-                  {usage.features.hasRiskCheck && (
-                    <Chip size="small" label={t('featRisk')} color="primary" variant="outlined" />
+                  {renderUsageBar(
+                    t('metricTemplates'),
+                    usage.templates.used,
+                    usage.templates.limit,
+                    usage.templates.isUnlimited,
                   )}
-                  {usage.features.hasSections && (
-                    <Chip size="small" label={t('featSections')} color="primary" variant="outlined" />
+                  {renderUsageBar(
+                    t('metricClarifications'),
+                    usage.clarifications.used,
+                    usage.clarifications.limit,
+                    usage.clarifications.isUnlimited,
+                    undefined,
+                    t('clarificationsHint'),
+                    { displayLimitOnly: true, hideProgress: true },
                   )}
-                  {usage.features.hasStatuses && (
-                    <Chip size="small" label={t('featStatuses')} color="primary" variant="outlined" />
-                  )}
-                  {usage.features.hasPrioritySupport && (
-                    <Chip
-                      size="small"
-                      label={t('featSupport')}
-                      color="secondary"
-                      variant="outlined"
-                    />
-                  )}
-                </Box>
-              </MuiCardContent>
-            </MuiCard>
-          )}
+                </MuiCardContent>
+              </MuiCard>
+            )}
 
-          {/* Plans */}
-          <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-            {t('plansTitle')}
-          </Typography>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan) => {
-              const isCurrent = plan.id === currentPlan;
-              const isHighlighted = plan.id === 'basic';
-              const isFreePlan = plan.id === 'freemium';
-              const disableFreeWhileActive = isFreePlan && currentPlan !== 'freemium';
-              const hasDiscount =
-                !!plan.first_month_discount_available &&
-                plan.first_month_price !== null &&
-                plan.first_month_price !== undefined &&
-                plan.price > 0 &&
-                plan.first_month_price < plan.price;
-              const discountPercent = hasDiscount
-                ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
-                : null;
-
-              const priceLabel = hasDiscount ? plan.first_month_price : plan.price;
-
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative ${isHighlighted ? 'border-2 border-blue-500 shadow-xl scale-[1.02]' : 'border border-gray-200'} ${
-                    isCurrent ? 'ring-2 ring-green-500/40' : ''
-                  }`}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              justifyContent="space-between"
+              spacing={2}
+              sx={{ mt: 4, mb: 2 }}
+            >
+              <Typography variant="h5">{t('plansTitle')}</Typography>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel id="billing-currency-label">{t('currency.label')}</InputLabel>
+                <Select
+                  labelId="billing-currency-label"
+                  label={t('currency.label')}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as BillingDisplayCurrency)}
+                  MenuProps={{ disablePortal: true }}
                 >
-                  {isHighlighted && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">{t('popular')}</Badge>
-                    </div>
-                  )}
-                  {isCurrent && !isFreePlan && (
-                    <div className="absolute -top-4 right-4">
-                      <Badge variant="secondary" className="px-3 py-1">{t('planCurrentBadge')}</Badge>
-                    </div>
-                  )}
+                  {currencies.map((c) => (
+                    <MenuItem key={c} value={c}>
+                      {c}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
 
-                  <CardHeader>
-                    <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
-                    <div className="mb-2">
-                      <span className="text-4xl font-bold">{formatPrice(priceLabel)}</span>
-                      {plan.price > 0 && <span className="text-gray-600 ml-2">{t('perMonth')}</span>}
-                    </div>
-                    {hasDiscount && (
-                      <div className="text-sm text-gray-700 space-y-1">
-                        <div>
-                          <span className="line-through text-gray-400">{formatPrice(plan.price)}</span>{' '}
-                          <span className="font-semibold text-green-700">
-                            {discountPercent !== null ? `-${discountPercent}%` : ''}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">{t('firstMonthOff')}</div>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {t('currency.helper')}
+            </Typography>
+
+            {fxError && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {t('fxStale')}
+              </Alert>
+            )}
+
+            {!isPaymentEnabled && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {t('paymentNonRub')}
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {plans.map((plan) => {
+                const isCurrent = plan.id === currentPlan;
+                const isHighlighted = plan.id === 'basic';
+                const isFreePlan = plan.id === 'freemium';
+                const disableFreeWhileActive = isFreePlan && currentPlan !== 'freemium';
+                const hasDiscount =
+                  !!plan.first_month_discount_available &&
+                  plan.first_month_price !== null &&
+                  plan.first_month_price !== undefined &&
+                  plan.price > 0 &&
+                  plan.first_month_price < plan.price;
+                const discountPercent = hasDiscount
+                  ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
+                  : null;
+
+                const priceLabel = hasDiscount ? plan.first_month_price : plan.price;
+                const payBlocked = !isPaymentEnabled && plan.price > 0;
+                const features = planFeatureList(t, plan.id);
+                const priceOpts = {
+                  currency,
+                  rates,
+                  fxFailed: fxError,
+                  locale,
+                  freeLabel: t('free'),
+                };
+
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative ${isHighlighted ? 'border-2 border-blue-500 shadow-xl scale-[1.02]' : 'border border-gray-200'} ${
+                      isCurrent ? 'ring-2 ring-green-500/40' : ''
+                    }`}
+                  >
+                    {isHighlighted && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">{t('popular')}</Badge>
                       </div>
                     )}
-                  </CardHeader>
+                    {isCurrent && !isFreePlan && (
+                      <div className="absolute -top-4 right-4">
+                        <Badge variant="secondary" className="px-3 py-1">
+                          {t('planCurrentBadge')}
+                        </Badge>
+                      </div>
+                    )}
 
-                  <CardContent>
-                    <Button
-                      className={`w-full mb-6 ${isHighlighted ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-                      size="lg"
-                      disabled={isCurrent || disableFreeWhileActive || subscribeMutation.isPending}
-                      onClick={() => handleSubscribe(plan.id)}
-                    >
-                      {selectedPlan === plan.id && subscribeMutation.isPending ? (
-                        <CircularProgress size={20} />
-                      ) : isCurrent ? (
-                        t('btnCurrent')
-                      ) : disableFreeWhileActive ? (
-                        t('btnUnavailable')
-                      ) : plan.price === 0 ? (
-                        t('btnTryFree')
-                      ) : (
-                        t('btnChoose')
+                    <CardHeader>
+                      <CardTitle className="text-xl mb-2">{t(`plans.${plan.id}.title`)}</CardTitle>
+                      <div className="mb-2">
+                        <span className="text-4xl font-bold">
+                          {formatRubAmountForUi(priceLabel, priceOpts)}
+                        </span>
+                        {plan.price > 0 && <span className="text-gray-600 ml-2">{t('perMonth')}</span>}
+                      </div>
+                      {hasDiscount && (
+                        <div className="text-sm text-gray-700 space-y-1">
+                          <div>
+                            <span className="line-through text-gray-400">
+                              {formatRubAmountForUi(plan.price, priceOpts)}
+                            </span>{' '}
+                            <span className="font-semibold text-green-700">
+                              {discountPercent !== null ? `-${discountPercent}%` : ''}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">{t('firstMonthOff')}</div>
+                        </div>
                       )}
-                    </Button>
+                    </CardHeader>
 
-                    <ul className="space-y-3">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    <CardContent>
+                      <Button
+                        className={`w-full mb-6 ${isHighlighted ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                        size="lg"
+                        disabled={
+                          isCurrent ||
+                          disableFreeWhileActive ||
+                          subscribeMutation.isPending ||
+                          payBlocked
+                        }
+                        onClick={() => handleSubscribe(plan.id)}
+                      >
+                        {selectedPlan === plan.id && subscribeMutation.isPending ? (
+                          <CircularProgress size={20} />
+                        ) : isCurrent ? (
+                          t('btnCurrent')
+                        ) : disableFreeWhileActive ? (
+                          t('btnUnavailable')
+                        ) : payBlocked ? (
+                          t('btnComingSoon')
+                        ) : plan.price === 0 ? (
+                          t('btnTryFree')
+                        ) : (
+                          t('btnChoose')
+                        )}
+                      </Button>
 
-          <Alert severity="info" sx={{ mt: 4 }}>
-            {t('extraInfo', { price: plansData?.single_contract_price || 99 })}
-          </Alert>
-        </Box>
+                      <ul className="space-y-3">
+                        {features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2">
+                            <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-sm">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <Alert severity="info" sx={{ mt: 4 }}>
+              {t('extraInfo', { price: plansData?.single_contract_price || 99 })}
+            </Alert>
+          </Box>
+        )}
 
         <ConfirmDialog
           open={cancelDialogOpen}

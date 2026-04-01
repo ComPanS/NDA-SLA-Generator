@@ -3,6 +3,13 @@ import { billingApi } from '@/shared/api';
 import { SubscriptionPlan } from '@/shared/types';
 import { authStore } from '@/features/auth/store/authStore';
 
+export const useFxRates = () =>
+  useQuery({
+    queryKey: ['billing', 'fx-rates'],
+    queryFn: () => billingApi.getFxRates(),
+    staleTime: 55 * 60 * 1000,
+  });
+
 export const useBilling = () => {
   const isAuthenticated = authStore((state) => state.isAuthenticated);
   const hasHydrated = authStore((state) => state._hasHydrated);

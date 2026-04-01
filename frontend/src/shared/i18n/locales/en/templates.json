@@ -19,6 +19,7 @@
     "description": "Description",
     "contentLabel": "Base prompt text",
     "contentHelper": "Sent to the AI together with filled-in fields",
+    "defaultCountrySection": "Default country when creating a contract from this template",
     "fieldGroups": "Field groups",
     "addGroup": "Add group",
     "groupName": "Group name",

@@ -19,6 +19,7 @@
     "description": "Описание",
     "contentLabel": "Базовое описание (prompt)",
     "contentHelper": "Будет отправлено в AI вместе с заполненными полями",
+    "defaultCountrySection": "Страна по умолчанию при создании договора по этому шаблону",
     "fieldGroups": "Группы полей",
     "addGroup": "Добавить группу",
     "groupName": "Название группы",

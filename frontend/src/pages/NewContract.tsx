@@ -19,6 +19,7 @@ import {
   Tooltip,
   Chip,
   Snackbar,
+  CircularProgress,
 } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
@@ -40,9 +41,16 @@ import { useUsage, useConfirmPayment } from '@/features/billing/hooks/useBilling
 import { AxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/store/authStore';
+import { useGeoHint } from '@/shared/hooks/useGeoHint';
+import { defaultCountryFromAppLocale } from '@/shared/i18n/countryDefaults';
+import {
+  isValidOutputLanguageTag,
+  normalizeOutputLanguageTag,
+} from '@/shared/i18n/outputLanguageTag';
+import { ContractJurisdictionFormFields } from '@/features/contracts/components/ContractJurisdictionFormFields';
 
 export const NewContract = () => {
-  const { t } = useTranslation('contracts');
+  const { t, i18n } = useTranslation('contracts');
   const { t: tc } = useTranslation('common');
   const navigate = useLocalizedNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,7 +81,13 @@ export const NewContract = () => {
     templateId || undefined
   );
   const { data: usage, refetch: refetchUsage } = useUsage();
+  const { data: geo } = useGeoHint();
   const confirmPaymentMutation = useConfirmPayment();
+  const countryUserTouchedRef = useRef(false);
+  const [countryCode, setCountryCode] = useState(() => defaultCountryFromAppLocale(i18n.language));
+  const [outputLanguage, setOutputLanguage] = useState(() =>
+    normalizeOutputLanguageTag(i18n.language),
+  );
 
   // Get hydration state
   const hasHydrated = authStore((state) => state._hasHydrated);
@@ -159,6 +173,18 @@ export const NewContract = () => {
     }
   }, [selectedTemplate, defaultFromI18n]);
 
+  useEffect(() => {
+    if (selectedTemplate?.default_country_code) {
+      setCountryCode(selectedTemplate.default_country_code);
+      countryUserTouchedRef.current = false;
+      return;
+    }
+    if (countryUserTouchedRef.current) return;
+    if (geo?.countryCode) {
+      setCountryCode(geo.countryCode);
+    }
+  }, [selectedTemplate?.id, selectedTemplate?.default_country_code, geo?.countryCode]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLimitError(null);
@@ -177,12 +203,21 @@ export const NewContract = () => {
       return;
     }
 
+    if (!isValidOutputLanguageTag(outputLanguage)) {
+      setShowValidation(true);
+      setSnackbarMessage(t('new.outputLanguageError'));
+      setSnackbarOpen(true);
+      return;
+    }
+
     generateContract(
       {
         title,
         template_id: templateId || undefined,
         prompt,
         risk_check: hasRiskCheckAccess ? riskCheck : false,
+        country_code: countryCode,
+        output_language: outputLanguage,
         fields,
         sections: hasSectionsAccess && sectionsEnabled ? sections : [],
       },
@@ -273,6 +308,7 @@ export const NewContract = () => {
                     value={templateId}
                     label={t('new.templateLabel')}
                     onChange={(e) => setTemplateId(e.target.value)}
+                    MenuProps={{ disablePortal: true, PaperProps: { sx: { maxHeight: 320 } } }}
                   >
                     <MenuItem value="">
                       <em>{t('new.noTemplate')}</em>
@@ -284,6 +320,18 @@ export const NewContract = () => {
                     ))}
                   </Select>
                 </FormControl>
+
+                <ContractJurisdictionFormFields
+                  countryCode={countryCode}
+                  outputLanguage={outputLanguage}
+                  onCountryChange={(c) => {
+                    countryUserTouchedRef.current = true;
+                    setCountryCode(c);
+                  }}
+                  onOutputLanguageChange={setOutputLanguage}
+                  outputLanguageError={showValidation && !isValidOutputLanguageTag(outputLanguage)}
+                  disabled={isGenerating}
+                />
 
                 <TextField
                   fullWidth
@@ -413,8 +461,13 @@ export const NewContract = () => {
                     type="submit"
                     variant="contained"
                     size="large"
-                  disabled={isGenerating}
+                    disabled={isGenerating}
                     fullWidth
+                    startIcon={
+                      isGenerating ? (
+                        <CircularProgress color="inherit" size={22} thickness={4} />
+                      ) : undefined
+                    }
                   >
                     {isGenerating ? t('new.generating') : t('new.generate')}
                   </Button>

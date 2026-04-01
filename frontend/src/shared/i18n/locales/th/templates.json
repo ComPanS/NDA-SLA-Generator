@@ -19,6 +19,7 @@
     "description": "คำอธิบาย",
     "contentLabel": "ข้อความพรอมต์พื้นฐาน",
     "contentHelper": "ส่งไปยัง AI พร้อมกับฟิลด์ที่กรอก",
+    "defaultCountrySection": "ประเทศเริ่มต้นเมื่อสร้างสัญญาจากเทมเพลตนี้",
     "fieldGroups": "กลุ่มฟิลด์",
     "addGroup": "เพิ่มกลุ่ม",
     "groupName": "ชื่อกลุ่ม",

@@ -16,8 +16,32 @@ import {
   incrementClarificationUsage,
 } from '../lib/limits';
 import { SINGLE_CONTRACT_PRICE } from '../config/subscriptions';
+import {
+  buildRiskPrompt,
+  buildRefinePrompt,
+  composeContractGeneratePrompt,
+  makePromptContext,
+  normalizeCountryCode,
+  normalizeOutputLanguage,
+} from '../lib/contractPrompts';
+import { logContractPipelineError } from '../lib/contractPipelineLog';
 
 const router = Router();
+
+const isoCountryCodeSchema = z
+  .string()
+  .length(2)
+  .transform((s) => s.toUpperCase())
+  .refine((s) => /^[A-Z]{2}$/.test(s), 'Invalid country code');
+
+/** BCP-47 language tag, e.g. ru, en, de, fr, zh-CN */
+const outputLanguageSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(32)
+  .regex(/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/, 'Invalid language tag')
+  .transform((s) => s.replace(/_/g, '-'));
 
 // Public stats endpoint for landing page
 router.get('/public-stats', async (_req, res) => {
@@ -94,57 +118,6 @@ function contractSectionsFromTemplate(template: TemplateWithFields): ContractSec
     title: s.title,
     order: s.order ?? idx,
   }));
-}
-
-function buildFieldsPrompt(fields: ContractFieldDraft[]) {
-  const grouped = fields.reduce<Array<{ label: string; order: number; fields: typeof fields }>>(
-    (acc, field) => {
-      const existing = acc.find((g) => g.label === field.groupLabel);
-      if (existing) {
-        existing.fields.push(field);
-      } else {
-        acc.push({ label: field.groupLabel, order: field.groupOrder ?? 0, fields: [field] });
-      }
-      return acc;
-    },
-    [],
-  );
-
-  return grouped
-    .sort((a, b) => a.order - b.order)
-    .map((group) => {
-      const renderedFields = group.fields
-        .sort((a, b) => (a.order === b.order ? 0 : a.order - b.order))
-        .map((f) => `  - ${f.label}: ${f.value || '(не указано)'}`)
-        .join('\n');
-      return `- ${group.label}:\n${renderedFields}`;
-    })
-    .join('\n');
-}
-
-function buildRiskPrompt(title: string, htmlContent: string) {
-  return [
-    'Ты — опытный юрист, специализирующийся на анализе договоров. Твоя задача — внимательно проанализировать предоставленный договор и выявить юридические риски.',
-    '',
-    'Правила оформления ответа:',
-    '- Отвечай исключительно на русском языке.',
-    '- Не используй никакого markdown-форматирования: никаких **, *, __, #, >, кодовых блоков, таблиц или других элементов разметки.',
-    '- Используй только простой текст и обычные маркированные списки с дефисом "- ".',
-    '- Каждый пункт списка должен иметь строго следующий формат:',
-    '  - Риск [краткое название риска]: [пояснение риска].',
-    '  Рекомендация: [конкретная рекомендация по устранению или снижению риска].',
-    '- Между названием риска и пояснением ставь двоеточие, после пояснения — точку.',
-    '- Строка с рекомендацией начинается строго со слова "Рекомендация:" (с большой буквы и двоеточия).',
-    '- Если юридических рисков не выявлено, напиши ровно одну строку: "Юридические риски не выявлены." и ничего больше.',
-    '- Не добавляй вступлений, заключений, приветствий, нумерации, лишних пояснений или пересказа договора.',
-    '- Ответ должен состоять только из списка рисков (или сообщения об их отсутствии).',
-    '',
-    `Название договора: ${title}`,
-    '',
-    '--- Начало текста договора (HTML) ---',
-    htmlContent,
-    '--- Конец текста договора ---',
-  ].join('\n');
 }
 
 function logColumnsDebug(_label: string, _html?: string) {
@@ -446,98 +419,6 @@ function extractTitleFromHtml(html: string, fallback: string): string {
   return cleaned || fallback;
 }
 
-// function buildInstruction(title: string) {
-//   return [
-//     'Сгенерируй полноценный юридический договор на русском языке в формате валидного HTML.',
-//     'Верни СТРОГО только HTML-контент, без пояснений, комментариев, Markdown и вводных фраз.',
-//     'HTML должен быть самодостаточным и готовым к встраиванию на сайт или в документ.',
-//     'Структура документа:',
-//     '- <h1> — название договора;',
-//     '- <h2> — разделы;',
-//     '- <p> — текст пунктов;',
-//     '- <ul>/<li> — перечисления (если уместно).',
-//     'Обязательные разделы договора:',
-//     '1. Преамбула;',
-//     '2. Предмет договора;',
-//     '3. Права и обязанности сторон;',
-//     '4. Ответственность сторон;',
-//     '5. Срок действия и порядок расторжения;',
-//     '6. Конфиденциальность;',
-//     '7. Урегулирование споров;',
-//     '8. Заключительные положения;',
-//     '9. Подписи сторон.',
-//     'Стиль изложения: официальный, юридически нейтральный, без эмоциональных оценок.',
-//     'Используй формулировки, характерные для типовых гражданско-правовых договоров РФ.',
-//     'Избегай двусмысленностей, разговорных выражений и воды.',
-//     'При необходимости используй нумерацию пунктов внутри разделов.',
-//     'Если данные сторон не указаны — используй нейтральные плейсхолдеры (например, «Заказчик», «Исполнитель»).',
-//     // `Название договора: ${title}`,
-//   ].join('\n');
-// }
-
-function buildInstruction(title: string) {
-  void title;
-  return [
-    'Сгенерируй полноценный юридический договор на русском языке в формате валидного HTML.',
-    'Верни СТРОГО только HTML-контент, без пояснений, комментариев, Markdown и вводных фраз.',
-    'HTML должен быть самодостаточным и готовым к встраиванию на сайт или в документ (включая минимальный <!DOCTYPE html>, <html>, <head> с <meta charset="utf-8"> и <body>).',
-    'Структура документа:',
-    '- <h1> — полное название договора (определи его самостоятельно на основе сути запроса, например, «Договор оказания услуг», «Договор купли-продажи» и т.д.);',
-    '- <h2> — заголовки разделов;',
-    '- <p> — текст пунктов (разрешено style="text-align: left|right|center|justify");',
-    '- <span style="font-size: 18px"> для изменения размера текста;',
-    '- Выделение: <strong>/<b>, <em>/<i>, <u>;',
-    '- Списки: для подпунктов с нумерацией 1.1, 2.2.1, 3.1.2 и т.д. используй <p>2.2.1. Текст пункта.</p> — НЕ используй <ol><li> для такой нумерации (иначе получится "1. 2.2.1."). Для простых списков 1, 2, 3 — <ol><li>; для маркированных — <ul><li>; для тире — <ul data-list-style="dash"><li>...</li></ul>;',
-    '- Две колонки используй ТОЛЬКО в блоке реквизитов в конце и нигде более: оберни реквизиты в <div data-columns="2" style="column-count: 2; column-gap: 24px">, внутри два вложенных <div> — левая колонка (Сторона 1/роль по контексту) и правая колонка (Сторона 2/роль по контексту); при необходимости вставь <div data-column-break="true"></div> между колонками, чтобы избежать балансировки строк. Если одна колонка короче другой по количеству строк, добавь в неё столько пустых параграфоф вида <p>&nbsp;</p>, чтобы их количество строк было одинаково.',
-    '- В блоке реквизитов обязательно выведи обе стороны: не пропускай правую колонку (Сторона 2/контекстная роль), укажи плейсхолдеры ровно из 30 символов «_» для названия, ИНН, ОГРН, адреса, представителя и основания, подписи и расшифровки. Если стороны разных типов (юрлицо/физлицо/ИП или другое), адаптируй реквизиты под тип: для физлица минимум — Ф.И.О., паспортные данные, адрес регистрации, подпись; для юрлица минимум — наименование, ИНН/ОГРН/КПП, адрес, представитель, основание, подпись и печать при необходимости; для всех остальных случаев - по ситуации.',
-    '- Преамбула: только дата и краткое обозначение сторон без повторения реквизитов (к примеру ИНН/ОГРН/адрес/представители/подписи оставь в финальном блоке реквизитов).',
-    '- Подразделы нумеруй внутри соответствующего раздела (1.1, 1.2, 2.1, 2.2.1 и т.д.) через тег <p>: <p>2.2.1. Текст подпункта.</p>. Не используй <ol><li> для нумерации 1.1, 2.2.1 — иначе браузер добавит "1." и получится "1. 2.2.1.". Не выводи номера подразделов раньше заголовка раздела и не сбивай нумерацию.',
-    'Требования к содержанию:',
-    '- Определи тип договора на основе запроса пользователя и самостоятельно подбери подходящую структуру и набор разделов, характерных для данного вида гражданско-правовых договоров в РФ.',
-    '- Обязательно включи ключевые разделы, типичные для большинства договоров: Преамбула, Предмет договора, Права и обязанности сторон, Ответственность сторон, Срок действия и порядок расторжения, Урегулирование споров, Заключительные положения, Реквизиты и подписи сторон.',
-    '- В разделе с реквизитами/подписями сторон (не преамбула) обязательно отобрази ДВЕ стороны в двух колонках: используй <div data-columns="2" style="column-count: 2; column-gap: 24px">, левая колонка — Сторона 1 (или «Заказчик/Продавец/Арендодатель» по контексту), правая колонка — Сторона 2 (или «Исполнитель/Покупатель/Арендатор»). В каждой колонке укажи плейсхолдеры с ровно 30 символами нижнего подчеркивания с полями, которые больше всего подходят под договор, к примеру: полное наименование, ИНН, ОГРН, адрес, «в лице ________________________________________», «на основании ________________________________________», место для подписи и расшифровки.',
-    '- Добавляй дополнительные разделы, если они уместны для данного типа договора (например, «Порядок расчетов», «Гарантии», «Форс-мажор», «Интеллектуальная собственность», «Конфиденциальность» и т.д.).',
-    '- Удаляй или не включай разделы, которые явно не нужны для данного вида договора.',
-    '- Если тип договора предполагает специфические роли сторон, используй соответствующие плейсхолдеры: «Заказчик» и «Исполнитель» — для услуг, «Продавец» и «Покупатель» — для купли-продажи, «Арендодатель» и «Арендатор» — для аренды и т.д. При отсутствии конкретики используй нейтральные «Сторона 1» и «Сторона 2» или наиболее подходящие по контексту. Для разных типов сторон (юрлицо vs физлицо/ИП) реквизиты должны отличаться и соответствовать типу.',
-    'Стиль изложения: строго официальный, юридически точный и нейтральный, без эмоциональной окраски, разговорных выражений и избыточной «воды».',
-    'Используй формулировки, характерные для типовых договоров российского гражданского права (ссылки на ГК РФ при необходимости).',
-    'Обеспечь отсутствие двусмысленностей и логическую последовательность положений.',
-  ].join('\n');
-}
-
-function buildSectionsPrompt(title: string, sectionsSource: ContractSectionDraft[]) {
-  return sectionsSource.length > 0
-    ? `Структура разделов (сохрани указанный порядок и названия разделов, при необходимости дополни 1–3 логичными разделами, которые обычно присутствуют в договорах данного типа):\n${sectionsSource
-        .sort((a, b) => a.order - b.order)
-        .map((s, idx) => `${idx + 1}. ${s.title}`)
-        .join('\n')}`
-    : `Самостоятельно сформируй оптимальную, максимально полную и соответствующую современной российской договорной практике (2024–2026 гг.) структуру разделов для договора.
-
-Требования к структуре и содержанию:
-• Определи состав, последовательность и глубину разделов, исходя из:
-  - сути регулируемых гражданско-правовых отношений,
-  - положений Гражданского кодекса РФ (особенной части),
-  - специального законодательства (если применимо к данному виду договора),
-  - сложившейся договорной и судебной практики 2024–2026 годов,
-  - типичных рисков, интересов и потребностей сторон именно для данного вида договора.
-• Не используй упрощённые, шаблонные или усечённые перечни разделов.
-• Каждый раздел должен быть детализированным, содержать все логически необходимые подразделы (нумерация 1.1., 1.2., 1.2.1. и т.д.) и исключать двусмысленности.
-• Не оставляй разделы пустыми или состоящими из 1–2 общих фраз — каждый пункт должен нести конкретную юридическую нагрузку и минимизировать риски сторон.
-• Обязательно включи:
-  - Преамбулу (с датой заключения в формате ««___» _________ 20__ г.», полные реквизиты сторон с плейсхолдерами и линиями ровно из 30 символов «_»: наименование, ИНН, ОГРН, адрес, «в лице ________________________________________», «действующего на основании ________________________________________»),
-  - Финальный раздел «Реквизиты и подписи сторон» (или аналогичное название).
-• В разделе с подписями сторон обязательно предусмотри чётко оформленные поля:
-  - дата (««___» _________ 20__ г.»),
-  - строки для ФИО, должности (при наличии), собственноручной подписи каждой стороны с линиями ровно из 30 символов «_»,
-  - расшифровки подписей под линиями ровно из 30 символов «_»,
-  - место для оттиска печати (при необходимости).
-• Используй тег <h2> для названий основных разделов, нумеруй их арабскими цифрами (1., 2., …).
-• Подразделы внутри разделов нумеруй последовательно (1.1., 1.2., 1.2.1. и т.д.) через тег <p>: <p>2.2.1. Текст.</p>, не через <ol><li>.
-• Порядок разделов должен быть логичным, последовательным и удобным для восприятия сторонами и в случае судебного разбирательства.
-
-Генерируй структуру, максимально соответствующую качественным гражданско-правовым договорам, используемым в российском деловом обороте на текущий момент.`;
-}
-
 const contractFieldSchema = z.object({
   id: z.string().uuid().optional(),
   template_field_id: z.string().uuid().optional(),
@@ -573,6 +454,8 @@ const generateSchema = z.object({
   prompt: z.string().min(1),
   format_mode: z.string().optional(),
   risk_check: z.boolean().optional(),
+  country_code: isoCountryCodeSchema.optional(),
+  output_language: outputLanguageSchema.optional(),
   fields: z.array(createFieldSchema).optional(),
   sections: z.array(createSectionSchema).optional(),
 });
@@ -581,12 +464,16 @@ const refineSchema = z.object({
   prompt: z.string().min(1),
   format_mode: z.string().optional(),
   risk_check: z.boolean().optional(),
+  country_code: isoCountryCodeSchema.optional(),
+  output_language: outputLanguageSchema.optional(),
 });
 
 const guestGenerateSchema = z.object({
   title: z.string().min(1),
   prompt: z.string().min(1),
   risk_check: z.boolean().optional(),
+  country_code: isoCountryCodeSchema.optional(),
+  output_language: outputLanguageSchema.optional(),
   fields: z.array(createFieldSchema).optional(),
   sections: z.array(createSectionSchema).optional(),
 });
@@ -601,12 +488,16 @@ const guestClarifySchema = z.object({
   content: z.string().min(1),
   prompt: z.string().min(1),
   risk_check: z.boolean().optional(),
+  country_code: isoCountryCodeSchema.optional(),
+  output_language: outputLanguageSchema.optional(),
 });
 
 const guestImportSchema = z.object({
   title: z.string().min(1),
   content: z.string().min(1),
   risk_assessment: z.string().nullable().optional(),
+  country_code: isoCountryCodeSchema.optional(),
+  output_language: outputLanguageSchema.optional(),
   fields: z.array(createFieldSchema).optional(),
   sections: z.array(createSectionSchema).optional(),
 });
@@ -677,6 +568,8 @@ router.post('/guest/generate', async (req, res) => {
     return res.status(400).json({ detail: 'Не удалось определить IP адрес' });
   }
 
+  const guestActor = `ip:${ip}`;
+
   const existing = await prisma.guestAccess.findUnique({ where: { ip } });
   if (existing) {
     return res.status(429).json({
@@ -690,6 +583,10 @@ router.post('/guest/generate', async (req, res) => {
   }
 
   const { title, prompt, fields: incomingFields, sections: incomingSections } = parsed.data;
+  const promptCtx = makePromptContext(
+    parsed.data.country_code ?? null,
+    parsed.data.output_language ?? null,
+  );
 
   const fieldCopies: ContractFieldDraft[] = [];
   if (incomingFields && incomingFields.length) {
@@ -717,33 +614,36 @@ router.post('/guest/generate', async (req, res) => {
     }
   }
 
-  const instruction = buildInstruction(title);
-  const fieldsPrompt = fieldCopies.length ? buildFieldsPrompt(fieldCopies) : '';
-  const sectionsPrompt = buildSectionsPrompt(title, sectionCopies);
-
-  const finalPrompt = [
-    instruction,
-    fieldsPrompt ? `Структурированные поля:\n${fieldsPrompt}` : null,
-    sectionsPrompt,
-    `Дополнительные требования:\n${prompt}`,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
-
-  const rawContent = await generateText(finalPrompt);
-  logColumnsDebug('guest-generate raw', rawContent);
-  const content = sanitizeGeneratedHtml(rawContent, title);
-  logColumnsDebug('guest-generate sanitized', content);
-  const exportTitle = extractTitleFromHtml(content, title);
+  let content: string;
+  let exportTitle: string;
   let riskAssessmentText: string | null = null;
 
-  if (parsed.data.risk_check) {
-    try {
-      const riskPrompt = buildRiskPrompt(title, content);
-      riskAssessmentText = (await generateText(riskPrompt)).trim();
-    } catch (error) {
-      console.error('Guest risk assessment generation failed:', error);
+  try {
+    const finalPrompt = composeContractGeneratePrompt(
+      promptCtx,
+      title,
+      fieldCopies,
+      sectionCopies,
+      prompt,
+    );
+    const rawContent = await generateText(finalPrompt);
+    logColumnsDebug('guest-generate raw', rawContent);
+
+    content = sanitizeGeneratedHtml(rawContent, title);
+    logColumnsDebug('guest-generate sanitized', content);
+    exportTitle = extractTitleFromHtml(content, title);
+
+    if (parsed.data.risk_check) {
+      try {
+        const riskPrompt = buildRiskPrompt(promptCtx, title, content);
+        riskAssessmentText = (await generateText(riskPrompt)).trim();
+      } catch (error) {
+        logContractPipelineError('guest-generate', guestActor, '09_risk_assessment', error);
+      }
     }
+  } catch (error) {
+    logContractPipelineError('guest-generate', guestActor, 'llm_or_sanitize', error);
+    return res.status(500).json({ detail: 'Не удалось сгенерировать договор' });
   }
 
   try {
@@ -760,7 +660,7 @@ router.post('/guest/generate', async (req, res) => {
         detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
       });
     }
-    console.error('Guest access create error:', error);
+    logContractPipelineError('guest-generate', guestActor, '11_guest_access_create', error);
     return res.status(500).json({ detail: 'Не удалось зафиксировать попытку' });
   }
 
@@ -818,21 +718,11 @@ router.post('/guest/clarify', async (req, res) => {
   }
 
   const { title, content: baseContent, prompt, risk_check } = parsed.data;
-
-  const refinePrompt = [
-    'Ты редактор юридических договоров.',
-    'На входе HTML договора; верни только обновлённый HTML без пояснений.',
-    'Сохрани структуру и стили: заголовки h1/h2, параграфы p (разрешено style="text-align: left|right|center|justify"), выделения strong/em/u, изменение размера через <span style="font-size: Npx">, списки ol/ul/li и ul с data-list-style="dash". Подпункты 1.1, 2.2.1 — только через <p>2.2.1. Текст.</p>, не через <ol><li>. Разрывы колонок <div data-column-break="true"></div> и полноширинные блоки <div data-span-columns="all">...</div>. Колонки <div data-columns="2"> используй ТОЛЬКО в блоке реквизитов в конце: внутри две вложенные <div> (левая — Сторона 1/роль по контексту, правая — Сторона 2/роль по контексту); при необходимости поставь <div data-column-break="true"></div> между ними, чтобы избежать балансировки строк; если одна колонка короче, добавь в неё 1–3 пустых <p>&nbsp;</p> для выравнивания высоты. Не добавляй колонки в других разделах.',
-    'Обязательно сохрани или восстанови блок с реквизитами/подписями двух сторон в двух колонках: левая колонка — Сторона 1 (или контекстная роль), правая колонка — Сторона 2 (или контекстная роль), с плейсхолдерами длиной ровно 30 символов «_» для реквизитов, даты, подписи и расшифровки; правую колонку не пропускай. Адаптируй набор реквизитов под тип стороны (юрлицо/физлицо/ИП), не делай одинаковые колонки, если стороны разные.',
-    'Преамбула должна содержать только дату и краткое обозначение сторон, без повторения реквизитов (ИНН/ОГРН/адрес/представитель/подпись остаются в финальном блоке реквизитов).',
-    'Подразделы нумеруй через <p>2.2.1. Текст.</p>, не через <ol><li> (иначе получится "1. 2.2.1."). Не выводи номера подразделов раньше заголовка раздела и не сбивай нумерацию.',
-    'Вноси только запрошенные изменения, остальное оставь без изменений.',
-    'Если изменения противоречат закону, переформулируй корректно, но без комментариев.',
-    '--- Исходный договор ---',
-    baseContent,
-    '--- Правки ---',
-    prompt,
-  ].join('\n');
+  const clarifyCtx = makePromptContext(
+    parsed.data.country_code ?? null,
+    parsed.data.output_language ?? null,
+  );
+  const refinePrompt = buildRefinePrompt(clarifyCtx, baseContent, prompt);
 
   const rawContent = await generateText(refinePrompt);
   logColumnsDebug('guest-clarify raw', rawContent);
@@ -842,7 +732,7 @@ router.post('/guest/clarify', async (req, res) => {
   let riskAssessmentText: string | null = null;
   if (risk_check) {
     try {
-      const riskPrompt = buildRiskPrompt(title, updatedContent);
+      const riskPrompt = buildRiskPrompt(clarifyCtx, title, updatedContent);
       riskAssessmentText = (await generateText(riskPrompt)).trim();
     } catch (error) {
       console.error('Guest clarify risk assessment failed:', error);
@@ -859,6 +749,8 @@ router.post('/guest/import', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+
+  const impActor = req.userId;
 
   const parsed = guestImportSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -912,52 +804,62 @@ router.post('/guest/import', requireAuth, async (req: AuthRequest, res) => {
     }
   }
 
-  const sanitizedContent = sanitizeGeneratedHtml(content, title);
+  try {
+    const sanitizedContent = sanitizeGeneratedHtml(content, title);
+    const importCountry = normalizeCountryCode(parsed.data.country_code ?? null);
+    const importLang = normalizeOutputLanguage(parsed.data.output_language ?? null);
 
-  const document = await prisma.document.create({
-    data: {
-      title,
-      ownerId: req.userId,
-      status: 'draft',
-      versions: {
-        create: {
-          version: 1,
-          content: sanitizedContent,
-          riskAssessment: risk_assessment
-            ? {
-                create: { summary: risk_assessment },
-              }
-            : undefined,
+    const document = await prisma.document.create({
+      data: {
+        title,
+        ownerId: req.userId,
+        jurisdictionCountry: importCountry,
+        outputLanguage: importLang,
+        status: 'draft',
+        versions: {
+          create: {
+            version: 1,
+            content: sanitizedContent,
+            riskAssessment: risk_assessment
+              ? {
+                  create: { summary: risk_assessment },
+                }
+              : undefined,
+          },
         },
+        fields: fieldCopies.length
+          ? {
+              create: fieldCopies,
+            }
+          : undefined,
+        sections: sectionCopies.length
+          ? {
+              create: sectionCopies,
+            }
+          : undefined,
       },
-      fields: fieldCopies.length
-        ? {
-            create: fieldCopies,
-          }
-        : undefined,
-      sections: sectionCopies.length
-        ? {
-            create: sectionCopies,
-          }
-        : undefined,
-    },
-    include: {
-      template: { select: { id: true, name: true } },
-      versions: { include: { riskAssessment: true } },
-      fields: true,
-      sections: true,
-    },
-  });
+      include: {
+        template: { select: { id: true, name: true } },
+        versions: { include: { riskAssessment: true } },
+        fields: true,
+        sections: true,
+      },
+    });
 
-  await incrementContractUsage(req.userId);
-
-  return res.json({ document: toDocument(document) });
+    await incrementContractUsage(req.userId);
+    return res.json({ document: toDocument(document) });
+  } catch (error) {
+    logContractPipelineError('guest-import', impActor, 'pipeline', error);
+    return res.status(500).json({ detail: 'Не удалось импортировать договор' });
+  }
 });
 
 router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+
+  const genActor = req.userId;
 
   // Check contract limit
   const limitCheck = await checkContractLimit(req.userId);
@@ -1004,7 +906,10 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   }
 
   const userPrompt = template ? `${template.content}\n\n${prompt}` : prompt;
-  const instruction = buildInstruction(title);
+  const promptCtx = makePromptContext(
+    parsed.data.country_code ?? template?.defaultCountryCode ?? null,
+    parsed.data.output_language ?? null,
+  );
 
   const fieldCopies: ContractFieldDraft[] = template ? contractFieldsFromTemplate(template) : [];
   // Only allow sections if user has access
@@ -1058,76 +963,80 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     }
   }
 
-  const fieldsPrompt = fieldCopies.length ? buildFieldsPrompt(fieldCopies) : '';
   const sectionsSource = sectionCopies;
-  const sectionsPrompt = buildSectionsPrompt(title, sectionsSource);
 
-  const finalPrompt = [
-    instruction,
-    fieldsPrompt ? `Структурированные поля:\n${fieldsPrompt}` : null,
-    sectionsPrompt,
-    `Дополнительные требования:\n${userPrompt}`,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
-
-  const rawContent = await generateText(finalPrompt);
-  logColumnsDebug('contract-generate raw', rawContent);
-  const content = sanitizeGeneratedHtml(rawContent, title);
-  logColumnsDebug('contract-generate sanitized', content);
-  let riskAssessmentText: string | null = null;
-
-  if (hasRiskCheckAccess && parsed.data.risk_check) {
-    try {
-      const riskPrompt = buildRiskPrompt(title, content);
-      riskAssessmentText = (await generateText(riskPrompt)).trim();
-    } catch (error) {
-      console.error('Risk assessment generation failed:', error);
-    }
-  }
-
-  const document = await prisma.document.create({
-    data: {
+  try {
+    const finalPrompt = composeContractGeneratePrompt(
+      promptCtx,
       title,
-      ownerId: req.userId,
-      templateId: template?.id,
-      status: 'draft',
-      versions: {
-        create: {
-          version: 1,
-          content,
-          riskAssessment: riskAssessmentText
-            ? {
-                create: {
-                  summary: riskAssessmentText,
-                },
-              }
-            : undefined,
+      fieldCopies,
+      sectionsSource,
+      userPrompt,
+    );
+    const rawContent = await generateText(finalPrompt);
+    logColumnsDebug('contract-generate raw', rawContent);
+
+    const content = sanitizeGeneratedHtml(rawContent, title);
+    logColumnsDebug('contract-generate sanitized', content);
+
+    let riskAssessmentText: string | null = null;
+
+    if (hasRiskCheckAccess && parsed.data.risk_check) {
+      try {
+        const riskPrompt = buildRiskPrompt(promptCtx, title, content);
+        riskAssessmentText = (await generateText(riskPrompt)).trim();
+      } catch (error) {
+        logContractPipelineError('generate', genActor, '11_risk_assessment', error);
+      }
+    }
+
+    const document = await prisma.document.create({
+      data: {
+        title,
+        ownerId: req.userId,
+        templateId: template?.id,
+        jurisdictionCountry: promptCtx.countryCode,
+        outputLanguage: promptCtx.outputLanguage,
+        status: 'draft',
+        versions: {
+          create: {
+            version: 1,
+            content,
+            riskAssessment: riskAssessmentText
+              ? {
+                  create: {
+                    summary: riskAssessmentText,
+                  },
+                }
+              : undefined,
+          },
         },
+        fields: fieldCopies.length
+          ? {
+              create: fieldCopies,
+            }
+          : undefined,
+        sections: sectionsSource.length
+          ? {
+              create: sectionsSource,
+            }
+          : undefined,
       },
-      fields: fieldCopies.length
-        ? {
-            create: fieldCopies,
-          }
-        : undefined,
-      sections: sectionsSource.length
-        ? {
-            create: sectionsSource,
-          }
-        : undefined,
-    },
-    include: {
-      template: { select: { id: true, name: true } },
-      versions: { include: { riskAssessment: true } },
-      fields: true,
-      sections: true,
-    },
-  });
+      include: {
+        template: { select: { id: true, name: true } },
+        versions: { include: { riskAssessment: true } },
+        fields: true,
+        sections: true,
+      },
+    });
 
-  // Increment contract usage counter
-  await incrementContractUsage(req.userId);
+    await incrementContractUsage(req.userId);
 
-  return res.json({ document: toDocument(document) });
+    return res.json({ document: toDocument(document) });
+  } catch (error) {
+    logContractPipelineError('generate', genActor, 'pipeline', error);
+    return res.status(500).json({ detail: 'Не удалось создать договор' });
+  }
 });
 
 router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
@@ -1172,21 +1081,24 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   }
   const nextVersion = (doc.versions?.reduce((m, v) => Math.max(m, v.version), 0) || 0) + 1;
   const baseContent = doc.versions?.[doc.versions.length - 1]?.content || '';
-  const refinePrompt = [
-    'Ты редактор юридических договоров.',
-    'На входе HTML договора; верни только обновлённый HTML без пояснений.',
-    'Сохрани структуру и стили: заголовки h1/h2, параграфы p (разрешено style="text-align: left|right|center|justify"), выделения strong/em/u, изменение размера через <span style="font-size: Npx">, списки ol/ul/li и ul с data-list-style="dash". Подпункты 1.1, 2.2.1 — только через <p>2.2.1. Текст.</p>, не через <ol><li>. Разрывы колонок <div data-column-break="true"></div> и полноширинные блоки <div data-span-columns="all">...</div>.',
-    'Колонки <div data-columns="2"> используй ТОЛЬКО для блока реквизитов в конце: внутри две вложенные <div> (левая — Сторона 1/роль по контексту, правая — Сторона 2/роль по контексту); при необходимости поставь <div data-column-break="true"></div> между ними, чтобы избежать балансировки строк; если одна колонка короче, добавь в неё 1–3 пустых <p>&nbsp;</p> для выравнивания высоты. Не добавляй колонки в других разделах.',
-    'Обязательно сохрани или восстанови блок с реквизитами/подписями двух сторон в двух колонках, с плейсхолдерами длиной ровно 30 символов «_» для реквизитов, даты, подписи и расшифровки; правую колонку не пропускай. Реквизиты адаптируй под тип стороны (юрлицо/физлицо/ИП), колонки не должны быть идентичными, если типы сторон различаются.',
-    'Преамбула должна содержать только дату и краткое обозначение сторон, без повторения реквизитов (ИНН/ОГРН/адрес/представитель/подпись оставь в финальном блоке реквизитов).',
-    'Подразделы нумеруй через <p>2.2.1. Текст.</p>, не через <ol><li> (иначе получится "1. 2.2.1."). Не выводи номера подразделов раньше заголовка раздела и не сбивай нумерацию.',
-    'Вноси только запрошенные изменения, остальное оставь без изменений.',
-    'Если изменения противоречат закону, переформулируй корректно, но без комментариев.',
-    '--- Исходный договор ---',
-    baseContent,
-    '--- Правки ---',
-    parsed.data.prompt,
-  ].join('\n');
+  const storedCountry =
+    'jurisdictionCountry' in doc && typeof doc.jurisdictionCountry === 'string'
+      ? doc.jurisdictionCountry
+      : 'RU';
+  const storedLang =
+    'outputLanguage' in doc && typeof doc.outputLanguage === 'string'
+      ? doc.outputLanguage
+      : 'ru';
+  const nextCountry =
+    parsed.data.country_code !== undefined
+      ? normalizeCountryCode(parsed.data.country_code)
+      : normalizeCountryCode(storedCountry);
+  const nextLang =
+    parsed.data.output_language !== undefined
+      ? normalizeOutputLanguage(parsed.data.output_language)
+      : normalizeOutputLanguage(storedLang);
+  const refineCtx = makePromptContext(nextCountry, nextLang);
+  const refinePrompt = buildRefinePrompt(refineCtx, baseContent, parsed.data.prompt);
 
   const rawContent = await generateText(refinePrompt);
   logColumnsDebug('contract-clarify raw', rawContent);
@@ -1196,7 +1108,7 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
 
   if (hasRiskCheckAccess && parsed.data.risk_check) {
     try {
-      const riskPrompt = buildRiskPrompt(doc.title, content);
+      const riskPrompt = buildRiskPrompt(refineCtx, doc.title, content);
       riskAssessmentText = (await generateText(riskPrompt)).trim();
     } catch (error) {
       console.error('Risk assessment generation failed (refine):', error);
@@ -1205,6 +1117,8 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   const updated = (await prisma.document.update({
     where: { id: doc.id },
     data: {
+      jurisdictionCountry: nextCountry,
+      outputLanguage: nextLang,
       versions: {
         create: {
           version: nextVersion,

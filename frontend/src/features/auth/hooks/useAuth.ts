@@ -12,7 +12,12 @@ import { AxiosError } from 'axios';
 import { resolveLocalizedPath } from '@/shared/i18n/resolveLocalizedPath';
 import i18n from '@/shared/i18n/i18n';
 import { useImportGuestContract } from '@/features/contracts/hooks/useContracts';
-import { GuestImportRequest, ContractFieldInput, ContractSectionInput } from '@/shared/types';
+import {
+  GuestImportRequest,
+  ContractFieldInput,
+  ContractSectionInput,
+} from '@/shared/types';
+import { isValidOutputLanguageTag } from '@/shared/i18n/outputLanguageTag';
 
 const GUEST_STORAGE_KEY = 'guest-contract-state-v1';
 
@@ -73,10 +78,23 @@ export function buildGuestImportPayload(): GuestImportRequest | null {
         }))
       : undefined;
 
+  const countryCodeRaw = draft.countryCode;
+  const importCountry =
+    typeof countryCodeRaw === 'string' && /^[A-Z]{2}$/i.test(countryCodeRaw)
+      ? countryCodeRaw.toUpperCase()
+      : undefined;
+  const outputLangRaw = draft.outputLanguage;
+  const importOutputLang =
+    typeof outputLangRaw === 'string' && isValidOutputLanguageTag(outputLangRaw)
+      ? outputLangRaw.trim().replace(/_/g, '-')
+      : undefined;
+
   return {
     title,
     content,
     risk_assessment: riskAssessment ?? undefined,
+    country_code: importCountry,
+    output_language: importOutputLang,
     fields,
     sections,
   };

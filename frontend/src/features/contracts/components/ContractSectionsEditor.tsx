@@ -10,6 +10,7 @@ import {
   CardContent,
 } from '@mui/material';
 import { Add, Delete, HelpOutline } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { ContractSectionInput } from '@/shared/types';
 
 interface Props {
@@ -27,11 +28,16 @@ export const ContractSectionsEditor = ({
   disabled = false,
   headerAddon,
 }: Props) => {
+  const { t } = useTranslation('contracts');
   const sorted = sections.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const handleAdd = () => {
     if (disabled) return;
-    onChange([...sections, { title: `Раздел ${sections.length + 1}`, order: sections.length + 1 }]);
+    const n = sections.length + 1;
+    onChange([
+      ...sections,
+      { title: t('sectionsEditor.newSectionTitle', { n }), order: sections.length + 1 },
+    ]);
   };
 
   const handleChange = (idx: number, patch: Partial<ContractSectionInput>) => {
@@ -56,8 +62,8 @@ export const ContractSectionsEditor = ({
             rowGap={1}
           >
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Typography variant="h6">{title || 'Разделы договора'}</Typography>
-              <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+              <Typography variant="h6">{title || t('sectionsEditor.title')}</Typography>
+              <Tooltip title={t('sectionsEditor.tooltip')}>
                 <HelpOutline fontSize="small" color="action" />
               </Tooltip>
             </Stack>
@@ -74,7 +80,7 @@ export const ContractSectionsEditor = ({
                 disabled={disabled}
                 sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
-                Добавить раздел
+                {t('sectionsEditor.addSection')}
               </Button>
             </Stack>
           </Stack>
@@ -85,13 +91,13 @@ export const ContractSectionsEditor = ({
                 <Card variant="outlined" sx={{ p: 2 }}>
                   <Stack spacing={1}>
                     <TextField
-                      label="Название раздела"
+                      label={t('sectionsEditor.labels.title')}
                       value={section.title}
                       onChange={(e) => handleChange(idx, { title: e.target.value })}
                       disabled={disabled}
                     />
                     <TextField
-                      label="Порядок"
+                      label={t('sectionsEditor.labels.order')}
                       type="number"
                       value={section.order ?? idx + 1}
                       onChange={(e) => handleChange(idx, { order: Number(e.target.value) })}

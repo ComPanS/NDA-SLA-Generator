@@ -15,16 +15,23 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
+  Alert,
+  Tooltip,
 } from '@mui/material';
 import { Check, Warning, Star } from '@mui/icons-material';
 import { useState } from 'react';
-import { useSubscribe, usePurchaseSingleContract, usePlans } from '@/features/billing/hooks/useBilling';
-import { UpgradeOption, SubscriptionPlan } from '@/shared/types';
+import { useTranslation } from 'react-i18next';
 import {
-  SUBSCRIPTION_FEATURES,
-  SINGLE_CONTRACT_PRICE,
-  formatLimit,
-} from '@/shared/constants/subscriptions';
+  useSubscribe,
+  usePurchaseSingleContract,
+  usePlans,
+  useFxRates,
+} from '@/features/billing/hooks/useBilling';
+import { UpgradeOption, SubscriptionPlan } from '@/shared/types';
+import { SINGLE_CONTRACT_PRICE } from '@/shared/constants/subscriptions';
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
+import { useBillingDisplayCurrency } from '@/shared/money/useBillingDisplayCurrency';
+import { formatRubAmountForUi } from '@/shared/money/billingCurrency';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -36,11 +43,13 @@ interface UpgradeModalProps {
   showSingleContractOption?: boolean;
 }
 
-const LIMIT_TYPE_LABELS = {
-  contracts: 'договоров',
-  clarifications: 'уточнений на документ',
-  templates: 'шаблонов',
-};
+function planFeaturesTb(
+  tb: (key: string, opts?: { returnObjects?: boolean }) => unknown,
+  planId: SubscriptionPlan,
+) {
+  const v = tb(`plans.${planId}.features`, { returnObjects: true });
+  return Array.isArray(v) ? (v as string[]) : [];
+}
 
 export const UpgradeModal = ({
   open,
@@ -51,22 +60,45 @@ export const UpgradeModal = ({
   upgradeOptions,
   showSingleContractOption = false,
 }: UpgradeModalProps) => {
+  const { t } = useTranslation('billing');
+  const { i18n } = useTranslation();
+  const locale = icuLocaleFor(i18n.language);
+  const { currency, isPaymentEnabled } = useBillingDisplayCurrency();
+  const { data: fxData, isError: fxError } = useFxRates();
+  const rates = fxData?.rates;
+
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const subscribeMutation = useSubscribe();
   const purchaseSingleMutation = usePurchaseSingleContract();
   const { data: plansData } = usePlans();
 
+  const priceOpts = {
+    currency,
+    rates,
+    fxFailed: fxError,
+    locale,
+    freeLabel: t('free'),
+  };
+
+  const limitUnitKey =
+    limitType === 'contracts'
+      ? 'upgradeModal.limitContracts'
+      : limitType === 'clarifications'
+        ? 'upgradeModal.limitClarifications'
+        : 'upgradeModal.limitTemplates';
+
+  const limitUnitLabel = t(limitUnitKey);
+
   const handleSubscribe = async (plan: SubscriptionPlan) => {
+    if (!isPaymentEnabled) return;
     setSelectedPlan(plan);
     try {
-      // Build return URL with payment success parameter
       const url = new URL(window.location.origin + '/billing');
       url.searchParams.set('payment', 'success');
       const result = await subscribeMutation.mutateAsync({
         plan,
         returnUrl: url.toString(),
       });
-      // Redirect to YooKassa payment page
       window.location.href = result.payment_url;
     } catch (error) {
       console.error('Subscribe error:', error);
@@ -75,12 +107,11 @@ export const UpgradeModal = ({
   };
 
   const handlePurchaseSingle = async () => {
+    if (!isPaymentEnabled) return;
     try {
-      // Build return URL with payment success parameter
       const url = new URL(window.location.href);
       url.searchParams.set('payment', 'success');
       const result = await purchaseSingleMutation.mutateAsync(url.toString());
-      // Redirect to YooKassa payment page
       window.location.href = result.payment_url;
     } catch (error) {
       console.error('Purchase single contract error:', error);
@@ -89,18 +120,37 @@ export const UpgradeModal = ({
 
   const isLoading = subscribeMutation.isPending || purchaseSingleMutation.isPending;
 
+  const limitLineKey =
+    limitType === 'contracts'
+      ? 'upgradeModal.limitContractsLine'
+      : limitType === 'clarifications'
+        ? 'upgradeModal.limitClarificationsLine'
+        : 'upgradeModal.limitTemplatesLine';
+
+  const formatLimitDisplay = (n: number) =>
+    n === -1 ? t('upgradeModal.unlimited') : String(n);
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Warning color="warning" />
-        Достигнут лимит {LIMIT_TYPE_LABELS[limitType]}
+        {t('upgradeModal.limitReachedTitle')}
       </DialogTitle>
 
       <DialogContent>
+        {!isPaymentEnabled && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {t('paymentNonRub')}
+          </Alert>
+        )}
+
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1" color="text.secondary">
-            Вы использовали {currentUsage} из {limit} {LIMIT_TYPE_LABELS[limitType]} в этом месяце.
-            Для продолжения работы выберите один из вариантов:
+            {t('upgradeModal.body', {
+              used: currentUsage,
+              limit,
+              unit: limitUnitLabel,
+            })}
           </Typography>
         </Box>
 
@@ -110,28 +160,32 @@ export const UpgradeModal = ({
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Box>
-                    <Typography variant="h6">Купить 1 договор</Typography>
+                    <Typography variant="h6">{t('upgradeModal.buyOneTitle')}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Разовая покупка без подписки
+                      {t('upgradeModal.buyOneSubtitle')}
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography variant="h5" color="primary">
-                      {SINGLE_CONTRACT_PRICE} ₽
+                      {formatRubAmountForUi(SINGLE_CONTRACT_PRICE, priceOpts)}
                     </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={handlePurchaseSingle}
-                      disabled={isLoading}
-                      sx={{ mt: 1 }}
-                    >
-                      {purchaseSingleMutation.isPending ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        'Купить'
-                      )}
-                    </Button>
+                    <Tooltip title={!isPaymentEnabled ? t('upgradeModal.singleUnavailableNonRub') : ''}>
+                      <span>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={handlePurchaseSingle}
+                          disabled={isLoading || !isPaymentEnabled}
+                          sx={{ mt: 1 }}
+                        >
+                          {purchaseSingleMutation.isPending ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            t('upgradeModal.buy')
+                          )}
+                        </Button>
+                      </span>
+                    </Tooltip>
                   </Box>
                 </Box>
               </CardContent>
@@ -139,134 +193,132 @@ export const UpgradeModal = ({
 
             <Divider sx={{ my: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                или улучшите тариф
+                {t('upgradeModal.orUpgrade')}
               </Typography>
             </Divider>
           </>
         )}
 
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          {upgradeOptions.map((option) => (
-            <Card
-              key={option.plan}
-              sx={{
-                flex: '1 1 250px',
-                minWidth: 250,
-                position: 'relative',
-                border: option.plan === 'pro' ? 2 : 1,
-                borderColor: option.plan === 'pro' ? 'primary.main' : 'divider',
-              }}
-            >
-              {option.plan === 'pro' && (
-                <Chip
-                  icon={<Star />}
-                  label="Рекомендуем"
-                  color="primary"
-                  size="small"
-                  sx={{ position: 'absolute', top: 8, right: 8 }}
-                />
-              )}
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {option.name}
-                </Typography>
-                {(() => {
-                  const planFromApi = plansData?.plans?.find((p) => p.id === option.plan);
-                  const hasDiscount =
-                    !!planFromApi?.first_month_discount_available &&
-                    planFromApi.first_month_price !== null &&
-                    planFromApi.first_month_price !== undefined &&
-                    option.price > 0 &&
-                    (planFromApi.first_month_price as number) < option.price;
-                  const discountPercent = hasDiscount
-                    ? Math.round(
-                        (1 - (planFromApi?.first_month_price as number) / option.price) * 100,
-                      )
-                    : null;
-                  const displayPrice =
-                    hasDiscount && planFromApi?.first_month_price !== null
-                      ? planFromApi.first_month_price
-                      : option.price;
+          {upgradeOptions.map((option) => {
+            const planFromApi = plansData?.plans?.find((p) => p.id === option.plan);
+            const hasDiscount =
+              !!planFromApi?.first_month_discount_available &&
+              planFromApi.first_month_price !== null &&
+              planFromApi.first_month_price !== undefined &&
+              option.price > 0 &&
+              (planFromApi.first_month_price as number) < option.price;
+            const discountPercent = hasDiscount
+              ? Math.round((1 - (planFromApi?.first_month_price as number) / option.price) * 100)
+              : null;
+            const displayPriceRub =
+              hasDiscount && planFromApi?.first_month_price !== null
+                ? planFromApi.first_month_price
+                : option.price;
 
-                  return (
-                    <Typography variant="h4" color="primary" gutterBottom>
-                      {displayPrice} ₽
-                      <Typography component="span" variant="body2" color="text.secondary">
-                        {' '}
-                        / месяц
-                      </Typography>
-                      {hasDiscount && (
-                        <Typography variant="body2" color="text.secondary" component="div">
-                          <span style={{ textDecoration: 'line-through' }}>{option.price} ₽</span>{' '}
-                          {discountPercent !== null ? `-${discountPercent}%` : ''}
-                          <Typography variant="caption" color="text.secondary" component="div">
-                            Скидка только на первый месяц
-                          </Typography>
-                        </Typography>
-                      )}
+            const allFeatures = planFeaturesTb(t, option.plan);
+            const preview = allFeatures.slice(0, 4);
+            const rest = allFeatures.length - 4;
+
+            return (
+              <Card
+                key={option.plan}
+                sx={{
+                  flex: '1 1 250px',
+                  minWidth: 250,
+                  position: 'relative',
+                  border: option.plan === 'pro' ? 2 : 1,
+                  borderColor: option.plan === 'pro' ? 'primary.main' : 'divider',
+                }}
+              >
+                {option.plan === 'pro' && (
+                  <Chip
+                    icon={<Star />}
+                    label={t('upgradeModal.recommended')}
+                    color="primary"
+                    size="small"
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                  />
+                )}
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {t(`plans.${option.plan}.title`)}
+                  </Typography>
+                  <Typography variant="h4" color="primary" gutterBottom>
+                    {formatRubAmountForUi(displayPriceRub, priceOpts)}
+                    <Typography component="span" variant="body2" color="text.secondary">
+                      {' '}
+                      {t('perMonth')}
                     </Typography>
-                  );
-                })()}
+                    {hasDiscount && (
+                      <Typography variant="body2" color="text.secondary" component="div">
+                        <span style={{ textDecoration: 'line-through' }}>
+                          {formatRubAmountForUi(option.price, priceOpts)}
+                        </span>{' '}
+                        {discountPercent !== null ? `-${discountPercent}%` : ''}
+                        <Typography variant="caption" color="text.secondary" component="div">
+                          {t('upgradeModal.discountFirstMonthOnly')}
+                        </Typography>
+                      </Typography>
+                    )}
+                  </Typography>
 
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {limitType === 'contracts' && (
-                    <>Договоров: {formatLimit(option.newLimit)}</>
-                  )}
-                  {limitType === 'clarifications' && (
-                    <>Уточнений: {formatLimit(option.newLimit)}</>
-                  )}
-                  {limitType === 'templates' && (
-                    <>Шаблонов: {formatLimit(option.newLimit)}</>
-                  )}
-                </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {t(limitLineKey, { limit: formatLimitDisplay(option.newLimit) })}
+                  </Typography>
 
-                <List dense>
-                  {SUBSCRIPTION_FEATURES[option.plan].slice(0, 4).map((feature, index) => (
-                    <ListItem key={index} disableGutters sx={{ py: 0.25 }}>
-                      <ListItemIcon sx={{ minWidth: 28 }}>
-                        <Check fontSize="small" color="primary" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={feature}
-                        primaryTypographyProps={{ variant: 'body2' }}
-                      />
-                    </ListItem>
-                  ))}
-                  {SUBSCRIPTION_FEATURES[option.plan].length > 4 && (
-                    <ListItem disableGutters sx={{ py: 0.25 }}>
-                      <ListItemText
-                        primary={`+ ещё ${SUBSCRIPTION_FEATURES[option.plan].length - 4} преимуществ`}
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          color: 'text.secondary',
-                        }}
-                      />
-                    </ListItem>
-                  )}
-                </List>
+                  <List dense>
+                    {preview.map((feature, index) => (
+                      <ListItem key={index} disableGutters sx={{ py: 0.25 }}>
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <Check fontSize="small" color="primary" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={feature}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                    {rest > 0 && (
+                      <ListItem disableGutters sx={{ py: 0.25 }}>
+                        <ListItemText
+                          primary={t('upgradeModal.moreFeatures', { count: rest })}
+                          primaryTypographyProps={{
+                            variant: 'body2',
+                            color: 'text.secondary',
+                          }}
+                        />
+                      </ListItem>
+                    )}
+                  </List>
 
-                <Button
-                  variant={option.plan === 'pro' ? 'contained' : 'outlined'}
-                  fullWidth
-                  onClick={() => handleSubscribe(option.plan)}
-                  disabled={isLoading}
-                  sx={{ mt: 2 }}
-                >
-                  {selectedPlan === option.plan && subscribeMutation.isPending ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    'Выбрать'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <Tooltip title={!isPaymentEnabled ? t('upgradeModal.subscribeUnavailableNonRub') : ''}>
+                    <span>
+                      <Button
+                        variant={option.plan === 'pro' ? 'contained' : 'outlined'}
+                        fullWidth
+                        onClick={() => handleSubscribe(option.plan)}
+                        disabled={isLoading || !isPaymentEnabled}
+                        sx={{ mt: 2 }}
+                      >
+                        {selectedPlan === option.plan && subscribeMutation.isPending ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          t('upgradeModal.choose')
+                        )}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </CardContent>
+              </Card>
+            );
+          })}
         </Box>
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose} disabled={isLoading}>
-          Отмена
+          {t('upgradeModal.cancel')}
         </Button>
       </DialogActions>
     </Dialog>

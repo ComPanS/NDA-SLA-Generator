@@ -1,4 +1,26 @@
 {
+  "fieldsEditor": {
+    "title": "Contract fields",
+    "tooltip": "Fill in field values — they will appear in the final document and exports.",
+    "addField": "Add field",
+    "groupDefault": "Additional",
+    "newField": "New field",
+    "labels": {
+      "group": "Group",
+      "name": "Field name",
+      "value": "Value"
+    }
+  },
+  "sectionsEditor": {
+    "title": "Contract sections",
+    "tooltip": "Structure matters: order and titles affect generation and export. If disabled, the AI picks sections.",
+    "addSection": "Add section",
+    "newSectionTitle": "Section {{n}}",
+    "labels": {
+      "title": "Section title",
+      "order": "Order"
+    }
+  },
   "sectionsDefault": [
     "Preamble",
     "Subject of the agreement",
@@ -27,6 +49,16 @@
     "titleHelper": "The title is for your convenience only; it does not affect generated text. Put details for the AI in “Description / parameters” below.",
     "templateLabel": "Template",
     "noTemplate": "No template",
+    "countryLabel": "Country (jurisdiction)",
+    "outputLanguageLabel": "Output language",
+    "outputLanguageOption": {
+      "ru": "Russian",
+      "en": "English",
+      "es": "Spanish",
+      "th": "Thai"
+    },
+    "outputLanguageHelper": "Choose the contract language. If the document already uses another tag, it appears in the list too.",
+    "outputLanguageError": "Enter a valid language tag (2–32 characters, e.g. ru or zh-CN).",
     "promptLabel": "Description / parameters",
     "promptPlaceholder": "Describe the contract: parties, subject, timelines, terms...",
     "promptError": "Fill in description / parameters for the AI",

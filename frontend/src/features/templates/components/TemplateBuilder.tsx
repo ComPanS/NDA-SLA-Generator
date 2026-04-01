@@ -18,6 +18,7 @@ import { Add, Delete, HelpOutline } from '@mui/icons-material';
 import { Template, TemplateGroup } from '@/shared/types';
 import { useCreateTemplate, useUpdateTemplate } from '../hooks/useTemplates';
 import { TemplatePayload } from '@/shared/api';
+import { ContractJurisdictionFormFields } from '@/features/contracts/components/ContractJurisdictionFormFields';
 
 type EditableGroup = Omit<
   TemplateGroup,
@@ -100,6 +101,9 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       : defaultSections
   );
   const [sectionsEnabled, setSectionsEnabled] = useState(!!template?.sections?.length);
+  const [defaultCountryCode, setDefaultCountryCode] = useState(
+    () => template?.default_country_code || 'RU',
+  );
   const [error, setError] = useState('');
 
   const isEditing = useMemo(() => !!template?.id, [template]);
@@ -135,6 +139,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
         }))
       );
       setSectionsEnabled(!!template.sections.length);
+      setDefaultCountryCode(template.default_country_code || 'RU');
     } else {
       setName('');
       setDescription('');
@@ -142,6 +147,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       setGroups(defaultGroups);
       setSections(defaultSections);
       setSectionsEnabled(false);
+      setDefaultCountryCode('RU');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `defaultGroups`/`defaultSections` when clearing `template` are read from that commit; language-only updates are handled in the next effect
   }, [template]);
@@ -255,6 +261,9 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       name: name.trim(),
       description: description || undefined,
       content: content.trim(),
+      default_country_code: /^[A-Z]{2}$/i.test(defaultCountryCode)
+        ? defaultCountryCode.toUpperCase()
+        : null,
       groups: groups.map((group, gIdx) => ({
         label: group.label.trim(),
         order: group.order ?? gIdx,
@@ -307,6 +316,16 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             onChange={(e) => setDescription(e.target.value)}
             multiline
             minRows={2}
+          />
+          <Typography variant="subtitle2" sx={{ mt: 1 }}>
+            {t('builder.defaultCountrySection')}
+          </Typography>
+          <ContractJurisdictionFormFields
+            countryCode={defaultCountryCode}
+            outputLanguage="ru"
+            onCountryChange={setDefaultCountryCode}
+            onOutputLanguageChange={() => {}}
+            showOutputLanguage={false}
           />
           <TextField
             label={t('builder.contentLabel')}

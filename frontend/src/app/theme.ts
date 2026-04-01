@@ -66,5 +66,31 @@ export const theme = createTheme({
         },
       },
     },
+    /**
+     * Portals to document.body + Strict Mode / route unmount / TipTap DOM updates
+     * cause NotFoundError on removeChild. Prefer rendering in-place where safe.
+     * @see ContractEditor toolbarTooltipSlots (same idea locally).
+     */
+    MuiTooltip: {
+      defaultProps: {
+        slotProps: {
+          popper: {
+            disablePortal: true,
+          },
+        },
+      },
+    },
+    /** Select / Menu attach to body by default; same race as Autocomplete Popper. */
+    MuiMenu: {
+      defaultProps: {
+        disablePortal: true,
+      },
+    },
+    /** Modals (upgrade, confirm) — avoid portal teardown fighting React commit. */
+    MuiDialog: {
+      defaultProps: {
+        disablePortal: true,
+      },
+    },
   },
 });

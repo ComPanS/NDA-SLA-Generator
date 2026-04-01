@@ -38,7 +38,12 @@ export const env = {
   neuroapiApiKey: process.env.NEUROAPI_API_KEY || '',
   neuroapiBaseUrl: process.env.NEUROAPI_BASE_URL || 'https://neuroapi.host/v1',
   neuroapiModel: process.env.NEUROAPI_MODEL || 'grok-4-fast-non-reasoning',
-  neuroapiTimeoutMs: Number(process.env.NEUROAPI_TIMEOUT || 30000),
+  /** LLM generation can exceed 30s for long contracts; align with frontend CONTRACT_LLM_REQUEST_TIMEOUT_MS. */
+  neuroapiTimeoutMs: Number(process.env.NEUROAPI_TIMEOUT || 180_000),
+  /** Retries per LLM call on timeout / 5xx / empty body (not on 4xx except 429). */
+  neuroapiMaxRetries: Math.max(1, Math.min(8, Number(process.env.NEUROAPI_MAX_RETRIES || 3))),
+  /** Base delay before retry attempt n: n * this value (ms). */
+  neuroapiRetryBaseDelayMs: Math.max(0, Number(process.env.NEUROAPI_RETRY_BASE_DELAY_MS || 2000)),
   // YandexGPT (закомментировано — используется NeuroAPI)
   // yandexApiKey: process.env.YANDEX_GPT_API_KEY || '',
   // yandexEndpoint:

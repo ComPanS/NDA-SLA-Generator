@@ -14,13 +14,6 @@
   "metricTemplates": "Plantillas",
   "metricClarifications": "Aclaraciones por documento",
   "clarificationsHint": "Contamos documentos únicos con aclaraciones; repeticiones en un mismo doc no gastan cupo extra.",
-  "featuresTitle": "Funciones incluidas",
-  "featPdf": "Exportar PDF",
-  "featDocx": "Exportar DOCX",
-  "featRisk": "Análisis de riesgos",
-  "featSections": "Secciones",
-  "featStatuses": "Estados",
-  "featSupport": "Soporte prioritario",
   "plansTitle": "Planes disponibles",
   "popular": "Más popular",
   "planCurrentBadge": "Plan actual",
@@ -31,10 +24,78 @@
   "btnUnavailable": "No disponible",
   "btnTryFree": "Probar gratis",
   "btnChoose": "Elegir plan",
+  "btnComingSoon": "Próximamente",
   "extraInfo": "Al alcanzar el límite puede comprar contratos extra a {{price}} RUB cada uno.",
   "cancelTitle": "¿Cancelar suscripción?",
   "cancelBody": "La suscripción sigue activa hasta el final del periodo pagado y luego pasa a gratuita.",
   "cancelConfirm": "Cancelar suscripción",
   "payOk": "¡Pago exitoso!",
-  "payWait": "El pago se procesa. Intente actualizar la página."
+  "payWait": "El pago se procesa. Intente actualizar la página.",
+  "currency": {
+    "label": "Moneda de visualización",
+    "helper": "Conversión orientativa (tipo de cambio Banco de Rusia). El pago solo en rublos (YooKassa)."
+  },
+  "paymentNonRub": "El pago en esta moneda estará disponible pronto. Cambie a rublos (₽) para suscribirse.",
+  "fxStale": "Tipo de cambio no disponible; importes en ₽.",
+  "plans": {
+    "freemium": {
+      "title": "Inicial",
+      "features": [
+        "3 contratos al mes",
+        "1 plantilla",
+        "Exportación PDF",
+        "1 aclaración con IA por documento"
+      ]
+    },
+    "basic": {
+      "title": "Profesional",
+      "features": [
+        "20 contratos al mes",
+        "3 plantillas",
+        "Exportación PDF y DOCX",
+        "5 aclaraciones con IA por documento",
+        "Secciones del contrato",
+        "Estados del contrato"
+      ]
+    },
+    "pro": {
+      "title": "Empresa",
+      "features": [
+        "Todo lo del plan Profesional",
+        "Contratos ilimitados",
+        "Plantillas ilimitadas",
+        "Exportación PDF y DOCX",
+        "Aclaraciones con IA ilimitadas",
+        "Revisión de riesgos legales",
+        "Secciones del contrato",
+        "Estados del contrato",
+        "Historial de versiones",
+        "Soporte prioritario"
+      ]
+    }
+  },
+  "upgradeModal": {
+    "limitReachedTitle": "Límite alcanzado",
+    "body": "Ha usado {{used}} de {{limit}} ({{unit}}) este mes. Para continuar:",
+    "limitContracts": "contratos",
+    "limitClarifications": "aclaraciones por documento",
+    "limitTemplates": "plantillas",
+    "buyOneTitle": "Comprar 1 contrato",
+    "buyOneSubtitle": "Compra única sin suscripción",
+    "upgradeTitle": "Suscribirse",
+    "planChip": "Límite: {{limit}}",
+    "singleUnavailableNonRub": "La compra única está disponible en ₽",
+    "subscribeUnavailableNonRub": "Las suscripciones están disponibles en ₽",
+    "recommended": "Recomendado",
+    "buy": "Comprar",
+    "orUpgrade": "o mejore su plan",
+    "discountFirstMonthOnly": "Descuento solo el primer mes",
+    "moreFeatures": "+ {{count}} ventajas más",
+    "choose": "Elegir",
+    "cancel": "Cancelar",
+    "unlimited": "Ilimitado",
+    "limitContractsLine": "Contratos: {{limit}}",
+    "limitClarificationsLine": "Aclaraciones: {{limit}}",
+    "limitTemplatesLine": "Plantillas: {{limit}}"
+  }
 }

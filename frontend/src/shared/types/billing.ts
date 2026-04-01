@@ -82,6 +82,14 @@ export interface PlansResponse {
   single_contract_price: number;
 }
 
+/** GET /billing/fx-rates — rates[currency] = foreign units per 1 RUB */
+export interface FxRatesResponse {
+  base: 'RUB';
+  rates: Record<'RUB' | 'USD' | 'EUR' | 'GBP' | 'THB', number>;
+  source: string;
+  updated_at: string;
+}
+
 export interface Payment {
   id: string;
   amount: number;

@@ -1,4 +1,5 @@
 export * from './client';
+export * from './publicApi';
 export * from './auth';
 export * from './templates';
 export * from './contracts';

@@ -14,13 +14,6 @@
   "metricTemplates": "Templates",
   "metricClarifications": "Clarifications per document",
   "clarificationsHint": "We count unique documents with clarifications; repeat clarifications in one doc do not use extra quota.",
-  "featuresTitle": "Included features",
-  "featPdf": "PDF export",
-  "featDocx": "DOCX export",
-  "featRisk": "Risk check",
-  "featSections": "Sections",
-  "featStatuses": "Statuses",
-  "featSupport": "Priority support",
   "plansTitle": "Available plans",
   "popular": "Most popular",
   "planCurrentBadge": "Current plan",
@@ -31,10 +24,78 @@
   "btnUnavailable": "Unavailable",
   "btnTryFree": "Try for free",
   "btnChoose": "Choose plan",
+  "btnComingSoon": "Coming soon",
   "extraInfo": "When you hit the contract limit you can buy extra contracts at {{price}} RUB each.",
   "cancelTitle": "Cancel subscription?",
   "cancelBody": "Your subscription stays active until the end of the paid period, then switches to free.",
   "cancelConfirm": "Cancel subscription",
   "payOk": "Payment successful!",
-  "payWait": "Payment is processing. Try refreshing the page."
+  "payWait": "Payment is processing. Try refreshing the page.",
+  "currency": {
+    "label": "Display currency",
+    "helper": "Approximate conversion (CBR rates). Checkout is in RUB only (YooKassa)."
+  },
+  "paymentNonRub": "Payments in this currency are coming soon. Switch to rubles (₽) to subscribe.",
+  "fxStale": "Exchange rates unavailable; amounts shown in ₽.",
+  "plans": {
+    "freemium": {
+      "title": "Starter",
+      "features": [
+        "3 contracts per month",
+        "1 template",
+        "PDF export",
+        "1 AI clarification per document"
+      ]
+    },
+    "basic": {
+      "title": "Professional",
+      "features": [
+        "20 contracts per month",
+        "3 templates",
+        "PDF and DOCX export",
+        "5 AI clarifications per document",
+        "Contract sections",
+        "Contract statuses"
+      ]
+    },
+    "pro": {
+      "title": "Business",
+      "features": [
+        "Everything in Professional",
+        "Unlimited contracts",
+        "Unlimited templates",
+        "PDF and DOCX export",
+        "Unlimited AI clarifications",
+        "Legal risk review",
+        "Contract sections",
+        "Contract statuses",
+        "Version history",
+        "Priority support"
+      ]
+    }
+  },
+  "upgradeModal": {
+    "limitReachedTitle": "Limit reached",
+    "body": "You used {{used}} of {{limit}} ({{unit}}) this month. To continue:",
+    "limitContracts": "contracts",
+    "limitClarifications": "clarifications per document",
+    "limitTemplates": "templates",
+    "buyOneTitle": "Buy 1 contract",
+    "buyOneSubtitle": "One-time purchase, no subscription",
+    "upgradeTitle": "Subscribe",
+    "planChip": "Limit: {{limit}}",
+    "singleUnavailableNonRub": "One-time purchase is available in ₽",
+    "subscribeUnavailableNonRub": "Subscriptions are available in ₽",
+    "recommended": "Recommended",
+    "buy": "Buy",
+    "orUpgrade": "or upgrade your plan",
+    "discountFirstMonthOnly": "Discount applies to the first month only",
+    "moreFeatures": "+ {{count}} more benefits",
+    "choose": "Choose",
+    "cancel": "Cancel",
+    "unlimited": "Unlimited",
+    "limitContractsLine": "Contracts: {{limit}}",
+    "limitClarificationsLine": "Clarifications: {{limit}}",
+    "limitTemplatesLine": "Templates: {{limit}}"
+  }
 }

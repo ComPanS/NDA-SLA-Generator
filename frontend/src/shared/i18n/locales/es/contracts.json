@@ -1,4 +1,26 @@
 {
+  "fieldsEditor": {
+    "title": "Campos del contrato",
+    "tooltip": "Complete los valores: aparecerán en el documento final y en las exportaciones.",
+    "addField": "Añadir campo",
+    "groupDefault": "Adicional",
+    "newField": "Campo nuevo",
+    "labels": {
+      "group": "Grupo",
+      "name": "Nombre del campo",
+      "value": "Valor"
+    }
+  },
+  "sectionsEditor": {
+    "title": "Secciones del contrato",
+    "tooltip": "La estructura importa: el orden y los títulos afectan la generación y la exportación. Si está desactivado, la IA elige las secciones.",
+    "addSection": "Añadir sección",
+    "newSectionTitle": "Sección {{n}}",
+    "labels": {
+      "title": "Título de la sección",
+      "order": "Orden"
+    }
+  },
   "sectionsDefault": [
     "Preámbulo",
     "Objeto del contrato",
@@ -27,6 +49,16 @@
     "titleHelper": "El título es solo para su comodidad; no afecta el texto generado. Los detalles para la IA van en “Descripción / parámetros”.",
     "templateLabel": "Plantilla",
     "noTemplate": "Sin plantilla",
+    "countryLabel": "País (jurisdicción)",
+    "outputLanguageLabel": "Idioma del texto generado",
+    "outputLanguageOption": {
+      "ru": "Ruso",
+      "en": "Inglés",
+      "es": "Español",
+      "th": "Tailandés"
+    },
+    "outputLanguageHelper": "Elija el idioma del contrato. Si el documento ya tiene otra etiqueta, también aparecerá en la lista.",
+    "outputLanguageError": "Indica una etiqueta válida (2–32 caracteres, p. ej. ru o zh-CN).",
     "promptLabel": "Descripción / parámetros",
     "promptPlaceholder": "Describa el contrato: partes, objeto, plazos, condiciones...",
     "promptError": "Complete la descripción / parámetros para la IA",

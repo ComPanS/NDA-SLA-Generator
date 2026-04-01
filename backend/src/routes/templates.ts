@@ -25,11 +25,18 @@ const groupInput = z.object({
   fields: z.array(fieldInput).default([]),
 });
 
+const isoCountry = z
+  .string()
+  .length(2)
+  .transform((s) => s.toUpperCase())
+  .refine((s) => /^[A-Z]{2}$/.test(s), 'Invalid country code');
+
 const templateInput = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   content: z.string().min(1),
   is_active: z.boolean().optional(),
+  default_country_code: isoCountry.optional().nullable(),
   groups: z.array(groupInput).default([]),
   sections: z.array(sectionInput).default([]),
 });
@@ -94,7 +101,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
-  const { name, description, content, is_active, groups } = parsed.data;
+  const { name, description, content, is_active, default_country_code, groups } = parsed.data;
 
   try {
     const template = await prisma.$transaction(async (tx) => {
@@ -104,6 +111,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
           description,
           content,
           isActive: is_active ?? true,
+          defaultCountryCode: default_country_code ?? null,
           createdById: req.userId,
         },
       });
@@ -173,7 +181,8 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
   const templateId = String(req.params.id);
-  const { name, description, content, is_active, groups, sections } = parsed.data;
+  const { name, description, content, is_active, default_country_code, groups, sections } =
+    parsed.data;
   const shouldReplaceGroups = Array.isArray(groups);
   const shouldReplaceSections = Array.isArray(sections);
 
@@ -192,6 +201,10 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
           name: name ?? existing.name,
           description: description ?? existing.description,
           content: content ?? existing.content,
+          defaultCountryCode:
+            default_country_code === undefined
+              ? existing.defaultCountryCode
+              : default_country_code,
           isActive: is_active ?? existing.isActive,
         },
       });

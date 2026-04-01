@@ -20,6 +20,7 @@ import {
   MenuItem,
   Tooltip,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import { Download, Edit, ArrowBack, HelpOutline, Lock } from '@mui/icons-material';
 import {
@@ -53,6 +54,11 @@ import { ContractSectionsEditor } from '@/features/contracts/components/Contract
 import { useUsage } from '@/features/billing/hooks/useBilling';
 import { AxiosError } from 'axios';
 import { icuLocaleFor } from '@/shared/i18n/icuLocale';
+import {
+  isValidOutputLanguageTag,
+  normalizeOutputLanguageTag,
+} from '@/shared/i18n/outputLanguageTag';
+import { ContractJurisdictionFormFields } from '@/features/contracts/components/ContractJurisdictionFormFields';
 
 const normalizeColumnsContent = (html: string) => {
   if (!html) return html;
@@ -118,6 +124,8 @@ export const ContractView = () => {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [limitError, setLimitError] = useState<LimitReachedError | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [refineCountry, setRefineCountry] = useState('RU');
+  const [refineOutputLang, setRefineOutputLang] = useState('ru');
 
   // Загружаем документ
   const { data, isLoading, error } = useContract(id || '');
@@ -226,6 +234,12 @@ export const ContractView = () => {
       );
       setSectionsEnabled(document.sections.length > 0);
     }
+    if (document?.jurisdiction_country) {
+      setRefineCountry(document.jurisdiction_country);
+    }
+    if (document?.output_language) {
+      setRefineOutputLang(normalizeOutputLanguageTag(document.output_language));
+    }
   }, [document, selectedVersionId]);
 
   useEffect(() => {
@@ -237,10 +251,19 @@ export const ContractView = () => {
 
   const handleRefine = () => {
     if (!id || !refinePrompt.trim()) return;
+    if (!isValidOutputLanguageTag(refineOutputLang)) {
+      showSnackbar(t('new.outputLanguageError'));
+      return;
+    }
     setLimitError(null);
 
     refineContract(
-      { prompt: refinePrompt, risk_check: hasRiskCheckAccess ? riskCheck : false },
+      {
+        prompt: refinePrompt,
+        risk_check: hasRiskCheckAccess ? riskCheck : false,
+        country_code: refineCountry,
+        output_language: refineOutputLang,
+      },
       {
         onSuccess: (data) => {
           const newVersion = data.document.versions[data.document.versions.length - 1];
@@ -250,6 +273,12 @@ export const ContractView = () => {
             setCurrentContent(normalized);
             lastSavedRef.current = normalized;
             logColumnsClient('refine-success', normalized);
+          }
+          if (data.document.jurisdiction_country) {
+            setRefineCountry(data.document.jurisdiction_country);
+          }
+          if (data.document.output_language) {
+            setRefineOutputLang(normalizeOutputLanguageTag(data.document.output_language));
           }
           setRefinePrompt('');
           setShowRefineForm(false);
@@ -520,6 +549,7 @@ export const ContractView = () => {
                     label={t('view.statusLabel')}
                     onChange={(e) => handleStatusChange(e.target.value as DocumentStatus)}
                     disabled={isUpdatingStatus || !hasStatusesAccess}
+                    MenuProps={{ disablePortal: true }}
                   >
                     <MenuItem value="draft">{td('statusDraft')}</MenuItem>
                     <MenuItem value="final">{td('statusFinal')}</MenuItem>
@@ -563,6 +593,7 @@ export const ContractView = () => {
                   value={selectedVersion?.id || ''}
                   label={t('view.versionLabel')}
                   onChange={(e) => handleVersionChange(e.target.value as string)}
+                  MenuProps={{ disablePortal: true, PaperProps: { sx: { maxHeight: 280 } } }}
                 >
                   {versions.map((v) => (
                     <MenuItem key={v.id} value={v.id}>
@@ -645,6 +676,14 @@ export const ContractView = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {t('view.refineHint')}
                 </Typography>
+                <ContractJurisdictionFormFields
+                  countryCode={refineCountry}
+                  outputLanguage={refineOutputLang}
+                  onCountryChange={setRefineCountry}
+                  onOutputLanguageChange={setRefineOutputLang}
+                  outputLanguageError={!isValidOutputLanguageTag(refineOutputLang)}
+                  disabled={isRefining}
+                />
                 <TextField
                   fullWidth
                   multiline
@@ -687,6 +726,11 @@ export const ContractView = () => {
                     variant="contained"
                     onClick={handleRefine}
                     disabled={isRefining || !refinePrompt.trim()}
+                    startIcon={
+                      isRefining ? (
+                        <CircularProgress color="inherit" size={22} thickness={4} />
+                      ) : undefined
+                    }
                   >
                     {isRefining ? t('view.aiWorking') : t('view.applyChanges')}
                   </Button>

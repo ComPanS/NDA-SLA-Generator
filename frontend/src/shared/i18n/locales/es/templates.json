@@ -19,6 +19,7 @@
     "description": "Descripción",
     "contentLabel": "Texto base (prompt)",
     "contentHelper": "Se enviará a la IA junto con los campos rellenados",
+    "defaultCountrySection": "País predeterminado al crear un contrato con esta plantilla",
     "fieldGroups": "Grupos de campos",
     "addGroup": "Añadir grupo",
     "groupName": "Nombre del grupo",
