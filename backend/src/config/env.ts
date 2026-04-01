@@ -1,6 +1,18 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+/**
+ * По умолчанию dotenv НЕ перезаписывает уже заданные переменные (PM2, systemd, shell).
+ * Тогда значение SMTP_PORT из `.env` игнорируется, если оно уже есть в окружении процесса.
+ * `override: true` — файл `.env` рядом с приложением считаем источником правды для деплоя.
+ * Вернуть старое поведение: `DOTENV_NO_OVERRIDE=1` в окружении (не в `.env`).
+ */
+const dotenvNoOverride =
+  process.env.DOTENV_NO_OVERRIDE === '1' || process.env.DOTENV_NO_OVERRIDE === 'true';
+
+dotenv.config({
+  override: !dotenvNoOverride,
+  quiet: true,
+});
 
 function parseEnvBool(key: string, defaultValue: boolean): boolean {
   const v = process.env[key];
