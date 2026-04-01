@@ -110,12 +110,20 @@ export async function sendMail(options: { to: string; subject: string; text?: st
     });
   } catch (err) {
     const e = err as { code?: string; command?: string; message?: string };
+    const connectTimeout =
+      e.code === 'ETIMEDOUT' && (e.command === 'CONN' || e.command === undefined);
+    let hint: string | undefined;
+    if (connectTimeout) {
+      hint =
+        'TCP до SMTP не доходит (таймаут). Часто: VPS режет исходящие 465/587, ufw, неверный IP в SMTP_CONNECT_HOST. С сервера: nc -vz HOST 465 и nc -vz HOST 587. Попробуйте порт 587 + SMTP_SECURE=false; при блоке портов у провайдера — другой SMTP или API.';
+    }
     console.error('SMTP send failed', {
       host: env.smtpConnectHost || env.smtpHost,
       port: env.smtpPort,
       code: e.code,
       command: e.command,
       message: e.message,
+      ...(hint ? { hint } : {}),
     });
     throw err;
   }
