@@ -42,8 +42,8 @@ git clone git@github.com:your-username/NDA-SLA-Generator.git
 # Обновление системы
 sudo apt update && sudo apt upgrade -y
 
-# Установка Node.js 20+ (пропустите, если уже стоит >=20)
-curl -fsSL https://deb.nodesource.com/setup_23.x | sudo -E bash -
+# Установка Node.js LTS 20 или 22 (рекомендуется для production; пропустите, если уже стоит >=20)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Установка PostgreSQL
@@ -657,6 +657,9 @@ ls -la /var/www/nda-frontend
 
 ```
 cd /var/www/dogovorai
+
+# Зависимости: только каталоги `backend/` и `frontend/` содержат `package.json` и `package-lock.json`.
+# Не запускайте `npm audit fix` из корня клона без lockfile — будет ENOLOCK. Аудит/обновление lockfile делайте локально и коммитьте; на сервере после `git pull` — `npm ci`.
 
 # обновиться
 git pull

@@ -9,6 +9,7 @@ const TEST_PASSWORD = 'secret';
 const ADMIN_PATH = '/internal-admin';
 
 beforeAll(async () => {
+  process.env.DOTENV_NO_OVERRIDE = '1';
   process.env.NODE_ENV = 'test';
   process.env.ADMIN_LOGIN = TEST_LOGIN;
   process.env.ADMIN_PASSWORD = TEST_PASSWORD;

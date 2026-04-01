@@ -28,12 +28,15 @@
     "html-to-text": "^9.0.5",
     "htmlparser2": "^9.1.0",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.4",
     "pdf-lib": "^1.17.1",
     "prisma": "^6.19.2",
     "puppeteer": "^23.11.1",
     "sanitize-html": "^2.17.0",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "effect": "^3.20.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

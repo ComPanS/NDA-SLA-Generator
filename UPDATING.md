@@ -1,6 +1,10 @@
 
 cd /var/www/dogovorai
 
+# Зависимости: в репозитории два Node-проекта (`backend/`, `frontend/`), у каждого свой `package-lock.json`.
+# Команды `npm audit` / `npm audit fix` нужно запускать из этих каталогов, не из корня репозитория (иначе npm 10 выдаст ENOLOCK).
+# После `git pull` на сервере достаточно `npm ci` в `backend` и `frontend` — исправления уязвимостей должны быть уже в закоммиченных lockfile.
+
 # обновиться
 git pull 
 
