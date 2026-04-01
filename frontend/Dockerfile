@@ -1,15 +1,15 @@
 # Multi-stage build для оптимизации размера образа
 
-# Stage 1: Build
-FROM node:18-alpine AS builder
+# Stage 1: Build (bookworm — Chromium для post-build prerender лендинга)
+FROM node:18-bookworm-slim AS builder
 
 WORKDIR /app
 
 # Копируем package files
 COPY package*.json ./
 
-# Устанавливаем зависимости
-RUN npm ci
+# Зависимости + системные библиотеки для headless Chromium (Playwright)
+RUN npm ci && npx playwright install --with-deps chromium
 
 # Копируем исходный код
 COPY . .
@@ -17,8 +17,11 @@ COPY . .
 # Build аргументы
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+# Публичный URL сайта (canonical, og:url, prerender post-replace с preview origin)
+ARG VITE_SITE_URL
+ENV VITE_SITE_URL=$VITE_SITE_URL
 
-# Собираем приложение
+# Сборка Vite + prerender (/, /en, /es, /th)
 RUN npm run build
 
 # Stage 2: Production
