@@ -23,6 +23,11 @@ import {
 import { env } from '../config/env';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../lib/mailer';
 
+/** Avoid double slashes when joining paths (e.g. FRONTEND_URL=https://dogovarai.ru/). */
+function frontendBaseUrl(): string {
+  return env.frontendUrl.replace(/\/+$/, '');
+}
+
 const router = Router();
 
 const passwordSchema = z
@@ -392,8 +397,7 @@ router.post('/forgot-password', async (req, res) => {
     await prisma.passwordResetToken.create({
       data: { userId: user.id, tokenHash, expiresAt },
     });
-    const base = env.frontendUrl.replace(/\/$/, '');
-    const resetLink = `${base}/reset-password?token=${encodeURIComponent(token)}`;
+    const resetLink = `${frontendBaseUrl()}/reset-password?token=${encodeURIComponent(token)}`;
     await sendPasswordResetEmail(user.email, resetLink);
   } catch (error) {
     console.error('Forgot password error', error);
@@ -519,23 +523,18 @@ router.get('/google/url', (_req, res) => {
 router.get('/google/callback', async (req, res) => {
   const q = req.query;
   const oauthError = typeof q.error === 'string' ? q.error : undefined;
+  const fe = frontendBaseUrl();
   if (oauthError) {
-    return res.redirect(
-      `${env.frontendUrl}/login?error=${encodeURIComponent(oauthError)}`,
-    );
+    return res.redirect(`${fe}/login?error=${encodeURIComponent(oauthError)}`);
   }
 
   const code = typeof q.code === 'string' ? q.code : undefined;
   const state = typeof q.state === 'string' ? q.state : undefined;
   if (!code || !state) {
-    return res.redirect(
-      `${env.frontendUrl}/login?error=${encodeURIComponent('google_oauth_invalid')}`,
-    );
+    return res.redirect(`${fe}/login?error=${encodeURIComponent('google_oauth_invalid')}`);
   }
   if (!verifyGoogleState(state)) {
-    return res.redirect(
-      `${env.frontendUrl}/login?error=${encodeURIComponent('google_invalid_state')}`,
-    );
+    return res.redirect(`${fe}/login?error=${encodeURIComponent('google_invalid_state')}`);
   }
 
   try {
@@ -548,11 +547,9 @@ router.get('/google/callback', async (req, res) => {
       refresh_token: tokens.refresh_token,
       token_type: tokens.token_type,
     }).toString();
-    return res.redirect(302, `${env.frontendUrl}/oauth/google/callback#${hash}`);
+    return res.redirect(302, `${fe}/oauth/google/callback#${hash}`);
   } catch {
-    return res.redirect(
-      `${env.frontendUrl}/login?error=${encodeURIComponent('google_oauth_failed')}`,
-    );
+    return res.redirect(`${fe}/login?error=${encodeURIComponent('google_oauth_failed')}`);
   }
 });
 
