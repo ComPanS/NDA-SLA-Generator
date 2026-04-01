@@ -56,6 +56,11 @@ export interface YandexAuthUrlResponse {
   state: string;
 }
 
+export interface GoogleAuthUrlResponse {
+  url: string;
+  state: string;
+}
+
 export interface YandexCallbackPayload {
   code: string;
   state: string;

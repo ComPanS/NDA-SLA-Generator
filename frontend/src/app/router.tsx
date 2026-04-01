@@ -15,6 +15,7 @@ import { Admin } from '@/pages/Admin';
 import { Profile } from '@/pages/Profile';
 import { ADMIN_ROUTE } from '@/shared/constants';
 import { OAuthYandexCallback } from '@/pages/OAuthYandexCallback';
+import { OAuthGoogleCallback } from '@/pages/OAuthGoogleCallback';
 import { YandexSuggestToken } from '@/pages/YandexSuggestToken';
 import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
 import { TermsOfUse } from '@/pages/TermsOfUse';
@@ -88,6 +89,10 @@ const router = createBrowserRouter([
   {
     path: '/oauth/yandex/callback',
     element: <OAuthYandexCallback />,
+  },
+  {
+    path: '/oauth/google/callback',
+    element: <OAuthGoogleCallback />,
   },
   {
     path: '/oauth/yandex/token',

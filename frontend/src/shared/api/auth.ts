@@ -12,6 +12,7 @@ import {
   YandexAuthUrlResponse,
   YandexCallbackPayload,
   YandexSuggestPayload,
+  GoogleAuthUrlResponse,
 } from '@/shared/types';
 
 export const authApi = {
@@ -32,6 +33,11 @@ export const authApi = {
 
   yandexUrl: async (): Promise<YandexAuthUrlResponse> => {
     const response = await apiClient.get<YandexAuthUrlResponse>('/auth/yandex/url');
+    return response.data;
+  },
+
+  googleUrl: async (): Promise<GoogleAuthUrlResponse> => {
+    const response = await apiClient.get<GoogleAuthUrlResponse>('/auth/google/url');
     return response.data;
   },
 

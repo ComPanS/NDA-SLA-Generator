@@ -18,6 +18,7 @@ import { Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-mater
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useRegister, useAuthStore } from '@/features/auth/hooks/useAuth';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
+import { GoogleSignInButton } from '@/features/auth/components/GoogleSignInButton';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
 
@@ -238,6 +239,7 @@ export const Register = () => {
             </form>
 
             <YandexIdButton key={location.key} disabled={isPending} />
+            <GoogleSignInButton disabled={isPending} />
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">

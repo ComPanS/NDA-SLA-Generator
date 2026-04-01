@@ -12,13 +12,31 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useLogin, useAuthStore } from '@/features/auth/hooks/useAuth';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
+import { GoogleSignInButton } from '@/features/auth/components/GoogleSignInButton';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
 
+function googleOAuthErrorMessage(code: string): string {
+  switch (code) {
+    case 'access_denied':
+      return 'Вход через Google отменён';
+    case 'google_oauth_invalid':
+      return 'Некорректный ответ Google. Попробуйте снова.';
+    case 'google_invalid_state':
+      return 'Сессия авторизации устарела. Попробуйте войти через Google ещё раз.';
+    case 'google_oauth_failed':
+      return 'Не удалось завершить вход через Google. Попробуйте позже.';
+    default:
+      return `Ошибка входа через Google (${code})`;
+  }
+}
+
 export const Login = () => {
+  const [searchParams] = useSearchParams();
+  const oauthErrorCode = searchParams.get('error');
   const location = useLocation();
   const fromPasswordReset = Boolean(
     (location.state as { passwordReset?: boolean } | null)?.passwordReset,
@@ -54,6 +72,12 @@ export const Login = () => {
             {fromPasswordReset && (
               <Alert severity="success" sx={{ mb: 2 }}>
                 Пароль изменён. Войдите с новым паролем.
+              </Alert>
+            )}
+
+            {oauthErrorCode && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {googleOAuthErrorMessage(oauthErrorCode)}
               </Alert>
             )}
 
@@ -116,6 +140,7 @@ export const Login = () => {
             </form>
 
             <YandexIdButton key={location.key} disabled={isPending} />
+            <GoogleSignInButton disabled={isPending} />
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">

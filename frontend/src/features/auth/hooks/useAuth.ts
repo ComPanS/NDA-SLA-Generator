@@ -25,12 +25,12 @@ function readGuestDraft(): Record<string, unknown> | null {
   }
 }
 
-function clearGuestDraft() {
+export function clearGuestDraft() {
   if (typeof sessionStorage === 'undefined') return;
   sessionStorage.removeItem(GUEST_STORAGE_KEY);
 }
 
-function buildGuestImportPayload(): GuestImportRequest | null {
+export function buildGuestImportPayload(): GuestImportRequest | null {
   const draft = readGuestDraft();
   if (!draft) return null;
   const content = typeof draft.content === 'string' ? draft.content.trim() : '';

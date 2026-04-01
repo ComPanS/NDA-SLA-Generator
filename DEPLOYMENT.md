@@ -118,6 +118,12 @@ YANDEX_OAUTH_CLIENT_ID=
 YANDEX_OAUTH_CLIENT_SECRET=
 YANDEX_OAUTH_REDIRECT_URI=https://dogovarai.ru/oauth/yandex/callback
 
+# Google OAuth (редирект на API после логина; в Google Cloud → Authorized redirect URI)
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+GOOGLE_OAUTH_REDIRECT_URI=https://dogovarai.ru/api/auth/google/callback
+# GOOGLE_OAUTH_TIMEOUT_MS=30000
+
 # SMTP (email)
 SMTP_HOST=
 SMTP_PORT=587

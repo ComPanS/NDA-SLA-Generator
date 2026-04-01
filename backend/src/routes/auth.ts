@@ -12,6 +12,14 @@ import {
   verifyYandexState,
   YandexProfile,
 } from '../lib/yandexOauth';
+import {
+  buildGoogleAuthUrl,
+  createGoogleState,
+  exchangeGoogleCodeForToken,
+  fetchGoogleProfile,
+  verifyGoogleState,
+  GoogleProfile,
+} from '../lib/googleOauth';
 import { env } from '../config/env';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../lib/mailer';
 
@@ -103,6 +111,36 @@ async function upsertYandexUser(profile: YandexProfile) {
         data: {
           email: profile.email,
           yandexId: profile.id,
+          displayName: profile.displayName,
+          avatarUrl: profile.avatarUrl,
+          emailVerified: true,
+        },
+      });
+
+  return user;
+}
+
+async function upsertGoogleUser(profile: GoogleProfile) {
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ googleId: profile.id }, { email: profile.email }],
+    },
+  });
+
+  const user = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          googleId: existing.googleId ?? profile.id,
+          displayName: profile.displayName ?? existing.displayName,
+          avatarUrl: profile.avatarUrl ?? existing.avatarUrl,
+          emailVerified: true,
+        },
+      })
+    : await prisma.user.create({
+        data: {
+          email: profile.email,
+          googleId: profile.id,
           displayName: profile.displayName,
           avatarUrl: profile.avatarUrl,
           emailVerified: true,
@@ -465,6 +503,56 @@ router.post('/yandex/suggest', async (req, res) => {
     return res.json({ ...tokenPair(user.id), email_verified: true });
   } catch (error) {
     return res.status(400).json({ detail: (error as Error).message });
+  }
+});
+
+router.get('/google/url', (_req, res) => {
+  try {
+    const state = createGoogleState();
+    const url = buildGoogleAuthUrl(state);
+    return res.json({ url, state });
+  } catch (error) {
+    return res.status(400).json({ detail: (error as Error).message });
+  }
+});
+
+router.get('/google/callback', async (req, res) => {
+  const q = req.query;
+  const oauthError = typeof q.error === 'string' ? q.error : undefined;
+  if (oauthError) {
+    return res.redirect(
+      `${env.frontendUrl}/login?error=${encodeURIComponent(oauthError)}`,
+    );
+  }
+
+  const code = typeof q.code === 'string' ? q.code : undefined;
+  const state = typeof q.state === 'string' ? q.state : undefined;
+  if (!code || !state) {
+    return res.redirect(
+      `${env.frontendUrl}/login?error=${encodeURIComponent('google_oauth_invalid')}`,
+    );
+  }
+  if (!verifyGoogleState(state)) {
+    return res.redirect(
+      `${env.frontendUrl}/login?error=${encodeURIComponent('google_invalid_state')}`,
+    );
+  }
+
+  try {
+    const accessToken = await exchangeGoogleCodeForToken(code);
+    const profile = await fetchGoogleProfile(accessToken);
+    const user = await upsertGoogleUser(profile);
+    const tokens = tokenPair(user.id);
+    const hash = new URLSearchParams({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_type: tokens.token_type,
+    }).toString();
+    return res.redirect(302, `${env.frontendUrl}/oauth/google/callback#${hash}`);
+  } catch {
+    return res.redirect(
+      `${env.frontendUrl}/login?error=${encodeURIComponent('google_oauth_failed')}`,
+    );
   }
 });
 

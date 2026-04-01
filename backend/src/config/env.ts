@@ -51,6 +51,10 @@ export const env = {
   yandexOauthClientId: process.env.YANDEX_OAUTH_CLIENT_ID || '',
   yandexOauthClientSecret: process.env.YANDEX_OAUTH_CLIENT_SECRET || '',
   yandexOauthRedirectUri: process.env.YANDEX_OAUTH_REDIRECT_URI || '',
+  googleOauthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+  googleOauthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
+  googleOauthRedirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || '',
+  googleOauthTimeoutMs: Number(process.env.GOOGLE_OAUTH_TIMEOUT_MS || 30000),
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   smtpHost: (process.env.SMTP_HOST || '').trim(),
   /** TCP target when DNS for SMTP_HOST is unreliable (IPv4/IPv6). TLS SNI defaults to SMTP_HOST. */
