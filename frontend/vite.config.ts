@@ -30,5 +30,19 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      chunkSizeWarningLimit: 900,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('@mui/icons-material')) return 'mui-icons';
+            if (id.includes('@mui') || id.includes('@emotion')) return 'mui';
+            if (id.includes('@tanstack')) return 'tanstack';
+            return 'vendor';
+          },
+        },
+      },
+    },
   };
 });

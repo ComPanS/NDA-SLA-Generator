@@ -6,6 +6,8 @@ import {
   RefreshTokenRequest,
   RegistrationResponse,
   ResendVerificationRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   VerifyEmailRequest,
   YandexAuthUrlResponse,
   YandexCallbackPayload,
@@ -50,5 +52,15 @@ export const authApi = {
 
   resendVerification: async (payload: ResendVerificationRequest): Promise<void> => {
     await apiClient.post('/auth/resend', payload);
+  },
+
+  requestPasswordReset: async (payload: ForgotPasswordRequest): Promise<{ ok: boolean }> => {
+    const response = await apiClient.post<{ ok: boolean }>('/auth/forgot-password', payload);
+    return response.data;
+  },
+
+  resetPassword: async (payload: ResetPasswordRequest): Promise<{ ok: boolean }> => {
+    const response = await apiClient.post<{ ok: boolean }>('/auth/reset-password', payload);
+    return response.data;
   },
 };

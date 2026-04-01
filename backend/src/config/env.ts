@@ -2,6 +2,15 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+function parseEnvBool(key: string, defaultValue: boolean): boolean {
+  const v = process.env[key];
+  if (v === undefined || v === '') return defaultValue;
+  const l = v.toLowerCase();
+  if (l === '0' || l === 'false' || l === 'no' || l === 'off') return false;
+  if (l === '1' || l === 'true' || l === 'yes' || l === 'on') return true;
+  return defaultValue;
+}
+
 const adminRouteRaw = process.env.ADMIN_ROUTE || '/internal-admin';
 
 export const env = {
@@ -32,13 +41,36 @@ export const env = {
   yandexOauthRedirectUri: process.env.YANDEX_OAUTH_REDIRECT_URI || '',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   smtpHost: process.env.SMTP_HOST || '',
+  /** TCP target when DNS for SMTP_HOST is unreliable (IPv4/IPv6). TLS SNI defaults to SMTP_HOST. */
+  smtpConnectHost: (process.env.SMTP_CONNECT_HOST || '').trim(),
+  /** Optional TLS servername (SNI). If unset and host is IP, Nodemailer uses SMTP_HOST. */
+  smtpTlsServername: (process.env.SMTP_TLS_SERVERNAME || '').trim(),
   smtpPort: Number(process.env.SMTP_PORT || 0),
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
   smtpFrom: process.env.SMTP_FROM || 'no-reply@example.com',
+  /** If set, overrides port-based default (465 → implicit TLS, else plain + STARTTLS on 587). */
+  smtpSecure:
+    process.env.SMTP_SECURE === undefined || process.env.SMTP_SECURE === ''
+      ? undefined
+      : parseEnvBool('SMTP_SECURE', false),
+  /**
+   * For STARTTLS: require TLS upgrade. Default true for port 587. Set false for Mailhog (1025) etc.
+   */
+  smtpRequireTls:
+    process.env.SMTP_REQUIRE_TLS === undefined || process.env.SMTP_REQUIRE_TLS === ''
+      ? undefined
+      : parseEnvBool('SMTP_REQUIRE_TLS', true),
+  smtpTlsRejectUnauthorized: parseEnvBool('SMTP_TLS_REJECT_UNAUTHORIZED', true),
+  smtpConnectionTimeoutMs: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 60_000),
+  /** Prefer A record over AAAA when resolving SMTP host (helps some EDNS / IPv6 timeouts). */
+  smtpDnsIpv4First: parseEnvBool('SMTP_DNS_IPV4_FIRST', false),
+  /** Nodemailer DNS resolve timeout (ms). Default 90s — Windows/EDNS sometimes needs more than 30s. */
+  smtpDnsTimeoutMs: Number(process.env.SMTP_DNS_TIMEOUT_MS || 90_000),
   verificationCodeTtlMinutes: Number(process.env.VERIFICATION_CODE_TTL_MINUTES || 15),
   verificationResendIntervalSeconds: Number(process.env.VERIFICATION_RESEND_INTERVAL_SECONDS || 60),
   verificationResendMaxPerHour: Number(process.env.VERIFICATION_RESEND_MAX_PER_HOUR || 3),
+  passwordResetTokenTtlMinutes: Number(process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES || 60),
   adminLogin: process.env.ADMIN_LOGIN || '',
   adminPassword: process.env.ADMIN_PASSWORD || '',
   adminRoute: adminRouteRaw.startsWith('/') ? adminRouteRaw : `/${adminRouteRaw}`,

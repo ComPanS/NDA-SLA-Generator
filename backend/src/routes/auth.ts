@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { prisma } from '../config/prisma';
 import { signToken, verifyToken } from '../lib/jwt';
@@ -12,7 +13,7 @@ import {
   YandexProfile,
 } from '../lib/yandexOauth';
 import { env } from '../config/env';
-import { sendVerificationEmail } from '../lib/mailer';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../lib/mailer';
 
 const router = Router();
 
@@ -34,6 +35,44 @@ const verifySchema = z.object({
 const resendSchema = z.object({
   email: z.string().email(),
 });
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: passwordSchema,
+});
+
+function hashPasswordResetToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+function generatePasswordResetToken(): string {
+  return randomBytes(32).toString('hex');
+}
+
+async function ensureCanRequestPasswordReset(userId: string) {
+  const lastHour = new Date(Date.now() - 60 * 60 * 1000);
+  const countLastHour = await prisma.passwordResetToken.count({
+    where: { userId, createdAt: { gte: lastHour } },
+  });
+  if (countLastHour >= env.verificationResendMaxPerHour) {
+    return 'too_many_requests';
+  }
+  const last = await prisma.passwordResetToken.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (
+    last &&
+    Date.now() - last.createdAt.getTime() < env.verificationResendIntervalSeconds * 1000
+  ) {
+    return 'cooldown';
+  }
+  return null;
+}
 
 function tokenPair(userId: string) {
   return {
@@ -281,6 +320,68 @@ router.post('/resend', async (req, res) => {
     console.error('Resend verification error', error);
     return res.status(500).json({ detail: 'Failed to send code' });
   }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ detail: 'Invalid payload' });
+  }
+  const { email } = parsed.data;
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user?.hashedPassword) {
+      return res.json({ ok: true });
+    }
+    const blocked = await ensureCanRequestPasswordReset(user.id);
+    if (blocked) {
+      return res.json({ ok: true });
+    }
+    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+    const token = generatePasswordResetToken();
+    const tokenHash = hashPasswordResetToken(token);
+    const expiresAt = new Date(
+      Date.now() + env.passwordResetTokenTtlMinutes * 60 * 1000,
+    );
+    await prisma.passwordResetToken.create({
+      data: { userId: user.id, tokenHash, expiresAt },
+    });
+    const base = env.frontendUrl.replace(/\/$/, '');
+    const resetLink = `${base}/reset-password?token=${encodeURIComponent(token)}`;
+    await sendPasswordResetEmail(user.email, resetLink);
+  } catch (error) {
+    console.error('Forgot password error', error);
+  }
+  return res.json({ ok: true });
+});
+
+router.post('/reset-password', async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const flat = parsed.error.flatten();
+    return res.status(400).json({ detail: flat.fieldErrors.password?.[0] || 'Invalid payload' });
+  }
+  const { token, password } = parsed.data;
+  const tokenHash = hashPasswordResetToken(token);
+  const record = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash },
+  });
+  if (!record) {
+    return res.status(400).json({ detail: 'Неверная или устаревшая ссылка' });
+  }
+  if (record.expiresAt.getTime() < Date.now()) {
+    await prisma.passwordResetToken.delete({ where: { id: record.id } });
+    return res.status(400).json({ detail: 'Ссылка для сброса истекла. Запросите новую.' });
+  }
+  const hashedPassword = await bcrypt.hash(password, 12);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { hashedPassword },
+    }),
+    prisma.passwordResetToken.deleteMany({ where: { userId: record.userId } }),
+  ]);
+  return res.json({ ok: true });
 });
 
 router.post('/refresh', async (req, res) => {

@@ -2,6 +2,8 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Landing } from '@/pages/Landing';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
+import { ForgotPassword } from '@/pages/ForgotPassword';
+import { ResetPassword } from '@/pages/ResetPassword';
 import { Dashboard } from '@/pages/Dashboard';
 import { NewContract } from '@/pages/NewContract';
 import { ContractView } from '@/pages/ContractView';
@@ -30,6 +32,14 @@ const router = createBrowserRouter([
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPassword />,
   },
   {
     path: '/verify-email',

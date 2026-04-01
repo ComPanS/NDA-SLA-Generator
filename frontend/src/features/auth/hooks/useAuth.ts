@@ -222,3 +222,20 @@ export const useResendVerification = () => {
     mutationFn: (email: string) => authApi.resendVerification({ email }),
   });
 };
+
+export const useRequestPasswordReset = () => {
+  return useMutation({
+    mutationFn: (email: string) => authApi.requestPasswordReset({ email }),
+  });
+};
+
+export const useResetPassword = () => {
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: (payload: { token: string; password: string }) => authApi.resetPassword(payload),
+    onSuccess: () => {
+      navigate('/login', { state: { passwordReset: true } });
+    },
+  });
+};

@@ -20,6 +20,9 @@ import { PageMeta } from '@/shared/components/PageMeta';
 
 export const Login = () => {
   const location = useLocation();
+  const fromPasswordReset = Boolean(
+    (location.state as { passwordReset?: boolean } | null)?.passwordReset,
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +50,12 @@ export const Login = () => {
             <Typography variant="h4" component="h1" gutterBottom align="center">
               Вход
             </Typography>
+
+            {fromPasswordReset && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Пароль изменён. Войдите с новым паролем.
+              </Alert>
+            )}
 
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -87,6 +96,12 @@ export const Login = () => {
                   ),
                 }}
               />
+
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <MuiLink component={Link} to="/forgot-password" variant="body2">
+                  Забыли пароль?
+                </MuiLink>
+              </Box>
 
               <Button
                 fullWidth
