@@ -1,0 +1,45 @@
+---
+description: Контекст репозитория ДоговорAI (NDA-SLA-Generator) — назначение, структура каталогов, где искать код и документацию
+alwaysApply: true
+---
+
+# ДоговорAI (NDA-SLA-Generator)
+
+## Что это за проект
+
+Веб-сервис **ДоговорAI**: AI-конструктор договоров (NDA, SLA и др.) под российский рынок. Шаблоны, настраиваемые поля/разделы, правки через промпты к LLM (YandexGPT и др.), экспорт DOCX/PDF, история документов, подписка/биллинг (ЮKassa), OAuth (в т.ч. Яндекс, Google).
+
+Репозиторий — **монорепозиторий**: отдельные приложения в `frontend/` и `backend/`.
+
+## Где что лежит
+
+| Путь | Назначение |
+|------|------------|
+| `frontend/` | React 18, TypeScript, Vite, MUI, React Query, Zustand. Dev: порт **5173**. |
+| `frontend/src/app/` | Провайдеры, роутер, тема |
+| `frontend/src/features/` | Фичи: `auth`, `contracts`, `templates`, `billing` и др. (каждая — hooks, components, иногда `store`) |
+| `frontend/src/shared/` | Общий код: `api/`, `components/`, `types/`, `hooks/`, `utils/` |
+| `frontend/src/pages/` | Страницы роутера |
+| `backend/` | Node.js **Express**, **Prisma**, PostgreSQL, JWT. Dev: порт **8001**. |
+| `backend/src/index.ts` | Точка входа сервера |
+| `backend/src/routes/` | HTTP-маршруты (`auth`, `contracts`, `templates`, `admin`, `billing`, …) |
+| `backend/src/middleware/` | Например `auth`, security headers |
+| `backend/src/lib/` | Интеграции (OAuth, YandexGPT/LLM, почта, ЮKassa, экспорт и т.д.) |
+| `backend/src/config/` | `env`, Prisma, подписки |
+| `backend/prisma/` | `schema.prisma` и миграции |
+| `docker-compose.yml` | Оркестрация контейнеров |
+
+## Документация в репо (уточнять детали здесь)
+
+- **Обзор продукта и стек**: корневой `README.md` (в таблице стек частично устаревший про Python/FastAPI — фактическая реализация бэкенда в `backend/` — **Express + Prisma**).
+- **Быстрый старт**: `QUICKSTART.md`
+- **Деплой**: `DEPLOYMENT.md`
+- **Задачи / бэклог**: `TASKS.md`
+- **Архитектура фронта (FSD)**: `frontend/ARCHITECTURE.md`
+
+## Переменные окружения
+
+- Бэкенд: `backend/.env` (шаблон `backend/.env.example`)
+- Фронт: `frontend/.env` при необходимости
+
+Перед изменениями в API или схеме БД сверяйся с существующими роутами и `prisma/schema.prisma`.
