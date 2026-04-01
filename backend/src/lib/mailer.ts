@@ -93,14 +93,32 @@ const transporter = hasCredentials ? nodemailer.createTransport(smtpTransportOpt
 
 export async function sendMail(options: { to: string; subject: string; text?: string; html?: string }) {
   if (!transporter) {
-    console.log('[DEV][Email fallback] Sending email', { ...options, from: env.smtpFrom });
+    const hint =
+      'Задайте SMTP_HOST и SMTP_PORT в .env (на сервере проверьте путь к .env и systemd WorkingDirectory).';
+    const payload = { ...options, from: env.smtpFrom };
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(`SMTP не настроен. ${hint}`);
+    }
+    console.warn('[Email] пропуск отправки (нет SMTP_HOST/SMTP_PORT)', payload);
     return;
   }
 
-  await transporter.sendMail({
-    from: env.smtpFrom,
-    ...options,
-  });
+  try {
+    await transporter.sendMail({
+      from: env.smtpFrom,
+      ...options,
+    });
+  } catch (err) {
+    const e = err as { code?: string; command?: string; message?: string };
+    console.error('SMTP send failed', {
+      host: env.smtpConnectHost || env.smtpHost,
+      port: env.smtpPort,
+      code: e.code,
+      command: e.command,
+      message: e.message,
+    });
+    throw err;
+  }
 }
 
 export async function sendVerificationEmail(to: string, code: string) {

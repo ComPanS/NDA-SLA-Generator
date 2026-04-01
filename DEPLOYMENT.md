@@ -4,7 +4,6 @@
 
 ## Требования
 
-
 ### Инфраструктура
 
 - PostgreSQL 15+ database
@@ -216,7 +215,6 @@ npm run build
 Цель: `dogovarai.ru` → фронтенд контейнера (порт 5173 наружу), `/api` → бэкенд контейнера (порт 8001 наружу). `VITE_API_URL` в сборке уже равен `/api`, поэтому достаточно path-based прокси.
 
 1. DNS (уже задано):
-
    - `A @` → `95.163.244.138`
    - `A www` → `95.163.244.138`
    - (опционально) `A api` → `95.163.244.138`, если захотите отдельный поддомен для API.
@@ -657,15 +655,11 @@ ls -la /var/www/nda-frontend
 - GitHub Issues: https://github.com/your-username/NDA-SLA-Generator/issues
 - Email: support@dogovarai.ru
 
-
-
-
-
 ```
 cd /var/www/dogovorai
 
 # обновиться
-git pull 
+git pull
 
 # backend deps
 cd backend

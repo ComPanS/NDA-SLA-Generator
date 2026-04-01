@@ -40,12 +40,17 @@ export const env = {
   yandexOauthClientSecret: process.env.YANDEX_OAUTH_CLIENT_SECRET || '',
   yandexOauthRedirectUri: process.env.YANDEX_OAUTH_REDIRECT_URI || '',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-  smtpHost: process.env.SMTP_HOST || '',
+  smtpHost: (process.env.SMTP_HOST || '').trim(),
   /** TCP target when DNS for SMTP_HOST is unreliable (IPv4/IPv6). TLS SNI defaults to SMTP_HOST. */
   smtpConnectHost: (process.env.SMTP_CONNECT_HOST || '').trim(),
   /** Optional TLS servername (SNI). If unset and host is IP, Nodemailer uses SMTP_HOST. */
   smtpTlsServername: (process.env.SMTP_TLS_SERVERNAME || '').trim(),
-  smtpPort: Number(process.env.SMTP_PORT || 0),
+  smtpPort: (() => {
+    const raw = process.env.SMTP_PORT;
+    if (raw === undefined || raw === '') return 0;
+    const n = Number(String(raw).trim());
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  })(),
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
   smtpFrom: process.env.SMTP_FROM || 'no-reply@example.com',

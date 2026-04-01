@@ -10,6 +10,7 @@ import noticeRoutes from './routes/notice';
 import profileRoutes from './routes/profile';
 import { startSubscriptionExpiryJob } from './lib/subscriptionCleanup';
 import { securityHeaders } from './middleware/securityHeaders';
+import { emailTransportConfigured } from './lib/mailer';
 
 export function createApp() {
   const app = express();
@@ -47,6 +48,11 @@ export function createApp() {
 
 if (process.env.NODE_ENV !== 'test') {
   const app = createApp();
+  if (process.env.NODE_ENV === 'production' && !emailTransportConfigured) {
+    console.warn(
+      '[SMTP] В production не заданы SMTP_HOST/SMTP_PORT — письма (регистрация, сброс пароля) отправляться не будут.',
+    );
+  }
   // Start daily expiry checker
   startSubscriptionExpiryJob();
   app.listen(env.port, () => {

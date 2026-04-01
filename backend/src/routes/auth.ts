@@ -127,7 +127,12 @@ async function createVerificationCode(email: string, hashedPassword: string) {
     data: { email, hashedPassword, code, expiresAt },
   });
 
-  await sendVerificationEmail(email, code);
+  try {
+    await sendVerificationEmail(email, code);
+  } catch (err) {
+    await prisma.emailVerificationCode.deleteMany({ where: { email } });
+    throw err;
+  }
 }
 
 async function ensureCanResend(email: string) {
@@ -169,6 +174,9 @@ router.post('/register', async (req, res) => {
     await createVerificationCode(email, hashedPassword);
   } catch (error) {
     console.error('Send verification email error', error);
+    return res.status(503).json({
+      detail: 'Не удалось отправить письмо с кодом. Проверьте SMTP на сервере и логи backend.',
+    });
   }
 
   return res
