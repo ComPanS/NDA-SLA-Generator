@@ -53,6 +53,10 @@ if (process.env.NODE_ENV !== 'test') {
       '[SMTP] В production не заданы SMTP_HOST/SMTP_PORT — письма (регистрация, сброс пароля) отправляться не будут.',
     );
   }
+  if (emailTransportConfigured) {
+    const tcpTarget = env.smtpConnectHost || env.smtpHost;
+    console.log(`[SMTP] активная цель: ${tcpTarget}:${env.smtpPort} (SMTP_HOST=${env.smtpHost})`);
+  }
   // Start daily expiry checker
   startSubscriptionExpiryJob();
   app.listen(env.port, () => {

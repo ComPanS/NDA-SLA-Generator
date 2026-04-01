@@ -1,4 +1,4 @@
-```
+
 cd /var/www/dogovorai
 
 # обновиться
@@ -23,4 +23,3 @@ cd ..
 
 # перезапуск процессов
 pm2 restart nda-backend --update-env
-```
