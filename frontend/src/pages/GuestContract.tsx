@@ -19,6 +19,7 @@ import {
   Chip,
 } from '@mui/material';
 import { HelpOutline, Download } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { Layout, PageMeta } from '@/shared/components';
 import { ContractFieldsEditor } from '@/features/contracts/components/ContractFieldsEditor';
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
@@ -30,31 +31,26 @@ import {
   useGuestClarifyContract,
 } from '@/features/contracts/hooks/useContracts';
 import { AxiosError } from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 
 const storageKey = 'guest-contract-state-v1';
 
-const defaultSections: ContractSectionInput[] = [
-  { title: 'Преамбула', order: 1 },
-  { title: 'Предмет договора', order: 2 },
-  { title: 'Права и обязанности сторон', order: 3 },
-  { title: 'Стоимость и порядок расчетов', order: 4 },
-  { title: 'Сроки выполнения и приемка', order: 5 },
-  { title: 'Ответственность сторон', order: 6 },
-  { title: 'Конфиденциальность', order: 7 },
-  { title: 'Форс-мажор', order: 8 },
-  { title: 'Порядок разрешения споров', order: 9 },
-  { title: 'Срок действия, изменение и расторжение', order: 10 },
-  { title: 'Заключительные положения', order: 11 },
-  { title: 'Реквизиты и подписи сторон', order: 12 },
-];
-
 export const GuestContract = () => {
-  const navigate = useNavigate();
+  const { t } = useTranslation('guest');
+  const { t: tc } = useTranslation('contracts');
+  const { t: tCommon } = useTranslation('common');
+  const navigate = useLocalizedNavigate();
+
+  const defaultFromI18n = useMemo((): ContractSectionInput[] => {
+    const titles = tc('sectionsDefault', { returnObjects: true }) as unknown;
+    if (!Array.isArray(titles)) return [];
+    return titles.map((title, i) => ({ title: String(title), order: i + 1 }));
+  }, [tc]);
+
   const [prompt, setPrompt] = useState('');
   const [riskCheck, setRiskCheck] = useState(false);
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
-  const [sections, setSections] = useState<ContractSectionInput[]>(defaultSections);
+  const [sections, setSections] = useState<ContractSectionInput[]>(defaultFromI18n);
   const [sectionsEnabled, setSectionsEnabled] = useState(false);
   const [content, setContent] = useState('');
   const [exportTitle, setExportTitle] = useState('');
@@ -71,8 +67,8 @@ export const GuestContract = () => {
   const { mutate: guestClarify, isPending: isClarifying } = useGuestClarifyContract();
 
   const derivedTitle = useMemo(
-    () => (prompt.trim() ? prompt.trim().slice(0, 80) : 'Гостевой договор'),
-    [prompt]
+    () => (prompt.trim() ? prompt.trim().slice(0, 80) : t('defaultTitle')),
+    [prompt, t]
   );
   const isPromptMissing = showValidation && !prompt.trim();
 
@@ -84,7 +80,7 @@ export const GuestContract = () => {
       setPrompt(parsed.prompt || '');
       setRiskCheck(!!parsed.riskCheck);
       setFields(parsed.fields || []);
-      setSections(parsed.sections?.length ? parsed.sections : defaultSections);
+      setSections(parsed.sections?.length ? parsed.sections : defaultFromI18n);
       setSectionsEnabled(!!parsed.sectionsEnabled);
       setContent(parsed.content || '');
       setExportTitle(parsed.exportTitle || parsed.title || '');
@@ -94,7 +90,7 @@ export const GuestContract = () => {
     } catch {
       /* ignore corrupted state */
     }
-  }, []);
+  }, [defaultFromI18n]);
 
   useEffect(() => {
     const snapshot = {
@@ -133,7 +129,7 @@ export const GuestContract = () => {
     setShowValidation(true);
 
     if (!prompt.trim()) {
-      setErrorMessage('Заполните обязательные поля.');
+      setErrorMessage(t('validationError'));
       return;
     }
 
@@ -150,7 +146,7 @@ export const GuestContract = () => {
           setContent(data.content);
           setExportTitle(data.title || derivedTitle);
           setRiskSummary(data.risk_assessment || null);
-          setSuccessMessage('Документ сгенерирован. Можно отредактировать и экспортировать.');
+          setSuccessMessage(t('success'));
           setShowValidation(false);
           setIsGenerated(true);
           setIsClarified(false);
@@ -160,10 +156,8 @@ export const GuestContract = () => {
           const detail =
             err.response?.data?.detail ||
             err.message ||
-            'Не удалось создать договор. Попробуйте позже.';
-          setErrorMessage(
-            typeof detail === 'string' ? detail : 'Не удалось создать договор. Попробуйте позже.'
-          );
+            t('generateError');
+          setErrorMessage(typeof detail === 'string' ? detail : t('generateError'));
         },
       }
     );
@@ -181,8 +175,8 @@ export const GuestContract = () => {
           const detail =
             err.response?.data?.detail ||
             err.message ||
-            `Не удалось экспортировать в ${format.toUpperCase()}`;
-          setErrorMessage(typeof detail === 'string' ? detail : 'Ошибка экспорта');
+            `${t('exportError')} ${format.toUpperCase()}`;
+          setErrorMessage(typeof detail === 'string' ? detail : t('exportError'));
         },
       }
     );
@@ -191,16 +185,17 @@ export const GuestContract = () => {
   return (
     <Layout maxWidth="md">
       <PageMeta
-        title="Создание договора без регистрации — ДоговорAI"
-        description="Сгенерируйте тестовый договор бесплатно и без регистрации: NDA, SLA и другие шаблоны."
+        title={t('metaTitle')}
+        description={t('metaDesc')}
         path="/guest-contract"
+        siteName={tCommon('brand.name')}
       />
       <Box sx={{ mt: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Бесплатный договор без регистрации
+          {t('title')}
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-          Доступ сохраняется в этой вкладке до её закрытия.
+          {t('hint')}
         </Typography>
 
         {errorMessage && (
@@ -218,23 +213,23 @@ export const GuestContract = () => {
           <Card>
             <CardContent>
               <form onSubmit={handleSubmit}>
-              <Tooltip title="Шаблоны доступны после регистрации или входа">
+              <Tooltip title={t('templateDisabled')}>
                 <span>
                   <FormControl fullWidth margin="normal" disabled>
-                    <InputLabel>Шаблон</InputLabel>
-                    <Select value="" label="Шаблон">
-                      <MenuItem value="">Недоступно для гостей</MenuItem>
+                    <InputLabel>{t('templateLabel')}</InputLabel>
+                    <Select value="" label={t('templateLabel')}>
+                      <MenuItem value="">{t('templateGuest')}</MenuItem>
                     </Select>
                   </FormControl>
                 </span>
               </Tooltip>
               <Typography variant="caption" color="text.secondary">
-                Шаблоны станут доступны после регистрации или входа в аккаунт.
+                {t('templateNote')}
               </Typography>
 
               <TextField
                 fullWidth
-                label="Описание / Параметры"
+                label={tc('new.promptLabel')}
                 value={prompt}
                 onChange={(e) => {
                   setPrompt(e.target.value);
@@ -246,11 +241,9 @@ export const GuestContract = () => {
                 margin="normal"
                 multiline
                 rows={6}
-                placeholder="Опишите детали договора: стороны, предмет, сроки, условия..."
+                placeholder={tc('new.promptPlaceholder')}
                 helperText={
-                  isPromptMissing
-                    ? 'Заполните обязательное поле'
-                    : 'Чем подробнее описание, тем точнее будет сгенерирован документ'
+                  isPromptMissing ? t('promptRequired') : tc('new.promptHelper')
                 }
                 error={isPromptMissing}
                 sx={
@@ -272,8 +265,8 @@ export const GuestContract = () => {
                 }
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
-                    <span>Проверить на юридические риски</span>
-                    <Tooltip title="Включите, чтобы AI оценил текст договора и подсветил потенциальные юридические риски.">
+                    <span>{tc('new.riskCheck')}</span>
+                    <Tooltip title={tc('new.riskTooltipNew')}>
                       <HelpOutline fontSize="small" color="action" />
                     </Tooltip>
                   </Stack>
@@ -290,9 +283,9 @@ export const GuestContract = () => {
                       alignItems="center"
                       sx={{ mb: 1 }}
                     >
-                      <Typography variant="h6">Юридические риски</Typography>
+                      <Typography variant="h6">{t('risksTitle')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Получено при генерации
+                        {t('risksFromGen')}
                       </Typography>
                     </Stack>
                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
@@ -319,7 +312,7 @@ export const GuestContract = () => {
                             onChange={(e) => setSectionsEnabled(e.target.checked)}
                           />
                         }
-                        label="Включить"
+                        label={tc('new.enable')}
                       />
                     }
                   />
@@ -329,8 +322,8 @@ export const GuestContract = () => {
                       <Stack spacing={1}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between">
                           <Stack direction="row" alignItems="center" spacing={1}>
-                            <Typography variant="h6">Разделы договора</Typography>
-                            <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                            <Typography variant="h6">{tc('new.sectionsTitle')}</Typography>
+                            <Tooltip title={tc('new.sectionsTooltip')}>
                               <HelpOutline fontSize="small" color="action" />
                             </Tooltip>
                           </Stack>
@@ -341,11 +334,11 @@ export const GuestContract = () => {
                                 onChange={(e) => setSectionsEnabled(e.target.checked)}
                               />
                             }
-                            label="Включить"
+                            label={tc('new.enable')}
                           />
                         </Stack>
                         <Typography variant="body2" color="text.secondary">
-                          Разделы будут подобраны автоматически.
+                          {t('sectionsAuto')}
                         </Typography>
                       </Stack>
                     </CardContent>
@@ -361,7 +354,7 @@ export const GuestContract = () => {
                   disabled={isGenerating}
                   fullWidth
                 >
-                  {isGenerating ? 'Генерация...' : 'Сгенерировать договор'}
+                  {isGenerating ? t('generatingShort') : tc('new.generate')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -370,7 +363,7 @@ export const GuestContract = () => {
                   onClick={() => {
                     setPrompt('');
                     setFields([]);
-                    setSections(defaultSections);
+                    setSections(defaultFromI18n);
                     setSectionsEnabled(false);
                     setContent('');
                     setExportTitle('');
@@ -383,7 +376,7 @@ export const GuestContract = () => {
                     setClarifyPrompt('');
                   }}
                 >
-                  Очистить
+                  {t('clear')}
                 </Button>
               </Box>
               </form>
@@ -394,10 +387,7 @@ export const GuestContract = () => {
         {content && (
           <>
             <Alert severity="info" sx={{ mt: 3 }}>
-              <Typography variant="body2">
-                Договор сохраняется только в этой вкладке браузера. Скачайте файл, чтобы не потерять
-                результат.
-              </Typography>
+              <Typography variant="body2">{t('browserOnly')}</Typography>
             </Alert>
 
           <Card sx={{ mt: 3 }} variant="outlined">
@@ -411,21 +401,21 @@ export const GuestContract = () => {
                 >
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="h6" gutterBottom>
-                      Сгенерированный договор
+                      {t('generatedTitle')}
                     </Typography>
                     <TextField
                       fullWidth
-                      label="Название"
+                      label={t('exportName')}
                       value={exportTitle || derivedTitle}
                       onChange={(e) => setExportTitle(e.target.value)}
-                      helperText="Название попадёт в экспорт и сохранится в этой сессии"
+                      helperText={t('exportNameHelp')}
                       size="small"
                       sx={{ maxWidth: 420 }}
                     />
                     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                      <Chip label="Гостевой режим" size="small" color="default" />
-                      <Tooltip title="Сохранение, версии и совместная работа доступны после регистрации">
-                        <Chip label="Не сохранено" size="small" variant="outlined" />
+                      <Chip label={t('chipGuest')} size="small" color="default" />
+                      <Tooltip title={t('chipNotSavedTip')}>
+                        <Chip label={t('chipNotSaved')} size="small" variant="outlined" />
                       </Tooltip>
                     </Stack>
                   </Box>
@@ -435,14 +425,14 @@ export const GuestContract = () => {
                       onClick={() => navigate('/login')}
                       size="small"
                     >
-                      Войти
+                      {t('ctaLogin')}
                     </Button>
                     <Button
                       variant="contained"
                       onClick={() => navigate('/register')}
                       size="small"
                     >
-                      Зарегистрироваться
+                      {t('ctaRegister')}
                     </Button>
                   </Stack>
                 </Stack>
@@ -454,7 +444,7 @@ export const GuestContract = () => {
                     disabled={isExporting}
                     onClick={() => handleExport('docx')}
                   >
-                    Скачать DOCX
+                    {t('downloadDocx')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -462,10 +452,10 @@ export const GuestContract = () => {
                     disabled={isExporting}
                     onClick={() => handleExport('pdf')}
                   >
-                    Скачать PDF
+                    {t('downloadPdf')}
                   </Button>
                   <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                    Чтобы сохранить договор в аккаунт, войдите или зарегистрируйтесь. В гостевом режиме файл не сохраняется — скачайте, чтобы не потерять его.
+                    {t('accountHint')}
                   </Typography>
                 </Stack>
 
@@ -478,9 +468,9 @@ export const GuestContract = () => {
                         alignItems="center"
                         sx={{ mb: 1 }}
                       >
-                        <Typography variant="h6">Юридические риски</Typography>
+                        <Typography variant="h6">{t('risksTitle')}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Получено при генерации
+                          {t('risksFromGen')}
                         </Typography>
                       </Stack>
                       <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
@@ -494,15 +484,15 @@ export const GuestContract = () => {
                   <Card variant="outlined">
                     <CardContent>
                       <Stack spacing={1}>
-                        <Typography variant="subtitle1">Уточнить с помощью AI (1 раз)</Typography>
+                        <Typography variant="subtitle1">{t('clarifyTitle')}</Typography>
                         <TextField
                           fullWidth
-                          label="Что изменить или уточнить?"
+                          label={t('clarifyLabel')}
                           value={clarifyPrompt}
                           onChange={(e) => setClarifyPrompt(e.target.value)}
                           multiline
                           rows={3}
-                          placeholder="Например: сократи раздел оплаты, добавь пункт о конфиденциальности..."
+                          placeholder={t('clarifyPlaceholder')}
                         />
                         <Stack direction="row" spacing={1}>
                           <Button
@@ -526,19 +516,19 @@ export const GuestContract = () => {
                                     setRiskSummary(data.risk_assessment || null);
                                     setIsClarified(true);
                                     setClarifyPrompt('');
-                                    setSuccessMessage('Уточнение применено. Можно скачать обновлённый файл.');
+                                    setSuccessMessage(t('clarifySuccess'));
                                   },
                                   onError: () => {
-                                    setErrorMessage('Не удалось применить уточнение. Попробуйте позже.');
+                                    setErrorMessage(t('clarifyError'));
                                   },
                                 }
                               );
                             }}
                           >
-                            {isClarifying ? 'Применяем...' : 'Применить уточнение'}
+                            {isClarifying ? t('clarifyApplying') : t('clarifyApply')}
                           </Button>
                           <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                            Доступно один раз в гостевом режиме
+                            {t('clarifyOnceHint')}
                           </Typography>
                         </Stack>
                       </Stack>
@@ -557,7 +547,7 @@ export const GuestContract = () => {
                       setSuccessMessage(null);
                     }}
                   >
-                    Создать заново
+                    {t('createAgain')}
                   </Button>
                 </Stack>
               </Stack>

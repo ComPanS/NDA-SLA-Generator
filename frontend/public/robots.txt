@@ -1,11 +1,36 @@
 User-agent: *
 Allow: /
 
-# Block non-public and sensitive areas
+# Block non-public and sensitive areas (unprefixed Russian URLs)
 Disallow: /dashboard
 Disallow: /billing
 Disallow: /profile
 Disallow: /contract/
 Disallow: /templates
+Disallow: /new-contract
+Disallow: /verify-email
+
+# Same logical paths with locale prefix
+Disallow: /en/dashboard
+Disallow: /en/billing
+Disallow: /en/profile
+Disallow: /en/contract/
+Disallow: /en/templates
+Disallow: /en/new-contract
+Disallow: /en/verify-email
+Disallow: /es/dashboard
+Disallow: /es/billing
+Disallow: /es/profile
+Disallow: /es/contract/
+Disallow: /es/templates
+Disallow: /es/new-contract
+Disallow: /es/verify-email
+Disallow: /th/dashboard
+Disallow: /th/billing
+Disallow: /th/profile
+Disallow: /th/contract/
+Disallow: /th/templates
+Disallow: /th/new-contract
+Disallow: /th/verify-email
 
 Sitemap: https://dogovarai.ru/sitemap.xml

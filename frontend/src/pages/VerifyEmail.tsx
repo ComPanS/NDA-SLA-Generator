@@ -9,13 +9,19 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '@/shared/components';
+import { PageMeta } from '@/shared/components/PageMeta';
 import { useAuthStore, useResendVerification, useVerifyEmail } from '@/features/auth/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export const VerifyEmail = () => {
+  const { t } = useTranslation('auth');
+  const { t: tc } = useTranslation('common');
+  const localizedPath = useLocalizedPath();
   const { pendingEmail } = useAuthStore();
   const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(0);
@@ -33,7 +39,7 @@ export const VerifyEmail = () => {
   const email = useMemo(() => pendingEmail || '', [pendingEmail]);
 
   if (!email) {
-    return <Navigate to="/register" replace />;
+    return <Navigate to={localizedPath('/register')} replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -43,7 +49,7 @@ export const VerifyEmail = () => {
       { email, code },
       {
         onError: () => {
-          setError('Неверный или просроченный код. Попробуйте ещё раз.');
+          setError(t('verify.verifyError'));
         },
       },
     );
@@ -53,23 +59,27 @@ export const VerifyEmail = () => {
     setError(null);
     resendMutation.mutate(email, {
       onSuccess: () => setCooldown(RESEND_COOLDOWN_SECONDS),
-      onError: () => setError('Не удалось отправить код. Попробуйте позже.'),
+      onError: () => setError(t('verify.resendError')),
     });
   };
 
   return (
     <Layout maxWidth="sm">
+      <PageMeta
+        title={t('verify.metaTitle')}
+        description={t('verify.metaDescription')}
+        siteName={tc('brand.name')}
+      />
       <Box sx={{ mt: 8 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Stack spacing={3}>
               <Stack spacing={1}>
                 <Typography variant="h4" component="h1">
-                  Подтверждение email
+                  {t('verify.title')}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Мы отправили код подтверждения на {email}. Введите его ниже, чтобы завершить
-                  регистрацию.
+                  {t('verify.sentTo', { email })}
                 </Typography>
               </Stack>
 
@@ -82,7 +92,7 @@ export const VerifyEmail = () => {
               <form onSubmit={handleSubmit}>
                 <Stack spacing={2}>
                   <TextField
-                    label="Код из письма"
+                    label={t('verify.codeLabel')}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     inputMode="numeric"
@@ -95,7 +105,7 @@ export const VerifyEmail = () => {
                     size="large"
                     disabled={verifyMutation.isPending}
                   >
-                    {verifyMutation.isPending ? 'Проверяем...' : 'Подтвердить'}
+                    {verifyMutation.isPending ? t('verify.submitting') : t('verify.submit')}
                   </Button>
                 </Stack>
               </form>
@@ -106,7 +116,9 @@ export const VerifyEmail = () => {
                   onClick={handleResend}
                   disabled={resendMutation.isPending || cooldown > 0}
                 >
-                  {cooldown > 0 ? `Отправить снова через ${cooldown} c` : 'Отправить код ещё раз'}
+                  {cooldown > 0
+                    ? t('verify.resendWait', { seconds: cooldown })
+                    : t('verify.resend')}
                 </Button>
               </Stack>
             </Stack>

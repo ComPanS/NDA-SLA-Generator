@@ -1,9 +1,11 @@
 import { Button, Stack, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '@/shared/components';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 
 export const NotFound = () => {
-  const navigate = useNavigate();
+  const { t } = useTranslation('errors');
+  const navigate = useLocalizedNavigate();
 
   return (
     <Layout maxWidth="sm">
@@ -11,12 +13,12 @@ export const NotFound = () => {
         <Typography variant="h3" component="h1">
           404
         </Typography>
-        <Typography variant="h5">Страница не найдена</Typography>
+        <Typography variant="h5">{t('notFound.title')}</Typography>
         <Typography variant="body2" color="text.secondary">
-          Такой страницы нет или она была перемещена.
+          {t('notFound.hint')}
         </Typography>
         <Button variant="contained" onClick={() => navigate('/')}>
-          На главную
+          {t('notFound.home')}
         </Button>
       </Stack>
     </Layout>

@@ -1,0 +1,18 @@
+{
+  "metaTitle": "Perfil | ContractAI",
+  "metaDesc": "Su perfil y cuenta",
+  "title": "Perfil",
+  "loading": "Cargando perfil...",
+  "loadError": "No se pudo cargar el perfil",
+  "emailVerified": "Email verificado",
+  "emailNotVerified": "Email no verificado",
+  "plan": "Plan: {{plan}}",
+  "noSubscription": "Sin suscripción",
+  "created": "Cuenta creada: {{date}}",
+  "deleteSection": "Eliminar cuenta",
+  "deleteHint": "Elimina su cuenta, documentos, plantillas, pagos y suscripciones activas. No se puede deshacer.",
+  "deleteBtn": "Eliminar cuenta",
+  "confirmTitle": "¿Eliminar cuenta?",
+  "confirmMessage": "Eliminaremos su perfil, documentos, plantillas e historial de pagos. No se puede deshacer.",
+  "confirm": "Eliminar"
+}

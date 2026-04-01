@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
@@ -18,7 +19,9 @@ import {
 } from '@/features/landing/sections';
 
 export const Landing = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
+  const { t } = useTranslation('landing');
+  const { t: tc } = useTranslation('common');
   const { isAuthenticated } = useAuthStore();
   const { data: plansData, isLoading: plansLoading } = useQuery({
     queryKey: ['landing', 'plans'],
@@ -44,9 +47,10 @@ export const Landing = () => {
   return (
     <Layout fullWidth>
       <PageMeta
-        title="AI-конструктор договоров онлайн — создать NDA, SLA, оферты за 2 минуты"
-        description="Создавайте договоры онлайн с помощью AI: NDA, SLA, подряды и оферты. Готовый документ за 2 минуты, экспорт в DOCX и PDF."
-        keywords="AI конструктор договоров, генератор договоров, создание договоров онлайн, договор с ИИ, юридические документы онлайн, генератор NDA, генератор SLA, шаблон договора подряда, договор оказания услуг, публичная оферта, договор для фрилансера, договор с самозанятым, договор ИП с физлицом, автоматическое создание договоров, онлайн генератор контрактов"
+        title={t('meta.title')}
+        description={t('meta.description')}
+        keywords={t('meta.keywords')}
+        siteName={tc('brand.name')}
       />
 
       <HeroSection contractsTotal={contractsTotal} onPrimary={handlePrimary} onGuest={handleGuest} />

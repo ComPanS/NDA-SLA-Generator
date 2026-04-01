@@ -1,0 +1,32 @@
+{
+  "brand": {
+    "name": "ContractAI"
+  },
+  "nav": {
+    "howItWorks": "Cómo funciona",
+    "pricing": "Precios",
+    "reviews": "Reseñas",
+    "faq": "FAQ"
+  },
+  "header": {
+    "dashboard": "Panel",
+    "templates": "Plantillas",
+    "billing": "Suscripción",
+    "profile": "Perfil",
+    "newContract": "Nuevo contrato",
+    "logout": "Salir",
+    "login": "Iniciar sesión",
+    "createContract": "Crear contrato",
+    "guest": "Sin registro"
+  },
+  "footer": {
+    "tagline": "Constructor de contratos con IA para autónomos, freelancers y pymes. Protege tu posición en unos minutos sin abogado.",
+    "disclaimer": "El servicio ayuda a redactar documentos, no sustituye asesoramiento jurídico. La responsabilidad del texto final es tuya.",
+    "navTitle": "Navegación",
+    "supportTitle": "Soporte",
+    "privacy": "Política de privacidad",
+    "terms": "Términos de uso",
+    "copyright": "Todos los derechos reservados.",
+    "language": "Idioma"
+  }
+}

@@ -2,13 +2,14 @@ import { Navigate } from 'react-router-dom';
 import { ReactNode } from 'react';
 import { authStore } from '@/features/auth/store/authStore';
 import { CircularProgress, Box } from '@mui/material';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  // Subscribe to both values from the same store
+  const loginPath = useLocalizedPath()('/login');
   const hasHydrated = authStore((state) => state._hasHydrated);
   const isAuthenticated = authStore((state) => state.isAuthenticated);
 
@@ -29,7 +30,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   return <>{children}</>;

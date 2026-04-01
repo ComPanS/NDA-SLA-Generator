@@ -1,0 +1,7 @@
+{
+  "notFound": {
+    "title": "Página no encontrada",
+    "hint": "Esta página no existe o se ha movido.",
+    "home": "Volver al inicio"
+  }
+}

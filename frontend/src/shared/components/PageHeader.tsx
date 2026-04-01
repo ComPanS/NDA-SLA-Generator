@@ -1,6 +1,7 @@
 import { Box, Typography, Breadcrumbs, Link as MuiLink } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { ReactNode } from 'react';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 
 interface Breadcrumb {
   label: string;
@@ -15,6 +16,8 @@ interface PageHeaderProps {
 }
 
 export const PageHeader = ({ title, subtitle, breadcrumbs, action }: PageHeaderProps) => {
+  const localizedPath = useLocalizedPath();
+
   return (
     <Box sx={{ mb: 4 }}>
       {breadcrumbs && breadcrumbs.length > 0 && (
@@ -24,7 +27,7 @@ export const PageHeader = ({ title, subtitle, breadcrumbs, action }: PageHeaderP
               <MuiLink
                 key={index}
                 component={Link}
-                to={crumb.path}
+                to={localizedPath(crumb.path)}
                 underline="hover"
                 color="inherit"
               >

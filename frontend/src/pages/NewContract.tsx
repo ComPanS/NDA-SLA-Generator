@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -19,7 +20,8 @@ import {
   Chip,
   Snackbar,
 } from '@mui/material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 import {
   Layout,
   ProtectedRoute,
@@ -39,23 +41,10 @@ import { AxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/store/authStore';
 
-const defaultSections: ContractSectionInput[] = [
-  { title: 'Преамбула', order: 1 },
-  { title: 'Предмет договора', order: 2 },
-  { title: 'Права и обязанности сторон', order: 3 },
-  { title: 'Стоимость и порядок расчетов', order: 4 },
-  { title: 'Сроки выполнения и приемка', order: 5 },
-  { title: 'Ответственность сторон', order: 6 },
-  { title: 'Конфиденциальность', order: 7 },
-  { title: 'Форс-мажор', order: 8 },
-  { title: 'Порядок разрешения споров', order: 9 },
-  { title: 'Срок действия, изменение и расторжение', order: 10 },
-  { title: 'Заключительные положения', order: 11 },
-  { title: 'Реквизиты и подписи сторон', order: 12 },
-];
-
 export const NewContract = () => {
-  const navigate = useNavigate();
+  const { t } = useTranslation('contracts');
+  const { t: tc } = useTranslation('common');
+  const navigate = useLocalizedNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
@@ -63,7 +52,13 @@ export const NewContract = () => {
   const [prompt, setPrompt] = useState('');
   const [riskCheck, setRiskCheck] = useState(false);
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
-  const [sections, setSections] = useState<ContractSectionInput[]>(defaultSections);
+  const defaultFromI18n = useMemo((): ContractSectionInput[] => {
+    const titles = t('sectionsDefault', { returnObjects: true }) as unknown;
+    if (!Array.isArray(titles)) return [];
+    return titles.map((title, i) => ({ title: String(title), order: i + 1 }));
+  }, [t]);
+
+  const [sections, setSections] = useState<ContractSectionInput[]>(defaultFromI18n);
   const [sectionsEnabled, setSectionsEnabled] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [limitError, setLimitError] = useState<LimitReachedError | null>(null);
@@ -96,11 +91,9 @@ export const NewContract = () => {
       confirmPaymentMutation.mutate(undefined, {
         onSuccess: (result) => {
           if (result.success) {
-            setSnackbarMessage(
-              result.message || 'Оплата прошла успешно! Теперь вы можете создать договор.'
-            );
+            setSnackbarMessage(result.message || t('new.paymentSuccess'));
           } else {
-            setSnackbarMessage(result.message || 'Платёж обрабатывается...');
+            setSnackbarMessage(result.message || t('new.paymentProcessing'));
           }
           setSnackbarOpen(true);
           setLimitError(null);
@@ -112,7 +105,7 @@ export const NewContract = () => {
           // Fallback - just refresh
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
           refetchUsage();
-          setSnackbarMessage('Оплата обрабатывается. Попробуйте обновить страницу.');
+          setSnackbarMessage(t('new.paymentError'));
           setSnackbarOpen(true);
         },
       });
@@ -125,6 +118,7 @@ export const NewContract = () => {
     confirmPaymentMutation,
     queryClient,
     refetchUsage,
+    t,
   ]);
   const {
     mutate: generateContract,
@@ -160,10 +154,10 @@ export const NewContract = () => {
       setSectionsEnabled(false);
     } else {
       setFields([]);
-      setSections(defaultSections);
+      setSections(defaultFromI18n);
       setSectionsEnabled(false);
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, defaultFromI18n]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +167,7 @@ export const NewContract = () => {
 
     if (!hasTitle || !hasPrompt) {
       setShowValidation(true);
-      setSnackbarMessage('Заполните название и поле «Описание / Параметры»');
+      setSnackbarMessage(t('new.validationSnackbar'));
       setSnackbarOpen(true);
       if (!hasTitle && titleRef.current) {
         titleRef.current.focus();
@@ -212,10 +206,11 @@ export const NewContract = () => {
       <ProtectedRoute>
         <Layout>
           <PageMeta
-            title="Создать договор с AI | ДоговорAI"
-            description="Соберите договор (NDA, SLA и любые соглашения): выберите шаблон, заполните поля и сгенерируйте текст."
+            title={t('new.metaTitle')}
+            description={t('new.metaDescriptionLoading')}
+            siteName={tc('brand.name')}
           />
-          <LoadingSpinner message="Загрузка шаблонов..." />
+          <LoadingSpinner message={t('new.loadingTemplates')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -225,7 +220,7 @@ export const NewContract = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <ErrorMessage message="Не удалось загрузить шаблоны" />
+          <ErrorMessage message={t('new.loadError')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -235,19 +230,20 @@ export const NewContract = () => {
     <ProtectedRoute>
       <Layout maxWidth="md">
         <PageMeta
-          title="Создать договор с AI | ДоговорAI"
-          description="Настройте разделы, заполните параметры и получите готовый договор с помощью AI."
+          title={t('new.metaTitle')}
+          description={t('new.metaDescription')}
+          siteName={tc('brand.name')}
         />
         <Box sx={{ mt: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Создать новый договор
+            {t('new.pageTitle')}
           </Typography>
 
           <Card sx={{ mt: 3 }}>
             <CardContent>
               {generateError && !limitError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                  Не удалось создать договор. Попробуйте еще раз.
+                  {t('new.createError')}
                 </Alert>
               )}
               {limitError && (
@@ -259,29 +255,27 @@ export const NewContract = () => {
               <form onSubmit={handleSubmit}>
                 <TextField
                   fullWidth
-                  label="Название договора"
+                  label={t('new.titleLabel')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   margin="normal"
-                  placeholder="Например: NDA с ООО Компания"
+                  placeholder={t('new.titlePlaceholder')}
                   error={showValidation && !title.trim()}
                   inputRef={titleRef}
                   helperText={
-                    showValidation && !title.trim()
-                      ? 'Введите название'
-                      : 'Название — только для вашего удобства, на текст генерации не влияет. Описание для ИИ укажите ниже в поле “Описание / Параметры”.'
+                    showValidation && !title.trim() ? t('new.titleError') : t('new.titleHelper')
                   }
                 />
 
                 <FormControl fullWidth margin="normal">
-                  <InputLabel>Шаблон</InputLabel>
+                  <InputLabel>{t('new.templateLabel')}</InputLabel>
                   <Select
                     value={templateId}
-                    label="Шаблон"
+                    label={t('new.templateLabel')}
                     onChange={(e) => setTemplateId(e.target.value)}
                   >
                     <MenuItem value="">
-                      <em>Без шаблона</em>
+                      <em>{t('new.noTemplate')}</em>
                     </MenuItem>
                     {templates?.map((template) => (
                       <MenuItem key={template.id} value={template.id}>
@@ -293,19 +287,17 @@ export const NewContract = () => {
 
                 <TextField
                   fullWidth
-                  label="Описание / Параметры"
+                  label={t('new.promptLabel')}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   margin="normal"
                   multiline
                   rows={6}
-                  placeholder="Опишите детали договора: стороны, предмет, сроки, условия..."
+                  placeholder={t('new.promptPlaceholder')}
                   error={showValidation && !prompt.trim()}
                   inputRef={promptRef}
                   helperText={
-                    showValidation && !prompt.trim()
-                      ? 'Заполните описание / параметры для ИИ'
-                      : 'Чем подробнее описание, тем точнее будет сгенерирован документ'
+                    showValidation && !prompt.trim() ? t('new.promptError') : t('new.promptHelper')
                   }
                 />
 
@@ -319,17 +311,17 @@ export const NewContract = () => {
                   }
                   label={
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <span>Проверить на юридические риски</span>
+                      <span>{t('new.riskCheck')}</span>
                       {!hasRiskCheckAccess && (
                         <Chip
                           icon={<Lock fontSize="small" />}
-                          label="Бизнес"
+                          label={t('new.businessChip')}
                           size="small"
                           color="warning"
                           variant="outlined"
                         />
                       )}
-                      <Tooltip title="Включите, чтобы AI оценил текст договора и подсветил потенциальные юридические риски.">
+                      <Tooltip title={t('new.riskTooltipNew')}>
                         <HelpOutline fontSize="small" color="action" />
                       </Tooltip>
                     </Stack>
@@ -339,7 +331,7 @@ export const NewContract = () => {
 
                 {loadingTemplate && templateId && (
                   <Box sx={{ mt: 2 }}>
-                    <LoadingSpinner message="Загрузка полей шаблона..." />
+                    <LoadingSpinner message={t('new.loadingFields')} />
                   </Box>
                 )}
 
@@ -364,7 +356,7 @@ export const NewContract = () => {
                                   onChange={(e) => setSectionsEnabled(e.target.checked)}
                                 />
                               }
-                              label="Включить"
+                              label={t('new.enable')}
                             />
                           }
                         />
@@ -379,17 +371,17 @@ export const NewContract = () => {
                               justifyContent="space-between"
                             >
                               <Stack direction="row" alignItems="center" spacing={1}>
-                                <Typography variant="h6">Разделы договора</Typography>
+                                <Typography variant="h6">{t('new.sectionsTitle')}</Typography>
                                 {!hasSectionsAccess && (
                                   <Chip
                                     icon={<Lock fontSize="small" />}
-                                    label="Профессиональный"
+                                    label={t('new.proChip')}
                                     size="small"
                                     color="warning"
                                     variant="outlined"
                                   />
                                 )}
-                                <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                                <Tooltip title={t('new.sectionsTooltip')}>
                                   <HelpOutline fontSize="small" color="action" />
                                 </Tooltip>
                               </Stack>
@@ -401,12 +393,12 @@ export const NewContract = () => {
                                     disabled={!hasSectionsAccess}
                                   />
                                 }
-                                label="Включить"
+                                label={t('new.enable')}
                               />
                             </Stack>
                             {!hasSectionsAccess && (
                               <Typography variant="body2" color="text.secondary">
-                                Настройка разделов доступна на платных тарифах.
+                                {t('new.sectionsUpsell')}
                               </Typography>
                             )}
                           </Stack>
@@ -424,7 +416,7 @@ export const NewContract = () => {
                   disabled={isGenerating}
                     fullWidth
                   >
-                    {isGenerating ? 'Генерация документа...' : 'Сгенерировать договор'}
+                    {isGenerating ? t('new.generating') : t('new.generate')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -432,7 +424,7 @@ export const NewContract = () => {
                     onClick={() => navigate('/dashboard')}
                     disabled={isGenerating}
                   >
-                    Отмена
+                    {t('new.cancel')}
                   </Button>
                 </Box>
               </form>
@@ -440,11 +432,7 @@ export const NewContract = () => {
           </Card>
 
           <Alert severity="info" sx={{ mt: 3 }}>
-            <Typography variant="body2">
-              Документ создается автоматически с помощью AI. Перед применением убедитесь, что он
-              подходит под ваши требования. Перед использованием желательно проконсультироваться с
-              юристом.
-            </Typography>
+            <Typography variant="body2">{t('new.disclaimer')}</Typography>
           </Alert>
         </Box>
 

@@ -1,0 +1,16 @@
+{
+  "bold": "Negrita",
+  "italic": "Cursiva",
+  "underline": "Subrayado",
+  "h1": "Título H1",
+  "alignLeft": "Alinear izquierda",
+  "alignCenter": "Centrar",
+  "alignRight": "Alinear derecha",
+  "alignJustify": "Justificar",
+  "ol": "Lista numerada",
+  "ul": "Lista con viñetas",
+  "dashList": "Lista con guiones",
+  "columns": "Dos columnas",
+  "columnSpan": "Bloque a ancho completo",
+  "columnUnspan": "Volver a columnas"
+}

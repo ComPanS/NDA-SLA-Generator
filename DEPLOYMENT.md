@@ -283,6 +283,10 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        # Опционально: страна посетителя для авто-языка (см. GET /public/geo-hint).
+        # Если перед прокси стоит GeoIP (nginx geoip2 / Cloudflare), пробросьте код страны:
+        # proxy_set_header X-Geo-Country $geoip2_data_country_code;
+        # либо для Cloudflare на стороне CF уже есть CF-IPCountry до вашего origin.
     }
 
     # Базовые security headers

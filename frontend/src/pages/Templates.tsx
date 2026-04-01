@@ -14,6 +14,7 @@ import {
   Button,
   IconButton,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { ProtectedRoute, Layout, LoadingSpinner, ErrorMessage } from '@/shared/components';
 import {
   useTemplate,
@@ -24,6 +25,7 @@ import { TemplateBuilder } from '@/features/templates/components/TemplateBuilder
 import { Delete } from '@mui/icons-material';
 
 export const Templates = () => {
+  const { t } = useTranslation('templates');
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const { data: templates, isLoading, error } = useTemplates();
   const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(selectedId);
@@ -33,7 +35,7 @@ export const Templates = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <LoadingSpinner message="Загрузка шаблонов..." />
+          <LoadingSpinner message={t('loading')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -43,7 +45,7 @@ export const Templates = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <ErrorMessage message="Не удалось загрузить шаблоны" />
+          <ErrorMessage message={t('loadError')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -61,9 +63,9 @@ export const Templates = () => {
                 alignItems="center"
                 sx={{ mb: 1 }}
               >
-                <Typography variant="h6">Шаблоны</Typography>
+                <Typography variant="h6">{t('listTitle')}</Typography>
                 <Button size="small" onClick={() => setSelectedId(undefined)}>
-                  Новый
+                  {t('newBtn')}
                 </Button>
               </Stack>
               <List dense>
@@ -77,11 +79,11 @@ export const Templates = () => {
                         primary={tpl.name}
                         secondary={
                           tpl.groups?.length
-                            ? `${tpl.groups.length} групп, ${tpl.groups.reduce(
-                                (acc, g) => acc + g.fields.length,
-                                0
-                              )} полей`
-                            : 'Без полей'
+                            ? t('groupsFields', {
+                                groups: tpl.groups.length,
+                                fields: tpl.groups.reduce((acc, g) => acc + g.fields.length, 0),
+                              })
+                            : t('noFields')
                         }
                       />
                       <IconButton
@@ -90,7 +92,7 @@ export const Templates = () => {
                         disabled={isDeleting}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm('Удалить шаблон? Договоры останутся без привязки.')) {
+                          if (confirm(t('deleteConfirm'))) {
                             deleteTemplate(tpl.id, {
                               onSuccess: () => {
                                 if (selectedId === tpl.id) {
@@ -112,10 +114,10 @@ export const Templates = () => {
 
           <Stack spacing={2}>
             <Typography variant="h5">
-              {selectedId ? 'Редактирование шаблона' : 'Создание нового шаблона'}
+              {selectedId ? t('editTitle') : t('createTitle')}
             </Typography>
             {loadingTemplate && selectedId ? (
-              <LoadingSpinner message="Загрузка выбранного шаблона..." />
+              <LoadingSpinner message={t('loadingSelected')} />
             ) : (
               <TemplateBuilder key={selectedId || 'new'} template={selectedTemplate} />
             )}
@@ -124,7 +126,7 @@ export const Templates = () => {
               <Card>
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
-                    Структура выбранного шаблона
+                    {t('structureTitle')}
                   </Typography>
                   {selectedTemplate.groups.map((group) => (
                     <Box key={group.id} sx={{ mb: 2 }}>

@@ -1,31 +1,39 @@
 import { FileText, Menu, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { useAuthStore, useLogout } from '@/features/auth/hooks/useAuth';
 import { Button } from '@/shared/ui';
+import { parseLocaleFromPath } from '@/shared/i18n/localePath';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 
-type NavItem = { name: string; href: string };
-
-const anchorLinks: NavItem[] = [
-  { name: 'Как работает', href: '#how-it-works' },
-  { name: 'Тарифы', href: '#pricing' },
-  { name: 'Отзывы', href: '#reviews' },
-  { name: 'FAQ', href: '#faq' },
-];
+type NavItem = { nameKey: string; href: string };
 
 export const Header = () => {
-  const navigate = useNavigate();
+  const { t } = useTranslation('common');
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
+  const { logicalPath } = parseLocaleFromPath(location.pathname);
   const { isAuthenticated } = useAuthStore();
   const logout = useLogout();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const anchorLinks: NavItem[] = useMemo(
+    () => [
+      { nameKey: 'nav.howItWorks', href: '#how-it-works' },
+      { nameKey: 'nav.pricing', href: '#pricing' },
+      { nameKey: 'nav.reviews', href: '#reviews' },
+      { nameKey: 'nav.faq', href: '#faq' },
+    ],
+    []
+  );
+
   const productLinks = useMemo(
     () => [
-      { name: 'Дашборд', href: '/dashboard' },
-      { name: 'Шаблоны', href: '/templates' },
-      { name: 'Подписка', href: '/billing' },
-      { name: 'Профиль', href: '/profile' },
+      { nameKey: 'header.dashboard', href: '/dashboard' },
+      { nameKey: 'header.templates', href: '/templates' },
+      { nameKey: 'header.billing', href: '/billing' },
+      { nameKey: 'header.profile', href: '/profile' },
     ],
     []
   );
@@ -33,7 +41,7 @@ export const Header = () => {
   const navigateAnchor = (href: string) => {
     if (href.startsWith('#')) {
       const targetId = href.slice(1);
-      if (location.pathname === '/') {
+      if (logicalPath === '/') {
         const el = typeof document !== 'undefined' ? document.getElementById(targetId) : null;
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -84,7 +92,7 @@ export const Header = () => {
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                 <FileText className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-semibold text-gray-900">ДоговорAI</span>
+              <span className="text-xl font-semibold text-gray-900">{t('brand.name')}</span>
             </button>
           </div>
 
@@ -92,12 +100,12 @@ export const Header = () => {
             <div className="hidden md:flex items-center gap-8">
               {anchorLinks.map((item) => (
                 <button
-                  key={item.name}
+                  key={item.nameKey}
                   type="button"
                   onClick={() => navigateAnchor(item.href)}
                   className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
                 >
-                  {item.name}
+                  {t(item.nameKey)}
                 </button>
               ))}
             </div>
@@ -113,14 +121,14 @@ export const Header = () => {
                     onClick={() => navigate(item.href)}
                     className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
                   >
-                    {item.name}
+                    {t(item.nameKey)}
                   </button>
                 ))}
                 <Button variant="outline" onClick={handleStart}>
-                  Новый договор
+                  {t('header.newContract')}
                 </Button>
                 <Button variant="ghost" onClick={handleLogout}>
-                  Выйти
+                  {t('header.logout')}
                 </Button>
               </>
             ) : (
@@ -130,11 +138,11 @@ export const Header = () => {
                   className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
                   onClick={handleLogin}
                 >
-                  Войти
+                  {t('header.login')}
                 </button>
-                <Button onClick={handleStart}>Создать договор</Button>
+                <Button onClick={handleStart}>{t('header.createContract')}</Button>
                 <Button variant="outline" onClick={handleGuest}>
-                  Без регистрации
+                  {t('header.guest')}
                 </Button>
               </>
             )}
@@ -157,12 +165,12 @@ export const Header = () => {
               {!isAuthenticated &&
                 anchorLinks.map((item) => (
                   <button
-                    key={item.name}
+                    key={item.nameKey}
                     type="button"
                     onClick={() => navigateAnchor(item.href)}
                     className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-2 text-left cursor-pointer"
                   >
-                    {item.name}
+                    {t(item.nameKey)}
                   </button>
                 ))}
 
@@ -176,15 +184,15 @@ export const Header = () => {
                         onClick={() => navigate(item.href)}
                         className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-2 text-left cursor-pointer"
                       >
-                        {item.name}
+                        {t(item.nameKey)}
                       </button>
                     ))}
                     <div className="flex gap-2 flex-col">
                       <Button variant="outline" className="w-full" onClick={handleStart}>
-                        Новый договор
+                        {t('header.newContract')}
                       </Button>
                       <Button variant="ghost" className="w-full" onClick={handleLogout}>
-                        Выйти
+                        {t('header.logout')}
                       </Button>
                     </div>
                   </>
@@ -195,14 +203,14 @@ export const Header = () => {
                       className="text-gray-700 hover:text-blue-600 transition-colors px-2 py-2 text-left cursor-pointer"
                       onClick={handleLogin}
                     >
-                      Войти
+                      {t('header.login')}
                     </button>
                     <div className="flex gap-2 flex-col">
                       <Button className="w-full" onClick={handleStart}>
-                        Создать договор
+                        {t('header.createContract')}
                       </Button>
                       <Button variant="outline" className="w-full" onClick={handleGuest}>
-                        Без регистрации
+                        {t('header.guest')}
                       </Button>
                     </div>
                   </>

@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { Alert, Box, Card, CardContent, CircularProgress, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '@/shared/components';
 
 export const YandexSuggestToken = () => {
+  const { t } = useTranslation('oauth');
   const origin = useMemo(() => import.meta.env.VITE_YANDEX_ORIGIN || window.location.origin, []);
 
   useEffect(() => {
@@ -45,14 +47,14 @@ export const YandexSuggestToken = () => {
         <Card>
           <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" component="h1" gutterBottom>
-              Завершаем вход через Яндекс
+              {t('yandexTokenTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Страница может закрыться автоматически после передачи токена
+              {t('yandexTokenHint')}
             </Typography>
             <CircularProgress />
             <Alert severity="info" sx={{ mt: 2 }}>
-              Если окно не закрылось, вернитесь на предыдущую вкладку
+              {t('yandexTokenInfo')}
             </Alert>
           </CardContent>
         </Card>

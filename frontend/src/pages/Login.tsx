@@ -13,28 +13,36 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useLogin, useAuthStore } from '@/features/auth/hooks/useAuth';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
 import { GoogleSignInButton } from '@/features/auth/components/GoogleSignInButton';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
 
-function googleOAuthErrorMessage(code: string): string {
+function googleOAuthErrorMessage(
+  code: string,
+  t: (key: string, o?: { code?: string }) => string,
+): string {
   switch (code) {
     case 'access_denied':
-      return 'Вход через Google отменён';
+      return t('login.oauthGoogleDenied');
     case 'google_oauth_invalid':
-      return 'Некорректный ответ Google. Попробуйте снова.';
+      return t('login.oauthGoogleInvalid');
     case 'google_invalid_state':
-      return 'Сессия авторизации устарела. Попробуйте войти через Google ещё раз.';
+      return t('login.oauthGoogleState');
     case 'google_oauth_failed':
-      return 'Не удалось завершить вход через Google. Попробуйте позже.';
+      return t('login.oauthGoogleFailed');
     default:
-      return `Ошибка входа через Google (${code})`;
+      return t('login.oauthGoogleGeneric', { code });
   }
 }
 
 export const Login = () => {
+  const { t } = useTranslation('auth');
+  const { t: tc } = useTranslation('common');
+  const localizedPath = useLocalizedPath();
   const [searchParams] = useSearchParams();
   const oauthErrorCode = searchParams.get('error');
   const location = useLocation();
@@ -48,7 +56,7 @@ export const Login = () => {
   const { isAuthenticated } = useAuthStore();
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={localizedPath('/dashboard')} replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,38 +67,39 @@ export const Login = () => {
   return (
     <Layout maxWidth="sm">
       <PageMeta
-        title="Вход | ДоговорAI — AI-конструктор договоров"
-        description="Войдите в ДоговорAI, чтобы создавать и управлять договорами (NDA, SLA и другие) с помощью AI."
+        title={t('login.metaTitle')}
+        description={t('login.metaDescription')}
+        siteName={tc('brand.name')}
       />
       <Box sx={{ mt: 8 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
-              Вход
+              {t('login.title')}
             </Typography>
 
             {fromPasswordReset && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Пароль изменён. Войдите с новым паролем.
+                {t('login.resetSuccess')}
               </Alert>
             )}
 
             {oauthErrorCode && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                {googleOAuthErrorMessage(oauthErrorCode)}
+                {googleOAuthErrorMessage(oauthErrorCode, t)}
               </Alert>
             )}
 
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Неверный email или пароль
+                {t('login.invalidCredentials')}
               </Alert>
             )}
 
             <form onSubmit={handleSubmit}>
               <TextField
                 fullWidth
-                label="Email"
+                label={t('register.email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -100,7 +109,7 @@ export const Login = () => {
 
               <TextField
                 fullWidth
-                label="Пароль"
+                label={t('register.password')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -110,7 +119,7 @@ export const Login = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="показать пароль"
+                        aria-label={t('register.showPassword')}
                         onClick={() => setShowPassword((v) => !v)}
                         edge="end"
                       >
@@ -122,8 +131,8 @@ export const Login = () => {
               />
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                <MuiLink component={Link} to="/forgot-password" variant="body2">
-                  Забыли пароль?
+                <MuiLink component={Link} to={localizedPath('/forgot-password')} variant="body2">
+                  {t('login.forgotPassword')}
                 </MuiLink>
               </Box>
 
@@ -135,7 +144,7 @@ export const Login = () => {
                 sx={{ mt: 3 }}
                 disabled={isPending}
               >
-                {isPending ? 'Вход...' : 'Войти'}
+                {isPending ? t('login.submitting') : t('login.submit')}
               </Button>
             </form>
 
@@ -144,9 +153,9 @@ export const Login = () => {
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">
-                Нет аккаунта?{' '}
-                <MuiLink component={Link} to="/register">
-                  Зарегистрироваться
+                {t('login.noAccount')}{' '}
+                <MuiLink component={Link} to={localizedPath('/register')}>
+                  {t('login.registerLink')}
                 </MuiLink>
               </Typography>
             </Box>

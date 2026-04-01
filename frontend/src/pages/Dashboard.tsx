@@ -16,7 +16,8 @@ import {
   Snackbar,
 } from '@mui/material';
 import { Add, Description } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 import { Layout, ProtectedRoute } from '@/shared/components';
 import {
   useContractsList,
@@ -24,14 +25,19 @@ import {
   useRenameContract,
 } from '@/features/contracts/hooks/useContracts';
 import { useMemo, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { noticeApi } from '@/shared/api';
 import { PageMeta } from '@/shared/components/PageMeta';
 import { useConfirmPayment } from '@/features/billing/hooks/useBilling';
 import { authStore } from '@/features/auth/store/authStore';
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 
 export const Dashboard = () => {
-  const navigate = useNavigate();
+  const { t, i18n } = useTranslation('dashboard');
+  const { t: tc } = useTranslation('common');
+  const locale = icuLocaleFor(i18n.language);
+  const navigate = useLocalizedNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { data: documents, isLoading, error } = useContractsList();
@@ -66,13 +72,13 @@ export const Dashboard = () => {
       // Confirm payment on backend
       confirmPaymentMutation.mutate(undefined, {
         onSuccess: (result) => {
-          setSnackbarMessage(result.message || 'Оплата прошла успешно!');
+          setSnackbarMessage(result.message || t('paymentSuccess'));
           setSnackbarOpen(true);
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
         },
         onError: () => {
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
-          setSnackbarMessage('Оплата обрабатывается.');
+          setSnackbarMessage(t('paymentPending'));
           setSnackbarOpen(true);
         },
       });
@@ -84,6 +90,7 @@ export const Dashboard = () => {
     isAuthenticated,
     confirmPaymentMutation,
     queryClient,
+    t,
   ]);
 
   const hasDocuments = (documents?.length || 0) > 0;
@@ -106,22 +113,23 @@ export const Dashboard = () => {
           case 'updated_asc':
             return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
           case 'title_asc':
-            return a.title.localeCompare(b.title, 'ru');
+            return a.title.localeCompare(b.title, locale);
           case 'title_desc':
-            return b.title.localeCompare(a.title, 'ru');
+            return b.title.localeCompare(a.title, locale);
           case 'updated_desc':
           default:
             return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
         }
       });
-  }, [documents, hasDocuments, search, statusFilter, dateFrom, dateTo, sortBy]);
+  }, [documents, hasDocuments, search, statusFilter, dateFrom, dateTo, sortBy, locale]);
 
   return (
     <ProtectedRoute>
       <Layout>
         <PageMeta
-          title="Мои договоры | ДоговорAI"
-          description="Управляйте договорами: NDA, SLA и другие. Версии, статусы, экспорт DOCX/PDF в одном месте."
+          title={t('meta.title')}
+          description={t('meta.description')}
+          siteName={tc('brand.name')}
         />
         {noticeQuery.data?.enabled && noticeQuery.data.message && (
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -130,7 +138,7 @@ export const Dashboard = () => {
         )}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Мои договоры
+            {t('title')}
           </Typography>
           {hasDocuments && (
             <Button
@@ -139,13 +147,13 @@ export const Dashboard = () => {
               onClick={() => navigate('/new-contract')}
               sx={{ mt: 2 }}
             >
-              Создать новый договор
+              {t('createNew')}
             </Button>
           )}
         </Box>
 
-        {isLoading && <Typography>Загрузка документов...</Typography>}
-        {error && <Typography color="error">Не удалось загрузить документы</Typography>}
+        {isLoading && <Typography>{t('loading')}</Typography>}
+        {error && <Typography color="error">{t('loadError')}</Typography>}
 
         {!isLoading && !error && (
           <>
@@ -156,30 +164,30 @@ export const Dashboard = () => {
                     <Stack spacing={2}>
                       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                         <TextField
-                          label="Поиск по названию"
+                          label={t('searchLabel')}
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
                           fullWidth
                         />
                         <FormControl sx={{ minWidth: 160 }}>
-                          <InputLabel>Статус</InputLabel>
+                          <InputLabel>{t('statusLabel')}</InputLabel>
                           <Select
                             value={statusFilter}
-                            label="Статус"
+                            label={t('statusLabel')}
                             onChange={(e) =>
                               setStatusFilter(e.target.value as 'all' | 'draft' | 'final')
                             }
                           >
-                            <MenuItem value="all">Все</MenuItem>
-                            <MenuItem value="draft">Черновик</MenuItem>
-                            <MenuItem value="final">Финальный</MenuItem>
+                            <MenuItem value="all">{t('statusAll')}</MenuItem>
+                            <MenuItem value="draft">{t('statusDraft')}</MenuItem>
+                            <MenuItem value="final">{t('statusFinal')}</MenuItem>
                           </Select>
                         </FormControl>
                         <FormControl sx={{ minWidth: 200 }}>
-                          <InputLabel>Сортировка</InputLabel>
+                          <InputLabel>{t('sortLabel')}</InputLabel>
                           <Select
                             value={sortBy}
-                            label="Сортировка"
+                            label={t('sortLabel')}
                             onChange={(e) =>
                               setSortBy(
                                 e.target.value as
@@ -190,16 +198,16 @@ export const Dashboard = () => {
                               )
                             }
                           >
-                            <MenuItem value="updated_desc">По обновлению (новые)</MenuItem>
-                            <MenuItem value="updated_asc">По обновлению (старые)</MenuItem>
-                            <MenuItem value="title_asc">Название А→Я</MenuItem>
-                            <MenuItem value="title_desc">Название Я→А</MenuItem>
+                            <MenuItem value="updated_desc">{t('sortUpdatedDesc')}</MenuItem>
+                            <MenuItem value="updated_asc">{t('sortUpdatedAsc')}</MenuItem>
+                            <MenuItem value="title_asc">{t('sortTitleAsc')}</MenuItem>
+                            <MenuItem value="title_desc">{t('sortTitleDesc')}</MenuItem>
                           </Select>
                         </FormControl>
                       </Stack>
                       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                         <TextField
-                          label="Дата с"
+                          label={t('dateFrom')}
                           type="date"
                           InputLabelProps={{ shrink: true }}
                           value={dateFrom}
@@ -207,7 +215,7 @@ export const Dashboard = () => {
                           sx={{ minWidth: 200 }}
                         />
                         <TextField
-                          label="Дата по"
+                          label={t('dateTo')}
                           type="date"
                           InputLabelProps={{ shrink: true }}
                           value={dateTo}
@@ -230,16 +238,16 @@ export const Dashboard = () => {
                             {doc.title}
                           </Typography>
                           <Chip
-                            label={doc.status === 'draft' ? 'Черновик' : 'Финальный'}
+                            label={doc.status === 'draft' ? t('statusDraft') : t('statusFinal')}
                             size="small"
                           />
                         </Stack>
                         <Typography variant="body2" color="text.secondary">
-                          Из шаблона:{' '}
-                          {doc.template_name || (doc.template_id ? doc.template_id : 'Без шаблона')}
+                          {t('fromTemplate')}{' '}
+                          {doc.template_name || (doc.template_id ? doc.template_id : t('noTemplate'))}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Обновлён: {new Date(doc.updated_at).toLocaleString('ru-RU')}
+                          {t('updated')} {new Date(doc.updated_at).toLocaleString(locale)}
                         </Typography>
                         <Divider sx={{ my: 1 }} />
                         <Stack
@@ -252,21 +260,21 @@ export const Dashboard = () => {
                             variant="contained"
                             onClick={() => navigate(`/contract/${doc.id}`)}
                           >
-                            Открыть
+                            {t('open')}
                           </Button>
                           <Button
                             size="small"
                             variant="outlined"
                             disabled={isRenaming}
                             onClick={() => {
-                              const nextTitle = prompt('Новое название договора', doc.title);
+                              const nextTitle = prompt(t('renamePrompt'), doc.title);
                               if (nextTitle && nextTitle.trim()) {
                                 renameContract({ documentId: doc.id, title: nextTitle.trim() });
                               }
                             }}
                             sx={{ width: { xs: '100%', sm: 'auto' } }}
                           >
-                            Переименовать
+                            {t('rename')}
                           </Button>
                           <Button
                             size="small"
@@ -274,17 +282,17 @@ export const Dashboard = () => {
                             variant="text"
                             disabled={isDeleting}
                             onClick={() => {
-                              if (confirm('Удалить договор? Это действие необратимо.')) {
+                              if (confirm(t('deleteConfirm'))) {
                                 deleteContract(doc.id);
                               }
                             }}
                             sx={{ width: { xs: '100%', sm: 'auto' } }}
                           >
-                            Удалить
+                            {t('delete')}
                           </Button>
                           {latest && (
                             <Typography variant="body2" color="text.secondary">
-                              Текущая версия: {latest.version}
+                              {t('currentVersion')} {latest.version}
                             </Typography>
                           )}
                         </Stack>
@@ -295,7 +303,7 @@ export const Dashboard = () => {
 
                 {filtered.length === 0 && (
                   <Typography variant="body2" color="text.secondary">
-                    У вас пока нет документов. Создайте первый договор.
+                    {t('emptyFiltered')}
                   </Typography>
                 )}
               </Stack>
@@ -313,9 +321,9 @@ export const Dashboard = () => {
                   gap: 2,
                 }}
               >
-                <Typography variant="h6">У вас пока нет договоров</Typography>
+                <Typography variant="h6">{t('emptyStateTitle')}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Создайте первый договор, чтобы начать работу
+                  {t('emptyStateHint')}
                 </Typography>
                 <Button
                   variant="contained"
@@ -324,7 +332,7 @@ export const Dashboard = () => {
                   onClick={() => navigate('/new-contract')}
                   sx={{ px: 4, py: 1.5 }}
                 >
-                  Создать новый договор
+                  {t('createNew')}
                 </Button>
               </Box>
             )}

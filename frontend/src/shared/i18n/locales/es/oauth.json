@@ -1,0 +1,13 @@
+{
+  "yandexTitle": "Finalizando acceso con Yandex",
+  "yandexDenied": "Autorización denegada: {{error}}",
+  "yandexMissingParams": "Faltan parámetros code/state",
+  "yandexFailed": "No se pudo entrar con Yandex",
+  "yandexSuccess": "¡Correcto! Redirigiendo...",
+  "googleTitle": "Finalizando acceso con Google",
+  "googleNoTokens": "No hay tokens en la URL",
+  "googleIncomplete": "Respuesta de autorización incompleta",
+  "yandexTokenTitle": "Finalizando acceso con Yandex",
+  "yandexTokenHint": "Esta ventana puede cerrarse sola tras enviar el token",
+  "yandexTokenInfo": "Si no, vuelva a la pestaña anterior"
+}

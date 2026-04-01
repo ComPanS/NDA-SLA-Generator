@@ -1,0 +1,16 @@
+{
+  "bold": "Bold",
+  "italic": "Italic",
+  "underline": "Underline",
+  "h1": "Heading H1",
+  "alignLeft": "Align left",
+  "alignCenter": "Align center",
+  "alignRight": "Align right",
+  "alignJustify": "Justify",
+  "ol": "Numbered list",
+  "ul": "Bullet list",
+  "dashList": "Dash list",
+  "columns": "Two columns",
+  "columnSpan": "Full width block",
+  "columnUnspan": "Back to columns"
+}

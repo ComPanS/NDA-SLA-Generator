@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Card, CardContent, CircularProgress, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '@/shared/components';
+import { resolveLocalizedPath } from '@/shared/i18n/resolveLocalizedPath';
 import {
   authStore,
   buildGuestImportPayload,
@@ -10,6 +12,7 @@ import {
 import { useImportGuestContract } from '@/features/contracts/hooks/useContracts';
 
 export const OAuthGoogleCallback = () => {
+  const { t } = useTranslation('oauth');
   const navigate = useNavigate();
   const importGuestMutation = useImportGuestContract();
   const ranRef = useRef(false);
@@ -24,10 +27,10 @@ export const OAuthGoogleCallback = () => {
       const hash = window.location.hash.replace(/^#/, '');
       if (!hash) {
         if (authStore.getState().isAuthenticated) {
-          navigate('/dashboard', { replace: true });
+          navigate(resolveLocalizedPath('/dashboard'), { replace: true });
           return;
         }
-        setLocalError('Не получены токены в URL');
+        setLocalError(t('googleNoTokens'));
         setIsWorking(false);
         return;
       }
@@ -35,7 +38,7 @@ export const OAuthGoogleCallback = () => {
       const access = params.get('access_token');
       const refresh = params.get('refresh_token');
       if (!access || !refresh) {
-        setLocalError('Неполный ответ авторизации');
+        setLocalError(t('googleIncomplete'));
         setIsWorking(false);
         return;
       }
@@ -52,11 +55,11 @@ export const OAuthGoogleCallback = () => {
       } catch (error) {
         console.error('Guest contract import failed after Google login', error);
       }
-      navigate('/dashboard', { replace: true });
+      navigate(resolveLocalizedPath('/dashboard'), { replace: true });
     };
 
     void run();
-  }, [importGuestMutation, navigate]);
+  }, [importGuestMutation, navigate, t]);
 
   return (
     <Layout maxWidth="sm">
@@ -64,7 +67,7 @@ export const OAuthGoogleCallback = () => {
         <Card>
           <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" component="h1" gutterBottom>
-              Завершаем вход через Google
+              {t('googleTitle')}
             </Typography>
 
             {localError && (

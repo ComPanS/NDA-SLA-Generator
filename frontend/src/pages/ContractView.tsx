@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
+import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 import {
   Box,
   Card,
@@ -50,6 +52,7 @@ import {
 import { ContractSectionsEditor } from '@/features/contracts/components/ContractSectionsEditor';
 import { useUsage } from '@/features/billing/hooks/useBilling';
 import { AxiosError } from 'axios';
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 
 const normalizeColumnsContent = (html: string) => {
   if (!html) return html;
@@ -99,7 +102,10 @@ const normalizeColumnsContent = (html: string) => {
 
 export const ContractView = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { t, i18n } = useTranslation('contracts');
+  const { t: td } = useTranslation('dashboard');
+  const locale = icuLocaleFor(i18n.language);
+  const navigate = useLocalizedNavigate();
   const [currentContent, setCurrentContent] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [showRefineForm, setShowRefineForm] = useState(false);
@@ -247,7 +253,7 @@ export const ContractView = () => {
           }
           setRefinePrompt('');
           setShowRefineForm(false);
-          showSnackbar('Документ успешно обновлен через AI');
+          showSnackbar(t('view.snackUpdatedAi'));
         },
         onError: (error) => {
           const axiosError = error as AxiosError<LimitReachedError>;
@@ -255,7 +261,7 @@ export const ContractView = () => {
             setLimitError(axiosError.response.data);
             setUpgradeModalOpen(true);
           } else {
-            showSnackbar('Ошибка при обновлении документа');
+            showSnackbar(t('view.snackUpdateError'));
           }
         },
       }
@@ -267,18 +273,18 @@ export const ContractView = () => {
     renameContract(
       { documentId: id, title: titleDraft.trim() },
       {
-        onSuccess: () => showSnackbar('Название договора обновлено'),
-        onError: () => showSnackbar('Не удалось обновить название'),
+        onSuccess: () => showSnackbar(t('view.snackRenamed')),
+        onError: () => showSnackbar(t('view.snackRenameError')),
       }
     );
   };
 
   const handleDelete = () => {
     if (!id) return;
-    if (confirm('Удалить договор? Это действие нельзя отменить.')) {
+    if (confirm(t('view.deleteConfirm'))) {
       deleteContract(id, {
         onSuccess: () => navigate('/dashboard'),
-        onError: () => showSnackbar('Не удалось удалить договор'),
+        onError: () => showSnackbar(t('view.snackDeleteError')),
       });
     }
   };
@@ -289,8 +295,8 @@ export const ContractView = () => {
     updateStatus(
       { documentId: id, status: next },
       {
-        onSuccess: () => showSnackbar('Статус обновлен'),
-        onError: () => showSnackbar('Не удалось обновить статус'),
+        onSuccess: () => showSnackbar(t('view.snackStatusOk')),
+        onError: () => showSnackbar(t('view.snackStatusErr')),
       }
     );
   };
@@ -306,7 +312,7 @@ export const ContractView = () => {
           lastSavedRef.current = currentContent;
         },
         onError: () => {
-          showSnackbar('Не удалось сохранить изменения');
+          showSnackbar(t('view.snackSaveErr'));
         },
       });
 
@@ -329,10 +335,10 @@ export const ContractView = () => {
       { documentId: id, format, title: document.title },
       {
         onSuccess: () => {
-          showSnackbar(`Файл ${format.toUpperCase()} успешно загружен`);
+          showSnackbar(t('view.snackExportOk', { fmt: format.toUpperCase() }));
         },
         onError: () => {
-          showSnackbar(`Ошибка при экспорте в ${format.toUpperCase()}`);
+          showSnackbar(t('view.snackExportErr', { fmt: format.toUpperCase() }));
         },
       }
     );
@@ -359,7 +365,7 @@ export const ContractView = () => {
           lastSavedRef.current = newContent;
         },
         onError: () => {
-          showSnackbar('Не удалось сохранить изменения');
+          showSnackbar(t('view.snackSaveErr'));
         },
       });
 
@@ -395,8 +401,8 @@ export const ContractView = () => {
   const handleSaveFields = () => {
     if (!id) return;
     updateFields(fields, {
-      onSuccess: () => showSnackbar('Поля договора сохранены'),
-      onError: () => showSnackbar('Не удалось сохранить поля'),
+      onSuccess: () => showSnackbar(t('view.snackFieldsOk')),
+      onError: () => showSnackbar(t('view.snackFieldsErr')),
     });
   };
 
@@ -404,8 +410,8 @@ export const ContractView = () => {
     if (!id) return;
     const payload = sectionsEnabled ? sections : [];
     updateSections(payload, {
-      onSuccess: () => showSnackbar('Разделы договора сохранены'),
-      onError: () => showSnackbar('Не удалось сохранить разделы'),
+      onSuccess: () => showSnackbar(t('view.snackSectionsOk')),
+      onError: () => showSnackbar(t('view.snackSectionsErr')),
     });
   };
 
@@ -413,7 +419,7 @@ export const ContractView = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <LoadingSpinner message="Загрузка документа..." />
+          <LoadingSpinner message={t('view.loading')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -423,17 +429,14 @@ export const ContractView = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <ErrorMessage
-            title="Документ не найден"
-            message="Не удалось загрузить документ. Возможно, он был удален или у вас нет доступа."
-          />
+          <ErrorMessage title={t('view.notFoundTitle')} message={t('view.notFoundMessage')} />
           <Button
             variant="outlined"
             startIcon={<ArrowBack />}
             onClick={() => navigate('/dashboard')}
             sx={{ mt: 2 }}
           >
-            Вернуться к списку
+            {t('view.backToList')}
           </Button>
         </Layout>
       </ProtectedRoute>
@@ -456,7 +459,7 @@ export const ContractView = () => {
               onClick={() => navigate('/dashboard')}
               sx={{ width: { xs: '100%', md: 'auto' } }}
             >
-              Назад
+              {t('view.back')}
             </Button>
             <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'block' } }} />
             <Button
@@ -466,7 +469,7 @@ export const ContractView = () => {
               disabled={isDeleting}
               sx={{ width: { xs: '100%', md: 'auto' } }}
             >
-              Удалить договор
+              {t('view.deleteContract')}
             </Button>
             <Button
               variant="outlined"
@@ -475,9 +478,9 @@ export const ContractView = () => {
               disabled={isRefining}
               sx={{ width: { xs: '100%', md: 'auto' } }}
             >
-              Уточнить с AI
+              {t('view.refineAi')}
             </Button>
-            <Tooltip title={hasDocxExportAccess ? '' : 'Доступно на тарифах Basic и выше'}>
+            <Tooltip title={hasDocxExportAccess ? '' : t('view.docxTooltip')}>
               <span>
                 <Button
                   variant="contained"
@@ -486,9 +489,9 @@ export const ContractView = () => {
                   disabled={isExporting || !hasDocxExportAccess}
                   sx={{ width: { xs: '100%', md: 'auto' } }}
                 >
-                  Скачать DOCX
+                  {t('view.downloadDocx')}
                   {!hasDocxExportAccess && (
-                    <Chip label="Профессиональный" size="small" sx={{ ml: 1 }} />
+                    <Chip label={t('new.proChip')} size="small" sx={{ ml: 1 }} />
                   )}
                 </Button>
               </span>
@@ -500,9 +503,9 @@ export const ContractView = () => {
               disabled={isExporting}
               sx={{ width: { xs: '100%', md: 'auto' } }}
             >
-              Скачать PDF
+              {t('view.downloadPdf')}
             </Button>
-            <Tooltip title={hasStatusesAccess ? '' : 'Доступно на тарифах Basic и выше'}>
+            <Tooltip title={hasStatusesAccess ? '' : t('view.docxTooltip')}>
               <span>
                 <FormControl
                   size="small"
@@ -511,15 +514,15 @@ export const ContractView = () => {
                     width: { xs: '100%', md: 'auto' },
                   }}
                 >
-                  <InputLabel>Статус</InputLabel>
+                  <InputLabel>{t('view.statusLabel')}</InputLabel>
                   <Select
                     value={statusDraft}
-                    label="Статус"
+                    label={t('view.statusLabel')}
                     onChange={(e) => handleStatusChange(e.target.value as DocumentStatus)}
                     disabled={isUpdatingStatus || !hasStatusesAccess}
                   >
-                    <MenuItem value="draft">Черновик</MenuItem>
-                    <MenuItem value="final">Финальный</MenuItem>
+                    <MenuItem value="draft">{td('statusDraft')}</MenuItem>
+                    <MenuItem value="final">{td('statusFinal')}</MenuItem>
                   </Select>
                 </FormControl>
               </span>
@@ -533,7 +536,7 @@ export const ContractView = () => {
             alignItems={{ xs: 'stretch', md: 'center' }}
           >
             <TextField
-              label="Название договора"
+              label={t('view.titleLabel')}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               fullWidth
@@ -548,44 +551,52 @@ export const ContractView = () => {
                 width: { xs: '100%', md: 'auto' },
               }}
             >
-              {isRenaming ? 'Сохранение...' : 'Сохранить название'}
+              {isRenaming ? t('view.saving') : t('view.saveTitle')}
             </Button>
           </Stack>
 
           {hasVersionsAccess && versions.length > 1 && (
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <FormControl size="small" sx={{ minWidth: 260 }}>
-                <InputLabel>Версия</InputLabel>
+                <InputLabel>{t('view.versionLabel')}</InputLabel>
                 <Select
                   value={selectedVersion?.id || ''}
-                  label="Версия"
+                  label={t('view.versionLabel')}
                   onChange={(e) => handleVersionChange(e.target.value as string)}
                 >
                   {versions.map((v) => (
                     <MenuItem key={v.id} value={v.id}>
-                      Версия {v.version} — {new Date(v.updated_at).toLocaleString('ru-RU')}
+                      {t('view.versionItem', {
+                        v: v.version,
+                        date: new Date(v.updated_at).toLocaleString(locale),
+                      })}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
               {!isLatestSelected && (
-                <Chip color="warning" label="Историческая версия (только просмотр)" />
+                <Chip color="warning" label={t('view.historicVersion')} />
               )}
             </Stack>
           )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Создан: {new Date(document.created_at).toLocaleString('ru-RU')} | Просматриваемая
-            версия: {selectedVersion?.version || 1} | Статус:{' '}
-            {statusDraft === 'draft' ? 'Черновик' : 'Финальный'} | Шаблон:{' '}
-            {document.template_name || (document.template_id ? 'Без названия' : 'Без шаблона')}
+            {t('view.metaLine', {
+              created: new Date(document.created_at).toLocaleString(locale),
+              ver: selectedVersion?.version || 1,
+              status: statusDraft === 'draft' ? td('statusDraft') : td('statusFinal'),
+              tpl:
+                document.template_name ||
+                (document.template_id ? t('view.noTemplateName') : t('view.noTemplate')),
+            })}
           </Typography>
 
           {!isLatestSelected && selectedVersion && (
             <Alert severity="info" sx={{ mb: 3 }}>
-              Вы смотрите версию №{selectedVersion.version} от{' '}
-              {new Date(selectedVersion.updated_at).toLocaleString('ru-RU')}. Чтобы редактировать,
-              вернитесь к последней версии.
+              {t('view.viewingVersionHint', {
+                v: selectedVersion.version,
+                date: new Date(selectedVersion.updated_at).toLocaleString(locale),
+              })}
             </Alert>
           )}
 
@@ -593,23 +604,25 @@ export const ContractView = () => {
             <CardContent>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="h6">Юридические риски</Typography>
+                  <Typography variant="h6">{t('view.risksTitle')}</Typography>
                   {!hasRiskCheckAccess && (
                     <Chip
                       icon={<Lock fontSize="small" />}
-                      label="Бизнес"
+                      label={t('new.businessChip')}
                       size="small"
                       color="warning"
                       variant="outlined"
                     />
                   )}
-                  <Tooltip title="Результат анализа договора на юридические риски. Включите опцию при генерации или уточнении, чтобы обновить этот блок.">
+                  <Tooltip title={t('view.risksTooltip')}>
                     <HelpOutline fontSize="small" color="action" />
                   </Tooltip>
                 </Stack>
                 {riskAssessment?.updated_at && (
                   <Typography variant="caption" color="text.secondary">
-                    Обновлено: {new Date(riskAssessment.updated_at).toLocaleString('ru-RU')}
+                    {t('view.risksUpdated', {
+                      date: new Date(riskAssessment.updated_at).toLocaleString(locale),
+                    })}
                   </Typography>
                 )}
               </Stack>
@@ -618,8 +631,7 @@ export const ContractView = () => {
                 sx={{ mt: 1.5, whiteSpace: 'pre-wrap' }}
                 color={riskAssessment ? 'text.primary' : 'text.secondary'}
               >
-                {riskAssessment?.summary?.trim() ||
-                  'Проверка рисков еще не выполнялась. Отметьте опцию при генерации или уточнении, чтобы получить оценку.'}
+                {riskAssessment?.summary?.trim() || t('view.risksEmpty')}
               </Typography>
             </CardContent>
           </Card>
@@ -628,10 +640,10 @@ export const ContractView = () => {
             <Card sx={{ mb: 3 }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Уточнить документ с помощью AI
+                  {t('view.refineTitle')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Опишите, какие изменения нужно внести в договор, и AI обновит документ
+                  {t('view.refineHint')}
                 </Typography>
                 <TextField
                   fullWidth
@@ -639,7 +651,7 @@ export const ContractView = () => {
                   rows={4}
                   value={refinePrompt}
                   onChange={(e) => setRefinePrompt(e.target.value)}
-                  placeholder="Например: Добавить пункт о штрафных санкциях за разглашение информации в размере 100,000 рублей"
+                  placeholder={t('view.refinePlaceholder')}
                   sx={{ mb: 2 }}
                   disabled={isRefining}
                 />
@@ -653,17 +665,17 @@ export const ContractView = () => {
                   }
                   label={
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <span>Проверить на юридические риски</span>
+                      <span>{t('new.riskCheck')}</span>
                       {!hasRiskCheckAccess && (
                         <Chip
                           icon={<Lock fontSize="small" />}
-                          label="Бизнес"
+                          label={t('new.businessChip')}
                           size="small"
                           color="warning"
                           variant="outlined"
                         />
                       )}
-                      <Tooltip title="Включите, чтобы AI проанализировал обновленный договор и подсветил возможные риски.">
+                      <Tooltip title={t('view.riskTooltipRefine')}>
                         <HelpOutline fontSize="small" color="action" />
                       </Tooltip>
                     </Stack>
@@ -676,7 +688,7 @@ export const ContractView = () => {
                     onClick={handleRefine}
                     disabled={isRefining || !refinePrompt.trim()}
                   >
-                    {isRefining ? 'AI обрабатывает...' : 'Применить изменения'}
+                    {isRefining ? t('view.aiWorking') : t('view.applyChanges')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -686,7 +698,7 @@ export const ContractView = () => {
                     }}
                     disabled={isRefining}
                   >
-                    Отмена
+                    {t('new.cancel')}
                   </Button>
                 </Stack>
               </CardContent>
@@ -695,19 +707,21 @@ export const ContractView = () => {
 
           <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              <strong>Это договор, сгенерированный через ИИ.</strong>
+              <strong>{t('view.aiDisclaimerBold')}</strong>
               <br />
-              Вы можете редактировать его напрямую в редакторе ниже или использовать AI для
-              автоматических изменений через кнопку &quot;Уточнить с AI&quot;. Рекомендована
-              консультация с юристом.
+              {t('view.aiDisclaimerText')}
             </Typography>
           </Alert>
 
           <Box sx={{ mb: 3 }}>
-            <ContractFieldsEditor fields={fields} onChange={setFields} title="Заполненные поля" />
+            <ContractFieldsEditor
+              fields={fields}
+              onChange={setFields}
+              title={t('view.filledFieldsTitle')}
+            />
             <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }} spacing={2}>
               <Button variant="contained" onClick={handleSaveFields} disabled={isUpdatingFields}>
-                {isUpdatingFields ? 'Сохранение...' : 'Сохранить поля'}
+                {isUpdatingFields ? t('view.saving') : t('view.saveFields')}
               </Button>
             </Stack>
           </Box>
@@ -718,7 +732,7 @@ export const ContractView = () => {
                 <ContractSectionsEditor
                   sections={sections}
                   onChange={setSections}
-                  title="Разделы договора"
+                  title={t('view.sectionsTitle')}
                   headerAddon={
                     <FormControlLabel
                       control={
@@ -727,7 +741,7 @@ export const ContractView = () => {
                           onChange={(e) => setSectionsEnabled(e.target.checked)}
                         />
                       }
-                      label="Включить"
+                      label={t('new.enable')}
                     />
                   }
                 />
@@ -737,7 +751,7 @@ export const ContractView = () => {
                     onClick={handleSaveSections}
                     disabled={isUpdatingSections}
                   >
-                    {isUpdatingSections ? 'Сохранение...' : 'Сохранить разделы'}
+                    {isUpdatingSections ? t('view.saving') : t('view.saveSections')}
                   </Button>
                 </Stack>
               </>
@@ -747,17 +761,17 @@ export const ContractView = () => {
                   <Stack spacing={1}>
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
                       <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="h6">Разделы договора</Typography>
+                        <Typography variant="h6">{t('view.sectionsTitle')}</Typography>
                         {!hasSectionsAccess && (
                           <Chip
                             icon={<Lock fontSize="small" />}
-                            label="Профессиональный"
+                            label={t('new.proChip')}
                             size="small"
                             color="warning"
                             variant="outlined"
                           />
                         )}
-                        <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                        <Tooltip title={t('new.sectionsTooltip')}>
                           <HelpOutline fontSize="small" color="action" />
                         </Tooltip>
                       </Stack>
@@ -769,13 +783,11 @@ export const ContractView = () => {
                             disabled={!hasSectionsAccess}
                           />
                         }
-                        label="Включить"
+                        label={t('new.enable')}
                       />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
-                      {hasSectionsAccess
-                        ? 'Разделы скрыты и не участвуют в документе.'
-                        : 'Настройка разделов доступна на платных тарифах.'}
+                      {hasSectionsAccess ? t('view.sectionsHidden') : t('view.sectionsUpsell')}
                     </Typography>
                   </Stack>
                 </CardContent>
@@ -794,18 +806,22 @@ export const ContractView = () => {
             sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
             <Typography variant="body2" color="text.secondary">
-              ID документа: {id} | Последнее обновление:{' '}
-              {new Date(selectedVersion?.updated_at || document.updated_at).toLocaleString('ru-RU')}
+              {t('view.docIdLine', {
+                id,
+                date: new Date(selectedVersion?.updated_at || document.updated_at).toLocaleString(
+                  locale,
+                ),
+              })}
             </Typography>
             <Stack direction="row" spacing={2}>
               <Button variant="outlined" onClick={() => navigate('/dashboard')}>
-                Вернуться к списку
+                {t('view.backToList')}
               </Button>
               <Button
                 variant="contained"
-                onClick={() => showSnackbar('Изменения сохранены автоматически')}
+                onClick={() => showSnackbar(t('view.snackSaved'))}
               >
-                Изменения сохраняются автоматически
+                {t('view.autoSaved')}
               </Button>
             </Stack>
           </Box>

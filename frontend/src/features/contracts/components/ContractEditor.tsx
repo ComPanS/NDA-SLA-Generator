@@ -23,7 +23,8 @@ import {
   TextFields,
   ViewColumn,
 } from '@mui/icons-material';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -33,6 +34,9 @@ import { ColumnBreak, ColumnSpan, Columns } from '../extensions/columns';
 import { DashList } from '../extensions/dashList';
 import './ContractEditor.css';
 
+/** Keeps MUI tooltips in the toolbar subtree; portals + TipTap DOM moves can trigger React removeChild errors in dev. */
+const toolbarTooltipSlots = { popper: { disablePortal: true } } as const;
+
 interface ContractEditorProps {
   content: string;
   onChange?: (content: string) => void;
@@ -40,40 +44,51 @@ interface ContractEditorProps {
 }
 
 export const ContractEditor = ({ content, onChange, readOnly = false }: ContractEditorProps) => {
+  const { t } = useTranslation('editor');
+  const onChangeRef = useRef(onChange);
+  const contentRef = useRef(content);
+  onChangeRef.current = onChange;
+  contentRef.current = content;
+
+  const extensions = useMemo(
+    () => [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+        underline: false,
+      }),
+      Underline,
+      TextStyle,
+      DashList,
+      ColumnSpan,
+      ColumnBreak,
+      Columns,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+      }),
+    ],
+    []
+  );
+
   const editor = useEditor(
     {
-      extensions: [
-        StarterKit.configure({
-          heading: {
-            levels: [1, 2, 3],
-          },
-          // Disable built-in underline to avoid duplicate extension names; we add our own instance below
-          underline: false,
-        }),
-        Underline,
-        TextStyle,
-        DashList,
-        ColumnSpan,
-        ColumnBreak,
-        Columns,
-        TextAlign.configure({
-          types: ['heading', 'paragraph'],
-          alignments: ['left', 'center', 'right', 'justify'],
-        }),
-      ],
+      extensions,
       content,
       editable: !readOnly,
-      onUpdate: ({ editor }) => {
-        onChange?.(editor.getHTML());
-      },
       onCreate: ({ editor }) => {
         const normalized = editor.getHTML();
-        if (normalized !== content) {
-          onChange?.(normalized);
+        const startHtml = contentRef.current;
+        if (normalized !== startHtml) {
+          onChangeRef.current?.(normalized);
         }
       },
+      onUpdate: ({ editor }) => {
+        onChangeRef.current?.(editor.getHTML());
+      },
     },
-    [readOnly]
+    [readOnly, extensions]
   );
 
   useEffect(() => {
@@ -162,7 +177,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('bold')}
               onClick={() => handle(() => editor.chain().focus().toggleBold().run())}
             >
-              <Tooltip title="Жирный">
+              <Tooltip title={t('bold')} slotProps={toolbarTooltipSlots}>
                 <FormatBold fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -171,7 +186,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('italic')}
               onClick={() => handle(() => editor.chain().focus().toggleItalic().run())}
             >
-              <Tooltip title="Курсив">
+              <Tooltip title={t('italic')} slotProps={toolbarTooltipSlots}>
                 <FormatItalic fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -180,7 +195,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('underline')}
               onClick={() => handle(() => editor.chain().focus().toggleUnderline().run())}
             >
-              <Tooltip title="Подчеркивание">
+              <Tooltip title={t('underline')} slotProps={toolbarTooltipSlots}>
                 <FormatUnderlined fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -192,7 +207,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('heading', { level: 1 })}
               onClick={() => handle(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
             >
-              <Tooltip title="Заголовок H1">
+              <Tooltip title={t('h1')}>
                 <TextFields fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -220,7 +235,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive({ textAlign: 'left' })}
               onClick={() => handle(() => editor.chain().focus().setTextAlign('left').run())}
             >
-              <Tooltip title="По левому краю">
+              <Tooltip title={t('alignLeft')} slotProps={toolbarTooltipSlots}>
                 <FormatAlignLeft fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -229,7 +244,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive({ textAlign: 'center' })}
               onClick={() => handle(() => editor.chain().focus().setTextAlign('center').run())}
             >
-              <Tooltip title="По центру">
+              <Tooltip title={t('alignCenter')} slotProps={toolbarTooltipSlots}>
                 <FormatAlignCenter fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -238,7 +253,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive({ textAlign: 'right' })}
               onClick={() => handle(() => editor.chain().focus().setTextAlign('right').run())}
             >
-              <Tooltip title="По правому краю">
+              <Tooltip title={t('alignRight')} slotProps={toolbarTooltipSlots}>
                 <FormatAlignRight fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -247,7 +262,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive({ textAlign: 'justify' })}
               onClick={() => handle(() => editor.chain().focus().setTextAlign('justify').run())}
             >
-              <Tooltip title="По ширине">
+              <Tooltip title={t('alignJustify')} slotProps={toolbarTooltipSlots}>
                 <FormatAlignJustify fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -261,7 +276,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('orderedList')}
               onClick={() => handle(() => editor.chain().focus().toggleOrderedList().run())}
             >
-              <Tooltip title="Нумерованный список">
+              <Tooltip title={t('ol')} slotProps={toolbarTooltipSlots}>
                 <FormatListNumbered fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -270,7 +285,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('bulletList')}
               onClick={() => handle(() => editor.chain().focus().toggleBulletList().run())}
             >
-              <Tooltip title="Маркированный список">
+              <Tooltip title={t('ul')} slotProps={toolbarTooltipSlots}>
                 <FormatListBulleted fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -279,7 +294,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               selected={editor.isActive('dashList')}
               onClick={() => handle(() => editor.chain().focus().toggleDashList().run())}
             >
-              <Tooltip title="Список через тире">
+              <Tooltip title={t('dashList')} slotProps={toolbarTooltipSlots}>
                 <Remove fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -300,7 +315,7 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
               }, 'create-2-columns')
             }
           >
-            <Tooltip title="Создать 2 колонки">
+            <Tooltip title={t('columns')} slotProps={toolbarTooltipSlots}>
               <ViewColumn fontSize="small" />
             </Tooltip>
           </IconButton>
@@ -312,7 +327,8 @@ export const ContractEditor = ({ content, onChange, readOnly = false }: Contract
             }
           >
             <Tooltip
-              title={editor.isActive('columnSpan') ? 'Вернуть в колонки' : 'Блок на всю ширину'}
+              title={editor.isActive('columnSpan') ? t('columnUnspan') : t('columnSpan')}
+              slotProps={toolbarTooltipSlots}
             >
               <ViewStream fontSize="small" />
             </Tooltip>

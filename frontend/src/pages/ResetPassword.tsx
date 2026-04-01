@@ -14,12 +14,17 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-material';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 import { useAuthStore, useResetPassword } from '@/features/auth/hooks/useAuth';
 import { AxiosError } from 'axios';
 
 export const ResetPassword = () => {
+  const { t } = useTranslation('auth');
+  const { t: tc } = useTranslation('common');
+  const localizedPath = useLocalizedPath();
   const { isAuthenticated } = useAuthStore();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token')?.trim() || '';
@@ -45,18 +50,18 @@ export const ResetPassword = () => {
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={localizedPath('/dashboard')} replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     if (!isPasswordStrong) {
-      setPasswordError('Исправьте требования к паролю ниже');
+      setPasswordError(t('reset.passwordRulesHint'));
       return;
     }
     if (!passwordsMatch) {
-      setPasswordError('Пароли должны совпадать');
+      setPasswordError(t('reset.passwordsMismatch'));
       return;
     }
     mutate({ token, password });
@@ -67,29 +72,37 @@ export const ResetPassword = () => {
       ? (error as AxiosError<{ detail: string }>).response!.data.detail
       : null;
 
+  const ruleItems: { key: keyof typeof passwordChecks; textKey: string }[] = [
+    { key: 'length', textKey: 'reset.ruleLength' },
+    { key: 'lower', textKey: 'reset.ruleLower' },
+    { key: 'upper', textKey: 'reset.ruleUpper' },
+    { key: 'digit', textKey: 'reset.ruleDigit' },
+  ];
+
   if (!token) {
     return (
       <Layout maxWidth="sm">
         <PageMeta
-          title="Сброс пароля | ДоговорAI — AI-конструктор договоров"
-          description="Задать новый пароль для аккаунта ДоговорAI."
+          title={t('reset.metaInvalidTitle')}
+          description={t('reset.metaDescription')}
+          siteName={tc('brand.name')}
         />
         <Box sx={{ mt: 8 }}>
           <Card>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h4" component="h1" gutterBottom align="center">
-                Ссылка недействительна
+                {t('reset.invalidTitle')}
               </Typography>
               <Alert severity="warning" sx={{ mb: 2 }}>
-                В адресе нет ключа сброса. Откройте ссылку из письма или запросите новую.
+                {t('reset.invalidWarning')}
               </Alert>
               <Typography variant="body2" align="center">
-                <MuiLink component={Link} to="/forgot-password">
-                  Запросить ссылку
+                <MuiLink component={Link} to={localizedPath('/forgot-password')}>
+                  {t('reset.requestLink')}
                 </MuiLink>
                 {' · '}
-                <MuiLink component={Link} to="/login">
-                  Вход
+                <MuiLink component={Link} to={localizedPath('/login')}>
+                  {t('reset.login')}
                 </MuiLink>
               </Typography>
             </CardContent>
@@ -102,17 +115,18 @@ export const ResetPassword = () => {
   return (
     <Layout maxWidth="sm">
       <PageMeta
-        title="Новый пароль | ДоговорAI — AI-конструктор договоров"
-        description="Задать новый пароль для аккаунта ДоговорAI."
+        title={t('reset.metaNewTitle')}
+        description={t('reset.metaDescription')}
+        siteName={tc('brand.name')}
       />
       <Box sx={{ mt: 8 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
-              Новый пароль
+              {t('reset.title')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Придумайте пароль для входа по email.
+              {t('reset.hint')}
             </Typography>
 
             {passwordError && (
@@ -130,7 +144,7 @@ export const ResetPassword = () => {
             <form onSubmit={handleSubmit}>
               <TextField
                 fullWidth
-                label="Новый пароль"
+                label={t('reset.newPassword')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => {
@@ -144,7 +158,7 @@ export const ResetPassword = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="показать пароль"
+                        aria-label={t('reset.showPassword')}
                         onClick={() => setShowPassword((v) => !v)}
                         edge="end"
                       >
@@ -156,12 +170,7 @@ export const ResetPassword = () => {
               />
 
               <Stack spacing={0.5} sx={{ mt: 1, mb: 1 }}>
-                {[
-                  { key: 'length', text: 'Минимум 8 символов' },
-                  { key: 'lower', text: 'Строчная буква (a-z)' },
-                  { key: 'upper', text: 'Заглавная буква (A-Z)' },
-                  { key: 'digit', text: 'Цифра (0-9)' },
-                ].map(({ key, text }) => {
+                {ruleItems.map(({ key, textKey }) => {
                   const passed = passwordChecks[key as keyof typeof passwordChecks];
                   return (
                     <Stack
@@ -177,7 +186,7 @@ export const ResetPassword = () => {
                       ) : (
                         <Cancel fontSize="small" color="disabled" />
                       )}
-                      <span>{text}</span>
+                      <span>{t(textKey)}</span>
                     </Stack>
                   );
                 })}
@@ -185,7 +194,7 @@ export const ResetPassword = () => {
 
               <TextField
                 fullWidth
-                label="Подтвердите пароль"
+                label={t('reset.confirmPassword')}
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => {
@@ -199,7 +208,7 @@ export const ResetPassword = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="показать пароль"
+                        aria-label={t('reset.showPassword')}
                         onClick={() => setShowConfirmPassword((v) => !v)}
                         edge="end"
                       >
@@ -211,8 +220,8 @@ export const ResetPassword = () => {
                 helperText={
                   confirmPassword
                     ? passwordsMatch
-                      ? 'Пароли совпадают'
-                      : 'Пароли должны совпадать'
+                      ? t('reset.passwordMatchOk')
+                      : t('reset.passwordMatchBad')
                     : ''
                 }
                 FormHelperTextProps={{
@@ -228,13 +237,13 @@ export const ResetPassword = () => {
                 sx={{ mt: 3 }}
                 disabled={isPending}
               >
-                {isPending ? 'Сохранение...' : 'Сохранить пароль'}
+                {isPending ? t('reset.submitting') : t('reset.submit')}
               </Button>
             </form>
 
             <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-              <MuiLink component={Link} to="/login">
-                ← Назад ко входу
+              <MuiLink component={Link} to={localizedPath('/login')}>
+                {t('reset.backToLogin')}
               </MuiLink>
             </Typography>
           </CardContent>

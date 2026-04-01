@@ -9,6 +9,8 @@ import {
 } from '@/shared/types';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { resolveLocalizedPath } from '@/shared/i18n/resolveLocalizedPath';
+import i18n from '@/shared/i18n/i18n';
 import { useImportGuestContract } from '@/features/contracts/hooks/useContracts';
 import { GuestImportRequest, ContractFieldInput, ContractSectionInput } from '@/shared/types';
 
@@ -39,7 +41,7 @@ export function buildGuestImportPayload(): GuestImportRequest | null {
   const title =
     (draft.exportTitle as string | undefined)?.trim() ||
     (draft.title as string | undefined)?.trim() ||
-    'Гостевой договор';
+    i18n.t('defaultTitle', { ns: 'guest' });
   const riskAssessment =
     typeof draft.riskSummary === 'string' && draft.riskSummary.trim() ? draft.riskSummary : null;
 
@@ -89,7 +91,7 @@ export const useLogin = () => {
     onSuccess: async (data, variables) => {
       if (data.requires_verification) {
         authStore.getState().setPendingEmail(variables.email);
-        navigate('/verify-email');
+        navigate(resolveLocalizedPath('/verify-email'));
         return;
       }
       authStore.getState().setTokens(data.access_token, data.refresh_token);
@@ -102,12 +104,12 @@ export const useLogin = () => {
       } catch (error) {
         console.error('Guest contract import failed after login', error);
       }
-      navigate('/dashboard');
+      navigate(resolveLocalizedPath('/dashboard'));
     },
     onError: (error: AxiosError<{ code?: string }>, variables) => {
       if (error.response?.status === 403 && error.response.data?.code === 'email_not_verified') {
         authStore.getState().setPendingEmail(variables.email);
-        navigate('/verify-email');
+        navigate(resolveLocalizedPath('/verify-email'));
       }
     },
   });
@@ -122,7 +124,7 @@ export const useRegister = () => {
     onSuccess: async (data, variables) => {
       if (data.requires_verification || !data.access_token) {
         authStore.getState().setPendingEmail(variables.email);
-        navigate('/verify-email');
+        navigate(resolveLocalizedPath('/verify-email'));
         return;
       }
       authStore.getState().setTokens(data.access_token, data.refresh_token!);
@@ -135,7 +137,7 @@ export const useRegister = () => {
       } catch (error) {
         console.error('Guest contract import failed after registration', error);
       }
-      navigate('/dashboard');
+      navigate(resolveLocalizedPath('/dashboard'));
     },
   });
 };
@@ -145,7 +147,7 @@ export const useLogout = () => {
 
   return () => {
     authStore.getState().logout();
-    navigate('/');
+    navigate(resolveLocalizedPath('/'));
   };
 };
 
@@ -168,7 +170,7 @@ export const useYandexCallback = () => {
       } catch (error) {
         console.error('Guest contract import failed after Yandex login', error);
       }
-      navigate('/dashboard');
+      navigate(resolveLocalizedPath('/dashboard'));
     },
   });
 };
@@ -190,7 +192,7 @@ export const useYandexSuggest = () => {
       } catch (error) {
         console.error('Guest contract import failed after Yandex suggest', error);
       }
-      navigate('/dashboard');
+      navigate(resolveLocalizedPath('/dashboard'));
     },
   });
 };
@@ -212,7 +214,7 @@ export const useVerifyEmail = () => {
       } catch (error) {
         console.error('Guest contract import failed after email verification', error);
       }
-      navigate('/dashboard');
+      navigate(resolveLocalizedPath('/dashboard'));
     },
   });
 };
@@ -235,7 +237,7 @@ export const useResetPassword = () => {
   return useMutation({
     mutationFn: (payload: { token: string; password: string }) => authApi.resetPassword(payload),
     onSuccess: () => {
-      navigate('/login', { state: { passwordReset: true } });
+      navigate(resolveLocalizedPath('/login'), { state: { passwordReset: true } });
     },
   });
 };

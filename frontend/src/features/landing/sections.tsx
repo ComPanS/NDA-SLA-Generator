@@ -13,7 +13,9 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PlanInfo } from '@/shared/types';
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 import {
   Accordion,
   AccordionContent,
@@ -29,6 +31,21 @@ import {
   CardTitle,
 } from '@/shared/ui';
 
+type ComparisonCell = string | boolean;
+type ComparisonRow = {
+  feature: string;
+  lawyer: ComparisonCell;
+  template: ComparisonCell;
+  service: ComparisonCell;
+};
+
+type FaqItem = { q: string; a: string };
+
+type PainPoint = { title: string; description: string };
+type Step = { number: string; title: string; description: string };
+type Testimonial = { name: string; role: string; text: string; initials: string };
+type TrustPoint = { title: string; description: string };
+
 type HeroSectionProps = {
   contractsTotal?: number | null;
   onPrimary: () => void;
@@ -36,48 +53,47 @@ type HeroSectionProps = {
 };
 
 export const HeroSection = ({ contractsTotal, onPrimary, onGuest }: HeroSectionProps) => {
+  const { t, i18n } = useTranslation('landing');
+  const localeTag = icuLocaleFor(i18n.language);
   const totalLabel =
     contractsTotal === null || contractsTotal === undefined
       ? '—'
-      : contractsTotal.toLocaleString('ru-RU');
+      : contractsTotal.toLocaleString(localeTag);
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white py-20 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-6xl mb-6">
-            Защитите свои деньги от недобросовестных клиентов за 5 минут — без юриста и без риска
-          </h1>
+          <h1 className="text-4xl md:text-6xl mb-6">{t('hero.title')}</h1>
 
-          <p className="text-lg md:text-xl text-gray-600 mb-8">
-            AI-конструктор NDA, ГПХ, оферт и других договоров для фрилансеров, самозанятых и ИП.
-            Готовый документ в PDF/DOCX за минуты.
-          </p>
+          <p className="text-lg md:text-xl text-gray-600 mb-8">{t('hero.subtitle')}</p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
             <Button size="lg" className="text-lg px-8 py-6" onClick={onPrimary}>
               <FileText className="mr-2" />
-              Создать договор бесплатно
+              {t('hero.ctaPrimary')}
             </Button>
             <Button size="lg" variant="outline" className="text-lg px-8 py-6" onClick={onGuest}>
-              Без регистрации
+              {t('hero.ctaGuest')}
             </Button>
           </div>
-          <p className="text-sm text-gray-700 mb-6">Без ввода платежных данных</p>
+          <p className="text-sm text-gray-700 mb-6">{t('hero.noCard')}</p>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-green-600" />
-              <span>Первый документ бесплатно</span>
+              <span>{t('hero.benefit1')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-green-600" />
-              <span>PDF и DOCX без лишних кликов</span>
+              <span>{t('hero.benefit2')}</span>
             </div>
           </div>
 
           <div className="mt-8 text-3xl md:text-4xl text-blue-600">
-            Уже <span className="font-semibold">{totalLabel}</span> договоров создано
+            {t('hero.contractsPrefix')}{' '}
+            <span className="font-semibold">{totalLabel}</span>{' '}
+            {t('hero.contractsSuffix')}
           </div>
         </div>
       </div>
@@ -85,127 +101,94 @@ export const HeroSection = ({ contractsTotal, onPrimary, onGuest }: HeroSectionP
   );
 };
 
-const painPoints = [
-  { icon: XCircle, title: 'Клиент не заплатил', description: 'Работа выполнена, а денег нет' },
-  {
-    icon: MessageSquareWarning,
-    title: 'Требует больше, чем договорились',
-    description: 'Постоянные правки без доплаты',
-  },
-  { icon: Clock, title: 'Спор по срокам', description: 'Кто виноват в задержке?' },
-  { icon: FileText, title: 'Ничего не доказать', description: 'Только переписка в мессенджере' },
-];
+const painIcons = [XCircle, MessageSquareWarning, Clock, FileText] as const;
 
-export const PainSection = () => (
-  <section className="py-20 px-4 bg-red-50">
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-3xl md:text-5xl text-center mb-12">Работа без договора — это риск.</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {painPoints.map((point) => (
-          <Card key={point.title} className="border-red-200 bg-white">
-            <CardContent className="pt-6">
-              <point.icon className="w-12 h-12 text-red-500 mb-4" />
-              <h3 className="text-lg mb-2">{point.title}</h3>
-              <p className="text-sm text-gray-600">{point.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+export const PainSection = () => {
+  const { t } = useTranslation('landing');
+  const points = t('pain.points', { returnObjects: true }) as PainPoint[];
+
+  return (
+    <section className="py-20 px-4 bg-red-50">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl md:text-5xl text-center mb-12">{t('pain.heading')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {points.map((point, idx) => {
+            const Icon = painIcons[idx] ?? XCircle;
+            return (
+              <Card key={point.title} className="border-red-200 bg-white">
+                <CardContent className="pt-6">
+                  <Icon className="w-12 h-12 text-red-500 mb-4" />
+                  <h3 className="text-lg mb-2">{point.title}</h3>
+                  <p className="text-sm text-gray-600">{point.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <p className="text-xl md:text-3xl text-center font-semibold">{t('pain.footer')}</p>
       </div>
-      <p className="text-xl md:text-3xl text-center font-semibold">
-        Один юридически грамотный договор решает эти риски раз и навсегда.
-      </p>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
-const steps = [
-  {
-    icon: MessageSquare,
-    number: '1',
-    title: 'Отвечаете на вопросы',
-    description: '5–7 минут: простые вопросы о проекте, сроках и оплате',
-  },
-  {
-    icon: Sparkles,
-    number: '2',
-    title: 'AI формирует договор по ГК РФ',
-    description: 'Алгоритм создаёт юридически корректный документ по нормам закона',
-  },
-  {
-    icon: Download,
-    number: '3',
-    title: 'Редактируете и скачиваете',
-    description: 'Внесите правки и получите готовый PDF/DOCX',
-  },
-];
+const stepIcons = [MessageSquare, Sparkles, Download] as const;
 
 type HowItWorksProps = { onPrimary: () => void };
 
-export const SolutionHowItWorksSection = ({ onPrimary }: HowItWorksProps) => (
-  <section id="how-it-works" className="py-20 px-4 bg-white">
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-3xl md:text-5xl text-center mb-4">
-        Превращаем договорённости в юридический документ за 3 шага
-      </h2>
-      <p className="text-center text-gray-600 mb-16 text-lg">Просто, быстро и без юриста</p>
+export const SolutionHowItWorksSection = ({ onPrimary }: HowItWorksProps) => {
+  const { t } = useTranslation('landing');
+  const steps = t('howItWorks.steps', { returnObjects: true }) as Step[];
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        {steps.map((step, index) => (
-          <div key={step.title} className="relative">
-            {index < steps.length - 1 && (
-              <div className="hidden md:block absolute top-16 left-[60%] w-[80%] h-0.5 bg-blue-200 z-0" />
-            )}
-            <div className="relative z-10 text-center">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-600 text-white mb-6 relative">
-                <step.icon className="w-10 h-10" />
-                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white text-blue-600 flex items-center justify-center text-sm font-semibold">
-                  {step.number}
+  return (
+    <section id="how-it-works" className="py-20 px-4 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl md:text-5xl text-center mb-4">{t('howItWorks.title')}</h2>
+        <p className="text-center text-gray-600 mb-16 text-lg">{t('howItWorks.subtitle')}</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+          {steps.map((step, index) => {
+            const Icon = stepIcons[index] ?? MessageSquare;
+            return (
+              <div key={step.title} className="relative">
+                {index < steps.length - 1 && (
+                  <div className="hidden md:block absolute top-16 left-[60%] w-[80%] h-0.5 bg-blue-200 z-0" />
+                )}
+                <div className="relative z-10 text-center">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-600 text-white mb-6 relative">
+                    <Icon className="w-10 h-10" />
+                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white text-blue-600 flex items-center justify-center text-sm font-semibold">
+                      {step.number}
+                    </div>
+                  </div>
+                  <h3 className="text-xl mb-3">{step.title}</h3>
+                  <p className="text-gray-600">{step.description}</p>
                 </div>
               </div>
-              <h3 className="text-xl mb-3">{step.title}</h3>
-              <p className="text-gray-600">{step.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
 
-      <div className="text-center">
-        <Button size="lg" className="text-lg px-8 py-6" onClick={onPrimary}>
-          Попробовать бесплатно
-        </Button>
+        <div className="text-center">
+          <Button size="lg" className="text-lg px-8 py-6" onClick={onPrimary}>
+            {t('howItWorks.cta')}
+          </Button>
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 type SocialProofProps = { contractsTotal?: number | null };
 
 export const SocialProofSection = ({ contractsTotal }: SocialProofProps) => {
+  const { t, i18n } = useTranslation('landing');
+  const localeTag = icuLocaleFor(i18n.language);
   const totalLabel =
     contractsTotal === null || contractsTotal === undefined
       ? '—'
-      : contractsTotal.toLocaleString('ru-RU');
+      : contractsTotal.toLocaleString(localeTag);
 
-  const testimonials = [
-    {
-      name: 'Анна Петрова',
-      role: 'UX/UI дизайнер',
-      text: 'Теперь на каждый проект — договор за 5 минут. Клиенты стали платить вовремя.',
-      initials: 'АП',
-    },
-    {
-      name: 'Дмитрий Соколов',
-      role: 'Веб-разработчик',
-      text: 'Договор помог отстоять оплату за доработки. Удобно, что можно редактировать текст.',
-      initials: 'ДС',
-    },
-    {
-      name: 'Мария Иванова',
-      role: 'Контент-маркетолог',
-      text: 'Экспорт в DOCX — спасение. Дорабатываю формулировки под каждого клиента.',
-      initials: 'МИ',
-    },
-  ];
+  const testimonials = t('social.testimonials', { returnObjects: true }) as Testimonial[];
 
   return (
     <section id="reviews" className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
@@ -214,14 +197,14 @@ export const SocialProofSection = ({ contractsTotal }: SocialProofProps) => {
           <div className="text-5xl md:text-7xl mb-2">
             <span className="text-blue-600 font-bold">{totalLabel}</span>
           </div>
-          <p className="text-2xl md:text-3xl text-gray-700">договоров уже создано</p>
+          <p className="text-2xl md:text-3xl text-gray-700">{t('social.contractsCreatedLine')}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {[
-            { icon: Users, value: totalLabel, label: 'Договоров создано' },
-            { icon: ShieldCheck, value: 'Риски под контролем', label: 'Подсветка проблемных пунктов' },
-            { icon: TrendingUp, value: 'Сохраняем версии', label: 'История правок и экспорт' },
+            { icon: Users, value: totalLabel, label: t('social.statContractsLabel') },
+            { icon: ShieldCheck, value: t('social.statRiskValue'), label: t('social.statRiskLabel') },
+            { icon: TrendingUp, value: t('social.statHistoryValue'), label: t('social.statHistoryLabel') },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <stat.icon className="w-12 h-12 text-blue-600 mx-auto mb-4" />
@@ -231,7 +214,7 @@ export const SocialProofSection = ({ contractsTotal }: SocialProofProps) => {
           ))}
         </div>
 
-        <h2 className="text-3xl md:text-4xl text-center mb-12">Что говорят пользователи</h2>
+        <h2 className="text-3xl md:text-4xl text-center mb-12">{t('social.testimonialsHeading')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {testimonials.map((testimonial) => (
             <Card key={testimonial.name}>
@@ -245,11 +228,6 @@ export const SocialProofSection = ({ contractsTotal }: SocialProofProps) => {
                     <div className="text-xs text-gray-600">{testimonial.role}</div>
                   </div>
                 </div>
-                {/* <div className="flex gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Check key={i} className="w-4 h-4 text-green-500" />
-                  ))}
-                </div> */}
                 <p className="text-sm text-gray-700">{testimonial.text}</p>
               </CardContent>
             </Card>
@@ -260,146 +238,117 @@ export const SocialProofSection = ({ contractsTotal }: SocialProofProps) => {
   );
 };
 
-const comparisonData = [
-  { feature: 'Стоимость', lawyer: '10 000–30 000 ₽', template: 'Бесплатно', service: 'от 0 ₽' },
-  { feature: 'Время создания', lawyer: '3–7 дней', template: '2–3 часа', service: '5 минут' },
-  { feature: 'Юридическая корректность', lawyer: true, template: false, service: true },
-  { feature: 'Адаптация под вас', lawyer: true, template: false, service: true },
-  { feature: 'Подсветка рисков', lawyer: true, template: false, service: true },
-  { feature: 'Можно редактировать', lawyer: false, template: true, service: true },
-  { feature: 'Экспорт DOCX/PDF', lawyer: true, template: true, service: true },
-];
+export const ComparisonSection = () => {
+  const { t } = useTranslation('landing');
+  const rows = t('comparison.rows', { returnObjects: true }) as ComparisonRow[];
 
-export const ComparisonSection = () => (
-  <section className="py-20 px-4 bg-gray-50">
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-3xl md:text-5xl text-center mb-4">Сравнение с альтернативами</h2>
-      <p className="text-center text-gray-600 mb-12 text-lg">
-        Экономия времени и денег по сравнению с юристом или шаблоном из интернета
-      </p>
+  return (
+    <section className="py-20 px-4 bg-gray-50">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl md:text-5xl text-center mb-4">{t('comparison.title')}</h2>
+        <p className="text-center text-gray-600 mb-12 text-lg">{t('comparison.subtitle')}</p>
 
-      <div className="overflow-x-auto">
-        <table className="w-full bg-white rounded-lg overflow-hidden shadow-lg">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="px-6 py-4 text-left">Критерий</th>
-              <th className="px-6 py-4 text-center">Нанять юриста</th>
-              <th className="px-6 py-4 text-center">Скачать шаблон</th>
-              <th className="px-6 py-4 text-center bg-green-50">
-                <span className="text-green-700 font-semibold text-lg">Наш AI-конструктор</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {comparisonData.map((row) => (
-              <tr key={row.feature} className="border-t border-gray-100">
-                <td className="px-6 py-4 font-medium">{row.feature}</td>
-                <td className="px-6 py-4 text-center">
-                  {typeof row.lawyer === 'boolean' ? (
-                    row.lawyer ? (
-                      <Check className="w-5 h-5 text-green-600 mx-auto" />
-                    ) : (
-                      <X className="w-5 h-5 text-red-500 mx-auto" />
-                    )
-                  ) : (
-                    <span className="text-gray-700">{row.lawyer}</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-center">
-                  {typeof row.template === 'boolean' ? (
-                    row.template ? (
-                      <Check className="w-5 h-5 text-green-600 mx-auto" />
-                    ) : (
-                      <X className="w-5 h-5 text-red-500 mx-auto" />
-                    )
-                  ) : (
-                    <span className="text-gray-700">{row.template}</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-center bg-green-50">
-                  {typeof row.service === 'boolean' ? (
-                    row.service ? (
-                      <Check className="w-5 h-5 text-green-700 mx-auto font-bold" />
-                    ) : (
-                      <X className="w-5 h-5 text-red-500 mx-auto" />
-                    )
-                  ) : (
-                    <span className="text-green-700 font-semibold">{row.service}</span>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full bg-white rounded-lg overflow-hidden shadow-lg">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="px-6 py-4 text-left">{t('comparison.colCriterion')}</th>
+                <th className="px-6 py-4 text-center">{t('comparison.colLawyer')}</th>
+                <th className="px-6 py-4 text-center">{t('comparison.colTemplate')}</th>
+                <th className="px-6 py-4 text-center bg-green-50">
+                  <span className="text-green-700 font-semibold text-lg">{t('comparison.colService')}</span>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.feature} className="border-t border-gray-100">
+                  <td className="px-6 py-4 font-medium">{row.feature}</td>
+                  <td className="px-6 py-4 text-center">
+                    {typeof row.lawyer === 'boolean' ? (
+                      row.lawyer ? (
+                        <Check className="w-5 h-5 text-green-600 mx-auto" />
+                      ) : (
+                        <X className="w-5 h-5 text-red-500 mx-auto" />
+                      )
+                    ) : (
+                      <span className="text-gray-700">{row.lawyer}</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {typeof row.template === 'boolean' ? (
+                      row.template ? (
+                        <Check className="w-5 h-5 text-green-600 mx-auto" />
+                      ) : (
+                        <X className="w-5 h-5 text-red-500 mx-auto" />
+                      )
+                    ) : (
+                      <span className="text-gray-700">{row.template}</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center bg-green-50">
+                    {typeof row.service === 'boolean' ? (
+                      row.service ? (
+                        <Check className="w-5 h-5 text-green-700 mx-auto font-bold" />
+                      ) : (
+                        <X className="w-5 h-5 text-red-500 mx-auto" />
+                      )
+                    ) : (
+                      <span className="text-green-700 font-semibold">{row.service}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
-const trustPoints = [
-  {
-    icon: ShieldCheck,
-    title: 'Структура по ГК РФ',
-    description:
-      'Разделы договора соответствуют нормам ГК РФ. Документ можно использовать в переговорах и суде.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Редактируйте как угодно',
-    description:
-      'Вы контролируете содержание: меняйте формулировки, добавляйте пункты или скрывайте лишнее.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Подсветка рисков',
-    description: 'AI подсвечивает потенциально опасные места, чтобы вы не пропустили важное.',
-  },
-  {
-    icon: Download,
-    title: 'Версии и экспорт',
-    description: 'Храним версии, экспортируем в PDF и DOCX без лишних действий.',
-  },
-];
+const trustIcons = [ShieldCheck, Sparkles, TrendingUp, Download] as const;
 
-export const TrustSection = () => (
-  <section className="py-20 px-4 bg-white">
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-3xl md:text-5xl text-center mb-4">
-        Договоры соответствуют ГК РФ и выдержат проверку
-      </h2>
-      <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto text-lg">
-        Не просто генерация текста — юридически значимые документы с учётом рисков
-      </p>
+export const TrustSection = () => {
+  const { t } = useTranslation('landing');
+  const trustPoints = t('trust.points', { returnObjects: true }) as TrustPoint[];
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        {trustPoints.map((point) => (
-          <Card key={point.title} className="border-2 border-green-100">
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                    <point.icon className="w-6 h-6 text-green-700" />
+  return (
+    <section className="py-20 px-4 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl md:text-5xl text-center mb-4">{t('trust.title')}</h2>
+        <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto text-lg">{t('trust.subtitle')}</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          {trustPoints.map((point, idx) => {
+            const Icon = trustIcons[idx] ?? ShieldCheck;
+            return (
+              <Card key={point.title} className="border-2 border-green-100">
+                <CardContent className="pt-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                        <Icon className="w-6 h-6 text-green-700" />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-lg mb-2 font-semibold">{point.title}</h3>
+                      <p className="text-gray-600">{point.description}</p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h3 className="text-lg mb-2 font-semibold">{point.title}</h3>
-                  <p className="text-gray-600">{point.description}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
 
-      <div className="text-center bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-        <p className="text-gray-700">
-          <span className="font-semibold">Персональные данные под защитой.</span> Документы
-          шифруются и обрабатываются по требованиям 152-ФЗ.
-        </p>
+        <div className="text-center bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+          <p className="text-gray-700">{t('trust.banner')}</p>
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 type PricingSectionProps = {
   plans: PlanInfo[];
@@ -407,205 +356,147 @@ type PricingSectionProps = {
   onSelectPlan: () => void;
 };
 
-const formatPrice = (value: number | null | undefined) => {
-  if (value === null || value === undefined) return '—';
-  if (value === 0) return 'Бесплатно';
-  return `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
-};
+export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionProps) => {
+  const { t, i18n } = useTranslation('landing');
+  const localeTag = icuLocaleFor(i18n.language);
 
-export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionProps) => (
-  <section id="pricing" className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
-    <div className="max-w-6xl mx-auto">
-      <h2 className="text-3xl md:text-5xl text-center mb-4">Простые и честные цены</h2>
-      <p className="text-center text-gray-600 mb-12 text-lg">
-        Первый договор бесплатно. Экспорт в PDF/DOCX, история версий и подсветка рисков.
-      </p>
+  const formatPrice = (value: number | null | undefined) => {
+    if (value === null || value === undefined) return '—';
+    if (value === 0) return t('pricing.freeLabel');
+    return `${new Intl.NumberFormat(localeTag).format(value)} \u20BD`;
+  };
 
-      {loading ? (
-        <div className="text-center text-gray-600">Загружаем тарифы...</div>
-      ) : plans.length === 0 ? (
-        <div className="text-center text-gray-600">Тарифы временно недоступны.</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {plans.map((plan) => {
-            const highlighted = plan.id === 'basic';
-            const hasDiscount =
-              !!plan.first_month_discount_available &&
-              plan.first_month_price !== null &&
-              plan.first_month_price !== undefined &&
-              plan.price > 0 &&
-              plan.first_month_price < plan.price;
-            const discountPercent = hasDiscount
-              ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
-              : null;
+  return (
+    <section id="pricing" className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl md:text-5xl text-center mb-4">{t('pricing.title')}</h2>
+        <p className="text-center text-gray-600 mb-12 text-lg">{t('pricing.subtitle')}</p>
 
-            return (
-              <Card
-                key={plan.id}
-                className={`relative ${
-                  highlighted ? 'border-2 border-blue-500 shadow-xl scale-105' : 'border border-gray-200'
-                }`}
-              >
-                {highlighted && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">Самый популярный</Badge>
-                  </div>
-                )}
+        {loading ? (
+          <div className="text-center text-gray-600">{t('pricing.loading')}</div>
+        ) : plans.length === 0 ? (
+          <div className="text-center text-gray-600">{t('pricing.empty')}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {plans.map((plan) => {
+              const highlighted = plan.id === 'basic';
+              const hasDiscount =
+                !!plan.first_month_discount_available &&
+                plan.first_month_price !== null &&
+                plan.first_month_price !== undefined &&
+                plan.price > 0 &&
+                plan.first_month_price < plan.price;
+              const discountPercent = hasDiscount
+                ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
+                : null;
 
-                <CardHeader>
-                  <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
-                  <div className="mb-2">
-                    <span className="text-4xl font-bold">
-                      {hasDiscount ? formatPrice(plan.first_month_price) : formatPrice(plan.price)}
-                    </span>
-                    {plan.price > 0 && <span className="text-gray-600 ml-2">/ месяц</span>}
-                  </div>
-                  {hasDiscount && (
-                    <div className="text-sm text-gray-700 space-y-1">
-                      <div>
-                        <span className="line-through text-gray-400">{formatPrice(plan.price)}</span>{' '}
-                        <span className="font-semibold text-green-700">
-                          {discountPercent !== null ? `-${discountPercent}%` : ''}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500">Скидка на первый месяц</div>
+              return (
+                <Card
+                  key={plan.id}
+                  className={`relative ${
+                    highlighted ? 'border-2 border-blue-500 shadow-xl scale-105' : 'border border-gray-200'
+                  }`}
+                >
+                  {highlighted && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">
+                        {t('pricing.popular')}
+                      </Badge>
                     </div>
                   )}
-                 
-                </CardHeader>
 
-                <CardContent>
-                  <Button
-                    className={`w-full mb-6 ${highlighted ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-                    size="lg"
-                    onClick={onSelectPlan}
-                  >
-                    {plan.price === 0 ? 'Попробовать бесплатно' : 'Выбрать тариф'}
-                  </Button>
+                  <CardHeader>
+                    <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
+                    <div className="mb-2">
+                      <span className="text-4xl font-bold">
+                        {hasDiscount ? formatPrice(plan.first_month_price) : formatPrice(plan.price)}
+                      </span>
+                      {plan.price > 0 && (
+                        <span className="text-gray-600 ml-2">{t('pricing.perMonth')}</span>
+                      )}
+                    </div>
+                    {hasDiscount && (
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div>
+                          <span className="line-through text-gray-400">{formatPrice(plan.price)}</span>{' '}
+                          <span className="font-semibold text-green-700">
+                            {discountPercent !== null ? `-${discountPercent}%` : ''}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">{t('pricing.discountFirstMonth')}</div>
+                      </div>
+                    )}
+                  </CardHeader>
 
-                  <ul className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  </section>
-);
+                  <CardContent>
+                    <Button
+                      className={`w-full mb-6 ${highlighted ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                      size="lg"
+                      onClick={onSelectPlan}
+                    >
+                      {plan.price === 0 ? t('pricing.tryFree') : t('pricing.choosePlan')}
+                    </Button>
 
-const faqItems = [
-  // Оригинальные вопросы
-  {
-    q: 'Сколько времени занимает подготовка договора?',
-    a: 'Обычно генерация и базовые правки занимают 3–7 минут. Дальше можно сразу экспортировать в PDF/DOCX.',
-  },
-  {
-    q: 'Нужна ли регистрация?',
-    a: 'Первый тестовый договор можно сделать без регистрации. Для истории, версий и экспорта лучше войти.',
-  },
-  {
-    q: 'Можно ли менять структуру разделов?',
-    a: 'Да, разделы и поля можно включать/выключать и менять порядок перед генерацией.',
-  },
-  {
-    q: 'Что такое шаблон и договор?',
-    a: 'Шаблон задаёт поля и разделы. Договор создаётся на основе шаблона и хранится в аккаунте.',
-  },
-  {
-    q: 'Как внести правки после генерации?',
-    a: 'Откройте договор в редакторе, поправьте текст и экспортируйте обновлённую версию.',
-  },
-  {
-    q: 'Какой формат экспорта доступен?',
-    a: 'Поддерживаются DOCX и PDF. Экспорт доступен из карточки договора.',
-  },
-  {
-    q: 'Работает ли без шаблона?',
-    a: 'Да, можно сгенерировать договор без шаблона: укажите заголовок и подсказку — AI предложит структуру.',
-  },
-  {
-    q: 'Можно ли использовать свои данные сторон?',
-    a: 'Да, заполните поля в шаблоне или договоре перед генерацией — они попадут в финальный текст.',
-  },
-  // Вопросы из нового лендинга
-  {
-    q: 'Это законно?',
-    a: 'Да. Сервис помогает составить договор, но финальную ответственность за содержание несёте вы. Мы используем стандартные формулировки по ГК РФ; при сложных кейсах стоит проконсультироваться с юристом.',
-  },
-  {
-    q: 'Могу ли я использовать договор в суде?',
-    a: 'Да, при подписании обеими сторонами договор соответствует нормам ГК РФ. Пользователи уже применяли такие договоры в спорах для взыскания оплаты.',
-  },
-  {
-    q: 'Подойдёт ли для суда?',
-    a: 'Структура документа соответствует требованиям ГК РФ. Для сложных сделок рекомендуем консультацию профильного юриста.',
-  },
-  {
-    q: 'Кто отвечает за ошибки?',
-    a: 'Финальное решение за вами: вы редактируете договор и утверждаете формулировки. AI подсвечивает риски, но документ нужно проверить перед использованием.',
-  },
-  {
-    q: 'Можно ли менять формулировки?',
-    a: 'Да, документ полностью редактируем: меняйте пункты, добавляйте условия, удаляйте лишнее. Экспорт в DOCX позволяет доработать в редакторе.',
-  },
-  {
-    q: 'Что если клиент не хочет подписывать договор, созданный через AI?',
-    a: 'Документ выглядит профессионально. Вы можете позиционировать его как типовой или составленный через сервис. Предложение подписать договор само по себе демонстрирует добросовестность.',
-  },
-  {
-    q: 'Какие типы договоров можно создать?',
-    a: 'ГПХ, NDA, договоры оказания услуг, подряда, агентские, лицензионные соглашения, публичные оферты и другие. База шаблонов пополняется.',
-  },
-  {
-    q: 'Нужна ли регистрация для первого договора?',
-    a: 'Нет. Первый договор можно создать и скачать бесплатно без регистрации. Регистрация нужна для сохранения истории и расширенных функций.',
-  },
-  {
-    q: 'Что делать, если нужна консультация юриста?',
-    a: 'На тарифе «Бизнес» доступна базовая консультация. Для сложных случаев можем порекомендовать партнёров-юристов.',
-  },
-];
+                    <ul className="space-y-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
 
-export const FAQSection = () => (
-  <section id="faq" className="py-20 px-4 bg-white">
-    <div className="max-w-3xl mx-auto">
-      <h2 className="text-3xl md:text-5xl text-center mb-4">Частые вопросы</h2>
-      <p className="text-center text-gray-600 mb-12">Ответы на главные сомнения</p>
-      <Accordion type="single" collapsible className="w-full">
-        {faqItems.map((item, index) => (
-          <AccordionItem key={item.q} value={`item-${index}`}>
-            <AccordionTrigger className="text-left text-lg cursor-pointer">{item.q}</AccordionTrigger>
-            <AccordionContent className="text-gray-600">{item.a}</AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    </div>
-  </section>
-);
+export const FAQSection = () => {
+  const { t } = useTranslation('landing');
+  const items = t('faq.items', { returnObjects: true }) as FaqItem[];
 
-type FinalCTASectionProps = { onPrimary: () => void; onGuest: () => void; contractsTotal?: number | null };
+  return (
+    <section id="faq" className="py-20 px-4 bg-white">
+      <div className="max-w-3xl mx-auto">
+        <h2 className="text-3xl md:text-5xl text-center mb-4">{t('faq.title')}</h2>
+        <p className="text-center text-gray-600 mb-12">{t('faq.subtitle')}</p>
+        <Accordion type="single" collapsible className="w-full">
+          {items.map((item, index) => (
+            <AccordionItem key={item.q} value={`item-${index}`}>
+              <AccordionTrigger className="text-left text-lg cursor-pointer">{item.q}</AccordionTrigger>
+              <AccordionContent className="text-gray-600">{item.a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </section>
+  );
+};
+
+type FinalCTASectionProps = {
+  onPrimary: () => void;
+  onGuest: () => void;
+  contractsTotal?: number | null;
+};
 
 export const FinalCTASection = ({ onPrimary, onGuest, contractsTotal }: FinalCTASectionProps) => {
+  const { t, i18n } = useTranslation('landing');
+  const localeTag = icuLocaleFor(i18n.language);
   const totalLabel =
     contractsTotal === null || contractsTotal === undefined
       ? ''
-      : `Присоединяйтесь к ${contractsTotal.toLocaleString('ru-RU')} созданным договорам`;
+      : t('finalCta.joinLine', { count: contractsTotal.toLocaleString(localeTag) });
 
   return (
     <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
       <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl md:text-5xl mb-6">Начните защищать свои доходы сегодня</h2>
-        <p className="text-xl mb-8 text-blue-100">
-          Создайте юридически грамотный договор за 5 минут. Экспортируйте в PDF или DOCX без лишних действий.
-        </p>
+        <h2 className="text-3xl md:text-5xl mb-6">{t('finalCta.title')}</h2>
+        <p className="text-xl mb-8 text-blue-100">{t('finalCta.subtitle')}</p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
           <Button
@@ -614,7 +505,7 @@ export const FinalCTASection = ({ onPrimary, onGuest, contractsTotal }: FinalCTA
             onClick={onPrimary}
           >
             <FileText className="mr-2" />
-            Создать договор бесплатно
+            {t('finalCta.ctaPrimary')}
             <ArrowRight className="ml-2" />
           </Button>
           <Button
@@ -623,22 +514,22 @@ export const FinalCTASection = ({ onPrimary, onGuest, contractsTotal }: FinalCTA
             className="bg-white/10 border-white/40 text-white hover:bg-white/10 text-lg px-8 py-6"
             onClick={onGuest}
           >
-            Без регистрации
+            {t('finalCta.ctaGuest')}
           </Button>
         </div>
 
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-blue-100 mb-6">
           <div className="flex items-center gap-2">
             <Check className="w-5 h-5" />
-            <span>PDF и DOCX</span>
+            <span>{t('finalCta.check1')}</span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="w-5 h-5" />
-            <span>Без ввода карты</span>
+            <span>{t('finalCta.check2')}</span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="w-5 h-5" />
-            <span>Подсветка рисков</span>
+            <span>{t('finalCta.check3')}</span>
           </div>
         </div>
 

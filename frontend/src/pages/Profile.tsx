@@ -11,7 +11,9 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { profileApi } from '@/shared/api';
+import { resolveLocalizedPath } from '@/shared/i18n/resolveLocalizedPath';
 import {
   ConfirmDialog,
   ErrorMessage,
@@ -22,8 +24,12 @@ import {
 } from '@/shared/components';
 import { authStore } from '@/features/auth/store/authStore';
 import { useState } from 'react';
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 
 export const Profile = () => {
+  const { t, i18n } = useTranslation('profile');
+  const { t: tc } = useTranslation('common');
+  const locale = icuLocaleFor(i18n.language);
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { data, isLoading, isError } = useQuery({
@@ -35,7 +41,7 @@ export const Profile = () => {
     mutationFn: () => profileApi.deleteAccount(),
     onSuccess: () => {
       authStore.getState().logout();
-      navigate('/');
+      navigate(resolveLocalizedPath('/'), { replace: true });
     },
   });
 
@@ -44,18 +50,18 @@ export const Profile = () => {
   return (
     <ProtectedRoute>
       <Layout>
-        <PageMeta title="Профиль | ДоговорAI" description="Ваш профиль и управление аккаунтом" />
+        <PageMeta title={t('metaTitle')} description={t('metaDesc')} siteName={tc('brand.name')} />
 
         <Box sx={{ maxWidth: 900, mx: 'auto' }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Профиль
+            {t('title')}
           </Typography>
           {/* <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Базовая информация об аккаунте и управление безопасностью.
           </Typography> */}
 
-          {isLoading && <LoadingSpinner message="Загружаем профиль..." />}
-          {isError && <ErrorMessage message="Не удалось загрузить профиль" />}
+          {isLoading && <LoadingSpinner message={t('loading')} />}
+          {isError && <ErrorMessage message={t('loadError')} />}
 
           {data && (
             <Stack spacing={3}>
@@ -68,23 +74,23 @@ export const Profile = () => {
                       <Typography color="text.secondary">{data.email}</Typography>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Chip
-                          label={data.emailVerified ? 'Email подтвержден' : 'Email не подтвержден'}
+                          label={data.emailVerified ? t('emailVerified') : t('emailNotVerified')}
                           color={data.emailVerified ? 'success' : 'warning'}
                           size="small"
                         />
                         {data.subscription ? (
                           <Chip
-                            label={`Тариф: ${data.subscription.plan.toUpperCase()}`}
+                            label={t('plan', { plan: data.subscription.plan.toUpperCase() })}
                             color="primary"
                             size="small"
                           />
                         ) : (
-                          <Chip label="Без подписки" size="small" />
+                          <Chip label={t('noSubscription')} size="small" />
                         )}
                       </Stack>
                       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         <Typography variant="body2" color="text.secondary">
-                          Аккаунт создан: {new Date(data.createdAt).toLocaleString('ru-RU')}
+                          {t('created', { date: new Date(data.createdAt).toLocaleString(locale) })}
                         </Typography>
                         {/* <Typography variant="body2" color="text.secondary">
                           Обновлен: {new Date(data.updatedAt).toLocaleString('ru-RU')}
@@ -98,10 +104,9 @@ export const Profile = () => {
               <Card>
                 <CardContent>
                   <Stack spacing={1.5}>
-                    <Typography variant="h6">Удаление аккаунта</Typography>
+                    <Typography variant="h6">{t('deleteSection')}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Это действие удалит ваш аккаунт, документы, шаблоны, платежи и активные
-                      подписки. Операция необратима.
+                      {t('deleteHint')}
                     </Typography>
                     <Divider />
                     <Box>
@@ -110,7 +115,7 @@ export const Profile = () => {
                         variant="contained"
                         onClick={() => setConfirmOpen(true)}
                       >
-                        Удалить аккаунт
+                        {t('deleteBtn')}
                       </Button>
                     </Box>
                   </Stack>
@@ -122,9 +127,9 @@ export const Profile = () => {
 
         <ConfirmDialog
           open={confirmOpen}
-          title="Удалить аккаунт?"
-          message="Мы удалим ваш профиль, документы, шаблоны и платежную историю. Действие нельзя отменить."
-          confirmText="Удалить"
+          title={t('confirmTitle')}
+          message={t('confirmMessage')}
+          confirmText={t('confirm')}
           confirmColor="error"
           onClose={() => setConfirmOpen(false)}
           onConfirm={() => deleteAccount()}

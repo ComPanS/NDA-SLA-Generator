@@ -1,0 +1,13 @@
+{
+  "yandexTitle": "Завершаем вход через Яндекс",
+  "yandexDenied": "Авторизация отклонена: {{error}}",
+  "yandexMissingParams": "Не получены параметры code/state",
+  "yandexFailed": "Не удалось войти через Яндекс",
+  "yandexSuccess": "Успешно! Перенаправляем...",
+  "googleTitle": "Завершаем вход через Google",
+  "googleNoTokens": "Не получены токены в URL",
+  "googleIncomplete": "Неполный ответ авторизации",
+  "yandexTokenTitle": "Завершаем вход через Яндекс",
+  "yandexTokenHint": "Страница может закрыться автоматически после передачи токена",
+  "yandexTokenInfo": "Если окно не закрылось, вернитесь на предыдущую вкладку"
+}

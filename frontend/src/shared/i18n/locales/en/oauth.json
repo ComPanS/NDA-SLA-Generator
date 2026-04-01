@@ -1,0 +1,13 @@
+{
+  "yandexTitle": "Finishing Yandex sign-in",
+  "yandexDenied": "Authorization denied: {{error}}",
+  "yandexMissingParams": "Missing code/state parameters",
+  "yandexFailed": "Could not sign in with Yandex",
+  "yandexSuccess": "Success! Redirecting...",
+  "googleTitle": "Finishing Google sign-in",
+  "googleNoTokens": "No tokens in URL",
+  "googleIncomplete": "Incomplete authorization response",
+  "yandexTokenTitle": "Finishing Yandex sign-in",
+  "yandexTokenHint": "This window may close automatically after the token is sent",
+  "yandexTokenInfo": "If it stays open, return to the previous tab"
+}

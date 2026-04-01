@@ -8,6 +8,7 @@ import billingRoutes from './routes/billing';
 import adminRoutes from './routes/admin';
 import noticeRoutes from './routes/notice';
 import profileRoutes from './routes/profile';
+import publicRoutes from './routes/public';
 import { startSubscriptionExpiryJob } from './lib/subscriptionCleanup';
 import { securityHeaders } from './middleware/securityHeaders';
 import { emailTransportConfigured } from './lib/mailer';
@@ -28,6 +29,7 @@ export function createApp() {
 
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
+  app.use('/public', publicRoutes);
   app.use('/auth', authRoutes);
   app.use('/templates', templateRoutes);
   app.use('/contracts', contractRoutes);

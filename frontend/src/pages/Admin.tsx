@@ -30,8 +30,12 @@ import {
 import { adminApi } from '@/shared/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
+import { useTranslation } from 'react-i18next';
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 
 export const Admin = () => {
+  const { t, i18n } = useTranslation('admin');
+  const dash = t('dash');
   const { isAuthenticated } = useAdminStore();
   const loginMutation = useAdminLogin();
   const logout = useAdminLogout();
@@ -74,8 +78,8 @@ export const Admin = () => {
     if (err?.message) {
       return err.message;
     }
-    return 'Не удалось войти';
-  }, [loginMutation.error]);
+    return t('loginFailed');
+  }, [loginMutation.error, t]);
 
   const documentStatuses = useMemo(() => {
     const entries = Object.entries(overviewQuery.data?.documents.by_status || {});
@@ -93,10 +97,10 @@ export const Admin = () => {
         <Card>
           <CardContent>
             <Typography variant="h5" gutterBottom>
-              Вход в админ-панель
+              {t('loginTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              Доступ ограничен. Введите логин и пароль из переменных окружения.
+              {t('loginHint')}
             </Typography>
             {loginErrorMessage && (
               <Alert severity="error" sx={{ mb: 2 }}>
@@ -112,14 +116,14 @@ export const Admin = () => {
               }}
             >
               <TextField
-                label="Логин"
+                label={t('username')}
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
                 required
                 autoComplete="username"
               />
               <TextField
-                label="Пароль"
+                label={t('password')}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -127,7 +131,7 @@ export const Admin = () => {
                 autoComplete="current-password"
               />
               <Button type="submit" variant="contained" disabled={loginMutation.isPending}>
-                {loginMutation.isPending ? 'Вход...' : 'Войти'}
+                {loginMutation.isPending ? t('loggingIn') : t('loginSubmit')}
               </Button>
             </Stack>
           </CardContent>
@@ -140,35 +144,35 @@ export const Admin = () => {
     <Layout>
       <Stack spacing={3}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4">Админ-панель</Typography>
+          <Typography variant="h4">{t('panelTitle')}</Typography>
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" onClick={() => overviewQuery.refetch()}>
-              Обновить
+              {t('refresh')}
             </Button>
             <Button variant="text" color="error" onClick={logout}>
-              Выйти
+              {t('logout')}
             </Button>
           </Stack>
         </Stack>
 
-        {overviewQuery.isError && <Alert severity="error">Не удалось загрузить сводку</Alert>}
+        {overviewQuery.isError && <Alert severity="error">{t('overviewLoadError')}</Alert>}
 
         <Grid container spacing={2}>
           <Grid item xs={12} md={3}>
             <Card>
               <CardContent>
                 <Typography color="text.secondary" variant="body2">
-                  Пользователи (всего)
+                  {t('usersTotal')}
                 </Typography>
-                <Typography variant="h5">{overviewQuery.data?.users.total ?? '—'}</Typography>
+                <Typography variant="h5">{overviewQuery.data?.users.total ?? dash}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Активные: {overviewQuery.data?.users.active ?? '—'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Админы: {overviewQuery.data?.users.admin ?? '—'}
+                  {t('usersActive', { val: overviewQuery.data?.users.active ?? dash })}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Новые 30д: {overviewQuery.data?.users.new_last_30d ?? '—'}
+                  {t('usersAdmins', { val: overviewQuery.data?.users.admin ?? dash })}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('usersNew30d', { val: overviewQuery.data?.users.new_last_30d ?? dash })}
                 </Typography>
               </CardContent>
             </Card>
@@ -177,12 +181,16 @@ export const Admin = () => {
             <Card>
               <CardContent>
                 <Typography color="text.secondary" variant="body2">
-                  Договоры
+                  {t('contracts')}
                 </Typography>
-                <Typography variant="h5">{overviewQuery.data?.documents.total ?? '—'}</Typography>
+                <Typography variant="h5">{overviewQuery.data?.documents.total ?? dash}</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" mt={1}>
                   {documentStatuses.map(([status, count]) => (
-                    <Chip key={status} label={`${status}: ${count}`} size="small" />
+                    <Chip
+                      key={status}
+                      label={t('statusCount', { status, count })}
+                      size="small"
+                    />
                   ))}
                 </Stack>
               </CardContent>
@@ -192,10 +200,10 @@ export const Admin = () => {
             <Card>
               <CardContent>
                 <Typography color="text.secondary" variant="body2">
-                  Подписки
+                  {t('subscriptions')}
                 </Typography>
                 <Typography variant="h5">
-                  {overviewQuery.data?.subscriptions.total ?? '—'}
+                  {overviewQuery.data?.subscriptions.total ?? dash}
                 </Typography>
                 <Stack spacing={0.5} mt={1}>
                   {(overviewQuery.data?.subscriptions.by_plan_status || []).map((row) => (
@@ -215,9 +223,9 @@ export const Admin = () => {
             <Card>
               <CardContent>
                 <Typography color="text.secondary" variant="body2">
-                  Гости
+                  {t('guests')}
                 </Typography>
-                <Typography variant="h5">{overviewQuery.data?.guests.total ?? '—'}</Typography>
+                <Typography variant="h5">{overviewQuery.data?.guests.total ?? dash}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -226,26 +234,26 @@ export const Admin = () => {
         <Card>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">Пользователи</Typography>
+              <Typography variant="h6">{t('usersSection')}</Typography>
               <Button variant="outlined" size="small" onClick={() => usersQuery.refetch()}>
-                Обновить
+                {t('refresh')}
               </Button>
             </Stack>
             {usersQuery.isError && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Не удалось загрузить пользователей
+                {t('usersLoadError')}
               </Alert>
             )}
             <TableContainer sx={{ overflowX: 'auto' }}>
               <Table size="small" sx={{ minWidth: 720 }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Роли</TableCell>
-                    <TableCell>Активен</TableCell>
-                    <TableCell>Создан</TableCell>
-                    <TableCell align="right">Договоров</TableCell>
-                    <TableCell align="right">Подписка</TableCell>
+                    <TableCell>{t('colEmail')}</TableCell>
+                    <TableCell>{t('colRoles')}</TableCell>
+                    <TableCell>{t('colActive')}</TableCell>
+                    <TableCell>{t('colCreated')}</TableCell>
+                    <TableCell align="right">{t('colContracts')}</TableCell>
+                    <TableCell align="right">{t('colSubscription')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -258,13 +266,15 @@ export const Admin = () => {
                           {user.isAdmin && <Chip label="admin" size="small" color="warning" />}
                         </Stack>
                       </TableCell>
-                      <TableCell>{user.isActive ? 'Да' : 'Нет'}</TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleString('ru-RU')}</TableCell>
+                      <TableCell>{user.isActive ? t('yes') : t('no')}</TableCell>
+                      <TableCell>
+                        {new Date(user.createdAt).toLocaleString(icuLocaleFor(i18n.language))}
+                      </TableCell>
                       <TableCell align="right">{user.documentsCount}</TableCell>
                       <TableCell align="right">
                         {user.subscriptionPlan
                           ? `${user.subscriptionPlan} (${user.subscriptionStatus})`
-                          : '—'}
+                          : dash}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -272,7 +282,7 @@ export const Admin = () => {
                     <TableRow>
                       <TableCell colSpan={6}>
                         <Typography align="center" color="text.secondary">
-                          Пользователей нет
+                          {t('usersEmpty')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -286,32 +296,32 @@ export const Admin = () => {
         <Card>
           <CardContent>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">Предупреждение в моих договорах</Typography>
+              <Typography variant="h6">{t('noticeTitle')}</Typography>
               <Button
                 variant="outlined"
                 size="small"
                 onClick={() => setShowNoticeSettings((prev) => !prev)}
               >
-                {showNoticeSettings ? 'Скрыть' : 'Показать'}
+                {showNoticeSettings ? t('noticeHide') : t('noticeShow')}
               </Button>
             </Stack>
             <Collapse in={showNoticeSettings} timeout="auto" unmountOnExit>
               {noticeQuery.isError && (
-                <Alert severity="error">Не удалось загрузить предупреждение</Alert>
+                <Alert severity="error">{t('noticeLoadError')}</Alert>
               )}
               <Stack spacing={2}>
                 <Stack direction="row" justifyContent="flex-end">
                   <Button variant="outlined" size="small" onClick={() => noticeQuery.refetch()}>
-                    Обновить
+                    {t('refresh')}
                   </Button>
                 </Stack>
                 <TextField
-                  label="Текст предупреждения"
+                  label={t('noticeMessageLabel')}
                   multiline
                   minRows={2}
                   value={noticeMessage}
                   onChange={(e) => setNoticeMessage(e.target.value)}
-                  placeholder="Краткое сообщение пользователям"
+                  placeholder={t('noticePlaceholder')}
                 />
                 <FormControlLabel
                   control={
@@ -321,7 +331,7 @@ export const Admin = () => {
                       color="primary"
                     />
                   }
-                  label="Показывать в моих договорах"
+                  label={t('noticeEnabledLabel')}
                 />
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Button
@@ -335,11 +345,11 @@ export const Admin = () => {
                       });
                     }}
                   >
-                    {updateNoticeMutation.isPending ? 'Сохраняю...' : 'Сохранить'}
+                    {updateNoticeMutation.isPending ? t('noticeSaving') : t('noticeSave')}
                   </Button>
                 </Stack>
                 {updateNoticeMutation.isError && (
-                  <Alert severity="error">Не удалось сохранить предупреждение</Alert>
+                  <Alert severity="error">{t('noticeSaveError')}</Alert>
                 )}
               </Stack>
             </Collapse>

@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Alert, Box, Card, CardContent, CircularProgress, Typography } from '@mui/material';
 import { useSearchParams, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '@/shared/components';
 import { useAuthStore, useYandexCallback } from '@/features/auth';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 
 export const OAuthYandexCallback = () => {
+  const { t } = useTranslation('oauth');
   const [searchParams] = useSearchParams();
+  const localizedPath = useLocalizedPath();
   const { isAuthenticated } = useAuthStore();
   const mutation = useYandexCallback();
   const sentRef = useRef(false);
@@ -26,7 +30,7 @@ export const OAuthYandexCallback = () => {
   const errorParam = searchParams.get('error');
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={localizedPath('/dashboard')} replace />;
   }
 
   return (
@@ -35,30 +39,30 @@ export const OAuthYandexCallback = () => {
         <Card>
           <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h5" component="h1" gutterBottom>
-              Завершаем вход через Яндекс
+              {t('yandexTitle')}
             </Typography>
 
             {errorParam && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Авторизация отклонена: {errorParam}
+                {t('yandexDenied', { error: errorParam })}
               </Alert>
             )}
 
             {!payload && !errorParam && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Не получены параметры code/state
+                {t('yandexMissingParams')}
               </Alert>
             )}
 
             {mutation.isError && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                {(mutation.error as Error)?.message || 'Не удалось войти через Яндекс'}
+                {(mutation.error as Error)?.message || t('yandexFailed')}
               </Alert>
             )}
 
             {mutation.isSuccess && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Успешно! Перенаправляем...
+                {t('yandexSuccess')}
               </Alert>
             )}
 

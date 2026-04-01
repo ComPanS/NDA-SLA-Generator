@@ -1,0 +1,32 @@
+{
+  "brand": {
+    "name": "ContractAI"
+  },
+  "nav": {
+    "howItWorks": "How it works",
+    "pricing": "Pricing",
+    "reviews": "Reviews",
+    "faq": "FAQ"
+  },
+  "header": {
+    "dashboard": "Dashboard",
+    "templates": "Templates",
+    "billing": "Billing",
+    "profile": "Profile",
+    "newContract": "New contract",
+    "logout": "Log out",
+    "login": "Log in",
+    "createContract": "Create a contract",
+    "guest": "Continue without signup"
+  },
+  "footer": {
+    "tagline": "AI contract builder for freelancers, sole traders, and small businesses. Protect your interests in about five minutes—without hiring a lawyer.",
+    "disclaimer": "The service helps you draft documents but is not legal advice. You are responsible for the final wording you use.",
+    "navTitle": "Navigation",
+    "supportTitle": "Support",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "copyright": "All rights reserved.",
+    "language": "Language"
+  }
+}

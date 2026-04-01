@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card as MuiCard,
@@ -36,14 +37,19 @@ import { SubscriptionPlan } from '@/shared/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/store/authStore';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/shared/ui';
-
-const formatPrice = (value: number | null | undefined) => {
-  if (value === null || value === undefined) return '—';
-  if (value === 0) return 'Бесплатно';
-  return `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
-};
+import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 
 export const Billing = () => {
+  const { t, i18n } = useTranslation('billing');
+  const locale = icuLocaleFor(i18n.language);
+  const formatPrice = useCallback(
+    (value: number | null | undefined) => {
+      if (value === null || value === undefined) return '—';
+      if (value === 0) return t('free');
+      return `${new Intl.NumberFormat(locale).format(value)} ₽`;
+    },
+    [locale, t],
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { data: subscription, isLoading: subLoading, error: subError } = useBilling();
@@ -74,7 +80,7 @@ export const Billing = () => {
       // Confirm payment on backend (applies changes if webhook missed it)
       confirmPaymentMutation.mutate(undefined, {
         onSuccess: (result) => {
-          setSnackbarMessage(result.message || 'Оплата прошла успешно!');
+          setSnackbarMessage(result.message || t('payOk'));
           setSnackbarOpen(true);
           // Refresh billing and usage data
           queryClient.invalidateQueries({ queryKey: ['billing'] });
@@ -84,7 +90,7 @@ export const Billing = () => {
           // Fallback - just refresh
           queryClient.invalidateQueries({ queryKey: ['billing'] });
           queryClient.invalidateQueries({ queryKey: ['billing', 'usage'] });
-          setSnackbarMessage('Оплата обрабатывается. Попробуйте обновить страницу.');
+          setSnackbarMessage(t('payWait'));
           setSnackbarOpen(true);
         },
       });
@@ -96,6 +102,7 @@ export const Billing = () => {
     isAuthenticated,
     confirmPaymentMutation,
     queryClient,
+    t,
   ]);
 
   const isLoading = subLoading || usageLoading || plansLoading;
@@ -104,7 +111,7 @@ export const Billing = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <LoadingSpinner message="Загрузка информации о подписке..." />
+          <LoadingSpinner message={t('loading')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -114,7 +121,7 @@ export const Billing = () => {
     return (
       <ProtectedRoute>
         <Layout>
-          <ErrorMessage message="Не удалось загрузить информацию о подписке" />
+          <ErrorMessage message={t('loadError')} />
         </Layout>
       </ProtectedRoute>
     );
@@ -223,7 +230,7 @@ export const Billing = () => {
       <Layout>
         <Box sx={{ mt: 2 }}>
           <Typography variant="h4" component="h1" gutterBottom>
-            Подписка и тарифы
+            {t('title')}
           </Typography>
 
           {/* Current subscription info */}
@@ -241,7 +248,7 @@ export const Billing = () => {
                 >
                   <Box>
                     <Typography variant="h6" gutterBottom>
-                      Текущая подписка
+                      {t('current')}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                       <Chip
@@ -250,15 +257,18 @@ export const Billing = () => {
                         icon={currentPlan === 'pro' ? <Star /> : undefined}
                       />
                       <Chip
-                        label={subscription.status === 'active' ? 'Активна' : subscription.status}
+                        label={(() => {
+                          if (subscription.status === 'active') return t('active');
+                          return subscription.status;
+                        })()}
                         color={subscription.status === 'active' ? 'success' : 'default'}
                         size="small"
                       />
                     </Box>
                     {subscription.expires_at && (
                       <Typography variant="body2" color="text.secondary">
-                        {subscription.auto_renew ? 'Следующее списание' : 'Действует до'}:{' '}
-                        {new Date(subscription.expires_at).toLocaleDateString('ru-RU')}
+                        {subscription.auto_renew ? t('nextCharge') : t('validUntil')}:{' '}
+                        {new Date(subscription.expires_at).toLocaleDateString(locale)}
                       </Typography>
                     )}
                   </Box>
@@ -271,7 +281,7 @@ export const Billing = () => {
                         onClick={() => setCancelDialogOpen(true)}
                         disabled={cancelMutation.isPending}
                       >
-                        Отменить подписку
+                        {t('cancelSub')}
                       </MuiButton>
                     ) : (
                       <MuiButton
@@ -283,7 +293,7 @@ export const Billing = () => {
                         {reactivateMutation.isPending ? (
                           <CircularProgress size={20} />
                         ) : (
-                          'Возобновить подписку'
+                          t('reactivateSub')
                         )}
                       </MuiButton>
                     )}
@@ -298,57 +308,57 @@ export const Billing = () => {
             <MuiCard sx={{ mb: 4 }}>
               <MuiCardContent>
                 <Typography variant="h6" gutterBottom>
-                  Использование за месяц
+                  {t('usageTitle')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Период: с {new Date(usage.periodStart).toLocaleDateString('ru-RU')}
+                  {t('periodFrom', { date: new Date(usage.periodStart).toLocaleDateString(locale) })}
                 </Typography>
                 {renderUsageBar(
-                  'Договоры',
+                  t('metricContracts'),
                   usage.contracts.used,
                   usage.contracts.limit,
                   usage.contracts.isUnlimited,
                   usage.contracts.extraPaid
                 )}
                 {renderUsageBar(
-                  'Шаблоны',
+                  t('metricTemplates'),
                   usage.templates.used,
                   usage.templates.limit,
                   usage.templates.isUnlimited
                 )}
                 {renderUsageBar(
-                  'Уточнения на документ',
+                  t('metricClarifications'),
                   usage.clarifications.used,
                   usage.clarifications.limit,
                   usage.clarifications.isUnlimited,
                   undefined,
-                  'Считаем уникальные документы, в которых было уточнение; повторные уточнения в одном документе лимит не тратят',
+                  t('clarificationsHint'),
                   { displayLimitOnly: true, hideProgress: true }
                 )}
 
                 <Divider sx={{ my: 2 }} />
 
                 <Typography variant="subtitle2" gutterBottom>
-                  Доступные функции
+                  {t('featuresTitle')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  <Chip size="small" label="PDF экспорт" color="primary" variant="outlined" />
+                  <Chip size="small" label={t('featPdf')} color="primary" variant="outlined" />
                   {usage.features.hasDocxExport && (
-                    <Chip size="small" label="DOCX экспорт" color="primary" variant="outlined" />
+                    <Chip size="small" label={t('featDocx')} color="primary" variant="outlined" />
                   )}
                   {usage.features.hasRiskCheck && (
-                    <Chip size="small" label="Проверка рисков" color="primary" variant="outlined" />
+                    <Chip size="small" label={t('featRisk')} color="primary" variant="outlined" />
                   )}
                   {usage.features.hasSections && (
-                    <Chip size="small" label="Разделы" color="primary" variant="outlined" />
+                    <Chip size="small" label={t('featSections')} color="primary" variant="outlined" />
                   )}
                   {usage.features.hasStatuses && (
-                    <Chip size="small" label="Статусы" color="primary" variant="outlined" />
+                    <Chip size="small" label={t('featStatuses')} color="primary" variant="outlined" />
                   )}
                   {usage.features.hasPrioritySupport && (
                     <Chip
                       size="small"
-                      label="Приоритетная поддержка"
+                      label={t('featSupport')}
                       color="secondary"
                       variant="outlined"
                     />
@@ -360,7 +370,7 @@ export const Billing = () => {
 
           {/* Plans */}
           <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-            Доступные тарифы
+            {t('plansTitle')}
           </Typography>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -390,12 +400,12 @@ export const Billing = () => {
                 >
                   {isHighlighted && (
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">Самый популярный</Badge>
+                      <Badge className="bg-blue-600 text-white px-4 py-1.5 text-sm">{t('popular')}</Badge>
                     </div>
                   )}
                   {isCurrent && !isFreePlan && (
                     <div className="absolute -top-4 right-4">
-                      <Badge variant="secondary" className="px-3 py-1">Текущий тариф</Badge>
+                      <Badge variant="secondary" className="px-3 py-1">{t('planCurrentBadge')}</Badge>
                     </div>
                   )}
 
@@ -403,7 +413,7 @@ export const Billing = () => {
                     <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
                     <div className="mb-2">
                       <span className="text-4xl font-bold">{formatPrice(priceLabel)}</span>
-                      {plan.price > 0 && <span className="text-gray-600 ml-2">/ месяц</span>}
+                      {plan.price > 0 && <span className="text-gray-600 ml-2">{t('perMonth')}</span>}
                     </div>
                     {hasDiscount && (
                       <div className="text-sm text-gray-700 space-y-1">
@@ -413,7 +423,7 @@ export const Billing = () => {
                             {discountPercent !== null ? `-${discountPercent}%` : ''}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-500">Скидка на первый месяц</div>
+                        <div className="text-xs text-gray-500">{t('firstMonthOff')}</div>
                       </div>
                     )}
                   </CardHeader>
@@ -428,13 +438,13 @@ export const Billing = () => {
                       {selectedPlan === plan.id && subscribeMutation.isPending ? (
                         <CircularProgress size={20} />
                       ) : isCurrent ? (
-                        'Текущий тариф'
+                        t('btnCurrent')
                       ) : disableFreeWhileActive ? (
-                        'Недоступно'
+                        t('btnUnavailable')
                       ) : plan.price === 0 ? (
-                        'Попробовать бесплатно'
+                        t('btnTryFree')
                       ) : (
-                        'Выбрать тариф'
+                        t('btnChoose')
                       )}
                     </Button>
 
@@ -453,8 +463,7 @@ export const Billing = () => {
           </div>
 
           <Alert severity="info" sx={{ mt: 4 }}>
-            При достижении лимита договоров вы можете приобрести дополнительные договоры по{' '}
-            {plansData?.single_contract_price || 99} ₽ за штуку.
+            {t('extraInfo', { price: plansData?.single_contract_price || 99 })}
           </Alert>
         </Box>
 
@@ -462,9 +471,9 @@ export const Billing = () => {
           open={cancelDialogOpen}
           onClose={() => setCancelDialogOpen(false)}
           onConfirm={handleCancelConfirm}
-          title="Отменить подписку?"
-          content="Подписка будет действовать до конца оплаченного периода. После этого вы перейдёте на бесплатный тариф."
-          confirmText="Отменить подписку"
+          title={t('cancelTitle')}
+          content={t('cancelBody')}
+          confirmText={t('cancelConfirm')}
           confirmColor="error"
           isLoading={cancelMutation.isPending}
         />

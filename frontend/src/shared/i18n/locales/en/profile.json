@@ -1,0 +1,18 @@
+{
+  "metaTitle": "Profile | ContractAI",
+  "metaDesc": "Your profile and account",
+  "title": "Profile",
+  "loading": "Loading profile...",
+  "loadError": "Could not load profile",
+  "emailVerified": "Email verified",
+  "emailNotVerified": "Email not verified",
+  "plan": "Plan: {{plan}}",
+  "noSubscription": "No subscription",
+  "created": "Account created: {{date}}",
+  "deleteSection": "Delete account",
+  "deleteHint": "This removes your account, documents, templates, payments and active subscriptions. Cannot be undone.",
+  "deleteBtn": "Delete account",
+  "confirmTitle": "Delete account?",
+  "confirmMessage": "We will remove your profile, documents, templates and billing history. This cannot be undone.",
+  "confirm": "Delete"
+}

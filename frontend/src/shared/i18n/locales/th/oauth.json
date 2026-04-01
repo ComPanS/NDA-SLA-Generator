@@ -1,0 +1,13 @@
+{
+  "yandexTitle": "กำลังเข้าสู่ระบบ Yandex",
+  "yandexDenied": "ปฏิเสธการอนุญาต: {{error}}",
+  "yandexMissingParams": "ไม่มีพารามิเตอร์ code/state",
+  "yandexFailed": "เข้าสู่ระบบ Yandex ไม่สำเร็จ",
+  "yandexSuccess": "สำเร็จ! กำลังเปลี่ยนหน้า...",
+  "googleTitle": "กำลังเข้าสู่ระบบ Google",
+  "googleNoTokens": "ไม่มีโทเค็นใน URL",
+  "googleIncomplete": "การตอบกลับการอนุญาตไม่สมบูรณ์",
+  "yandexTokenTitle": "กำลังเข้าสู่ระบบ Yandex",
+  "yandexTokenHint": "หน้าต่างอาจปิดอัตโนมัติหลังส่งโทเค็น",
+  "yandexTokenInfo": "หากไม่ปิด ให้กลับไปแท็บก่อนหน้า"
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Button,
   Card,
@@ -43,39 +44,60 @@ interface TemplateBuilderProps {
   template?: Template;
 }
 
-const defaultSections: EditableSection[] = [
-  { title: 'Преамбула', order: 1 },
-  { title: 'Предмет договора', order: 2 },
-  { title: 'Права и обязанности сторон', order: 3 },
-  { title: 'Стоимость и порядок расчетов', order: 4 },
-  { title: 'Сроки выполнения и приемка', order: 5 },
-  { title: 'Ответственность сторон', order: 6 },
-  { title: 'Конфиденциальность', order: 7 },
-  { title: 'Форс-мажор', order: 8 },
-  { title: 'Порядок разрешения споров', order: 9 },
-  { title: 'Срок действия, изменение и расторжение', order: 10 },
-  { title: 'Заключительные положения', order: 11 },
-  { title: 'Реквизиты и подписи сторон', order: 12 },
-];
-
 export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
+  const { t } = useTranslation('templates');
+
+  const defaultSections = useMemo<EditableSection[]>(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        title: t(`builder.sec${i + 1}`),
+        order: i + 1,
+      })),
+    [t]
+  );
+
+  const defaultGroups = useMemo<EditableGroup[]>(
+    () => [
+      {
+        label: t('builder.groupParties'),
+        order: 0,
+        fields: [
+          { label: t('builder.partyExecutor'), key: 'executor_name' },
+          { label: t('builder.partyCustomer'), key: 'customer_name' },
+        ],
+      },
+    ],
+    [t]
+  );
+
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [content, setContent] = useState(template?.content || '');
-  const [groups, setGroups] = useState<EditableGroup[]>(
-    template?.groups || [
-      {
-        label: 'Стороны',
-        order: 0,
-        fields: [
-          { label: 'Исполнитель', key: 'executor_name' },
-          { label: 'Заказчик', key: 'customer_name' },
-        ],
-      },
-    ]
+  const [groups, setGroups] = useState<EditableGroup[]>(() =>
+    template?.groups?.length
+      ? template.groups.map((g) => ({
+          id: g.id,
+          template_id: g.template_id,
+          label: g.label,
+          order: g.order,
+          fields: g.fields.map((f) => ({
+            id: f.id,
+            label: f.label,
+            key: f.key,
+            default_value: f.default_value,
+            order: f.order,
+          })),
+        }))
+      : defaultGroups
   );
-  const [sections, setSections] = useState<EditableSection[]>(
-    template?.sections || defaultSections
+  const [sections, setSections] = useState<EditableSection[]>(() =>
+    template?.sections?.length
+      ? template.sections.map((s) => ({
+          id: s.id,
+          title: s.title,
+          order: s.order,
+        }))
+      : defaultSections
   );
   const [sectionsEnabled, setSectionsEnabled] = useState(!!template?.sections?.length);
   const [error, setError] = useState('');
@@ -117,26 +139,25 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       setName('');
       setDescription('');
       setContent('');
-      setGroups([
-        {
-          label: 'Стороны',
-          order: 0,
-          fields: [
-            { label: 'Исполнитель', key: 'executor_name' },
-            { label: 'Заказчик', key: 'customer_name' },
-          ],
-        },
-      ]);
+      setGroups(defaultGroups);
       setSections(defaultSections);
       setSectionsEnabled(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `defaultGroups`/`defaultSections` when clearing `template` are read from that commit; language-only updates are handled in the next effect
   }, [template]);
+
+  useEffect(() => {
+    if (!template) {
+      setGroups(defaultGroups);
+      setSections(defaultSections);
+    }
+  }, [template, defaultGroups, defaultSections]);
 
   const handleAddGroup = () => {
     setGroups((prev) => [
       ...prev,
       {
-        label: `Группа ${prev.length + 1}`,
+        label: t('builder.groupNamed', { n: prev.length + 1 }),
         order: prev.length,
         template_id: template?.id,
         fields: [],
@@ -184,7 +205,10 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
               ...group,
               fields: [
                 ...group.fields,
-                { label: `Поле ${group.fields.length + 1}`, key: `field_${Date.now()}` },
+                {
+                  label: t('builder.fieldNamed', { n: group.fields.length + 1 }),
+                  key: `field_${Date.now()}`,
+                },
               ],
             }
           : group
@@ -223,7 +247,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   const handleSave = () => {
     setError('');
     if (!name.trim() || !content.trim()) {
-      setError('Название и базовый контент обязательны');
+      setError(t('builder.validationNameContent'));
       return;
     }
 
@@ -249,8 +273,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
         : [],
     };
 
-    const onError = () =>
-      setError('Не удалось сохранить шаблон. Проверьте поля и попробуйте снова.');
+    const onError = () => setError(t('builder.saveFailed'));
 
     if (isEditing && template?.id) {
       updateTemplate(
@@ -269,30 +292,30 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       <CardContent>
         <Stack spacing={2}>
           <Typography variant="h5">
-            {isEditing ? 'Редактировать шаблон' : 'Новый шаблон'}
+            {isEditing ? t('builder.headingEdit') : t('builder.headingNew')}
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label="Название"
+            label={t('builder.name')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
           <TextField
-            label="Описание"
+            label={t('builder.description')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             multiline
             minRows={2}
           />
           <TextField
-            label="Базовое описание (prompt)"
+            label={t('builder.contentLabel')}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             multiline
             minRows={3}
             required
-            helperText="Будет отправлено в AI вместе с заполненными полями"
+            helperText={t('builder.contentHelper')}
           />
 
           <Stack
@@ -302,14 +325,14 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             rowGap={1}
           >
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Группы полей
+              {t('builder.fieldGroups')}
             </Typography>
             <Button
               startIcon={<Add />}
               onClick={handleAddGroup}
               sx={{ width: { xs: '100%', sm: 'auto' } }}
             >
-              Добавить группу
+              {t('builder.addGroup')}
             </Button>
           </Stack>
 
@@ -324,7 +347,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                     sx={{ mb: 2 }}
                   >
                     <TextField
-                      label="Название группы"
+                      label={t('builder.groupName')}
                       value={group.label}
                       onChange={(e) => handleGroupChange(groupIndex, 'label', e.target.value)}
                       sx={{ flexGrow: 1 }}
@@ -340,7 +363,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                         <Card variant="outlined" sx={{ p: 2 }}>
                           <Stack spacing={1}>
                             <TextField
-                              label="Заголовок поля"
+                              label={t('builder.fieldTitle')}
                               value={field.label}
                               onChange={(e) =>
                                 handleFieldChange(groupIndex, fieldIndex, 'label', e.target.value)
@@ -348,7 +371,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                               required
                             />
                             <TextField
-                              label="Ключ (латиницей)"
+                              label={t('builder.fieldKey')}
                               value={field.key}
                               onChange={(e) =>
                                 handleFieldChange(groupIndex, fieldIndex, 'key', e.target.value)
@@ -356,7 +379,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                               required
                             />
                             <TextField
-                              label="Значение по умолчанию"
+                              label={t('builder.fieldDefault')}
                               value={field.default_value || ''}
                               onChange={(e) =>
                                 handleFieldChange(
@@ -376,7 +399,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                               onClick={() => handleRemoveField(groupIndex, fieldIndex)}
                               sx={{ alignSelf: 'flex-start' }}
                             >
-                              Удалить поле
+                              {t('builder.removeField')}
                             </Button>
                           </Stack>
                         </Card>
@@ -389,7 +412,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                     onClick={() => handleAddField(groupIndex)}
                     sx={{ mt: 2 }}
                   >
-                    Добавить поле
+                    {t('builder.addField')}
                   </Button>
                 </CardContent>
               </Card>
@@ -406,7 +429,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                 rowGap={1}
               >
                 <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                  Разделы договора
+                  {t('builder.sectionsTitle')}
                 </Typography>
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
@@ -421,14 +444,14 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                         onChange={(e) => setSectionsEnabled(e.target.checked)}
                       />
                     }
-                    label="Включить"
+                    label={t('builder.enable')}
                   />
                   <Button
                     startIcon={<Add />}
                     onClick={handleAddSection}
                     sx={{ width: { xs: '100%', sm: 'auto' } }}
                   >
-                    Добавить раздел
+                    {t('builder.addSection')}
                   </Button>
                 </Stack>
               </Stack>
@@ -446,13 +469,13 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                           spacing={1}
                         >
                           <TextField
-                            label="Название раздела"
+                            label={t('builder.sectionTitle')}
                             value={section.title}
                             onChange={(e) => handleSectionChange(idx, 'title', e.target.value)}
                             sx={{ flexGrow: 1 }}
                           />
                           <TextField
-                            label="Порядок"
+                            label={t('builder.order')}
                             type="number"
                             value={section.order ?? idx + 1}
                             onChange={(e) =>
@@ -481,8 +504,8 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                     rowGap={1}
                   >
                     <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-                      <Typography variant="h6">Разделы договора</Typography>
-                      <Tooltip title="Настройте структуру договора: порядок и названия разделов влияют на генерацию и экспорт. При отключении, ИИ сам подберет нужные разделы.">
+                      <Typography variant="h6">{t('builder.sectionsTitle')}</Typography>
+                      <Tooltip title={t('builder.sectionsTooltip')}>
                         <HelpOutline fontSize="small" color="action" />
                       </Tooltip>
                     </Stack>
@@ -493,7 +516,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                           onChange={(e) => setSectionsEnabled(e.target.checked)}
                         />
                       }
-                      label="Включить"
+                      label={t('builder.enable')}
                     />
                   </Stack>
                   {/* <Typography variant="body2" color="text.secondary">
@@ -515,7 +538,11 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
               onClick={handleSave}
               disabled={creating || updating || !name.trim() || !content.trim()}
             >
-              {creating || updating ? 'Сохраняем...' : isEditing ? 'Сохранить' : 'Создать шаблон'}
+              {creating || updating
+                ? t('builder.saving')
+                : isEditing
+                  ? t('builder.save')
+                  : t('builder.create')}
             </Button>
           </Stack>
         </Stack>

@@ -16,13 +16,18 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-material';
 import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { useRegister, useAuthStore } from '@/features/auth/hooks/useAuth';
 import { YandexIdButton } from '@/features/auth/components/YandexIdButton';
 import { GoogleSignInButton } from '@/features/auth/components/GoogleSignInButton';
 import { Layout } from '@/shared/components';
 import { PageMeta } from '@/shared/components/PageMeta';
+import { useLocalizedPath } from '@/shared/i18n/useLocalizedPath';
 
 export const Register = () => {
+  const { t } = useTranslation('auth');
+  const { t: tc } = useTranslation('common');
+  const localizedPath = useLocalizedPath();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,7 +50,7 @@ export const Register = () => {
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={localizedPath('/dashboard')} replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,39 +59,47 @@ export const Register = () => {
     setPolicyError('');
 
     if (!isPasswordStrong) {
-      setPasswordError('Исправьте требования к паролю ниже');
+      setPasswordError(t('register.passwordRulesHint'));
       return;
     }
 
     if (!passwordsMatch) {
-      setPasswordError('Пароли не совпадают');
+      setPasswordError(t('register.passwordsMismatch'));
       return;
     }
 
     if (!acceptedPolicies) {
-      setPolicyError('Необходимо принять политику и правила использования');
+      setPolicyError(t('register.policyRequired'));
       return;
     }
 
     register({ email, password });
   };
 
+  const ruleItems: { key: keyof typeof passwordChecks; textKey: string }[] = [
+    { key: 'length', textKey: 'register.ruleLength' },
+    { key: 'lower', textKey: 'register.ruleLower' },
+    { key: 'upper', textKey: 'register.ruleUpper' },
+    { key: 'digit', textKey: 'register.ruleDigit' },
+  ];
+
   return (
     <Layout maxWidth="sm">
       <PageMeta
-        title="Регистрация | ДоговорAI — AI-конструктор договоров"
-        description="Зарегистрируйтесь в ДоговорAI, чтобы создавать договоры (NDA, SLA и другие) с помощью AI и экспортировать DOCX/PDF."
+        title={t('register.metaTitle')}
+        description={t('register.metaDescription')}
+        siteName={tc('brand.name')}
       />
       <Box sx={{ mt: 8 }}>
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
-              Регистрация
+              {t('register.title')}
             </Typography>
 
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Этот email уже используется
+                {t('register.emailInUse')}
               </Alert>
             )}
 
@@ -99,7 +112,7 @@ export const Register = () => {
             <form onSubmit={handleSubmit}>
               <TextField
                 fullWidth
-                label="Email"
+                label={t('register.email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -109,7 +122,7 @@ export const Register = () => {
 
               <TextField
                 fullWidth
-                label="Пароль"
+                label={t('register.password')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => {
@@ -122,7 +135,7 @@ export const Register = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="показать пароль"
+                        aria-label={t('register.showPassword')}
                         onClick={() => setShowPassword((v) => !v)}
                         edge="end"
                       >
@@ -134,13 +147,8 @@ export const Register = () => {
               />
 
               <Stack spacing={0.5} sx={{ mt: 1, mb: 1 }}>
-                {[
-                  { key: 'length', text: 'Минимум 8 символов' },
-                  { key: 'lower', text: 'Строчная буква (a-z)' },
-                  { key: 'upper', text: 'Заглавная буква (A-Z)' },
-                  { key: 'digit', text: 'Цифра (0-9)' },
-                ].map(({ key, text }) => {
-                  const passed = passwordChecks[key as keyof typeof passwordChecks];
+                {ruleItems.map(({ key, textKey }) => {
+                  const passed = passwordChecks[key];
                   return (
                     <Stack
                       key={key}
@@ -155,7 +163,7 @@ export const Register = () => {
                       ) : (
                         <Cancel fontSize="small" color="disabled" />
                       )}
-                      <span>{text}</span>
+                      <span>{t(textKey)}</span>
                     </Stack>
                   );
                 })}
@@ -163,7 +171,7 @@ export const Register = () => {
 
               <TextField
                 fullWidth
-                label="Подтвердите пароль"
+                label={t('register.confirmPassword')}
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => {
@@ -176,7 +184,7 @@ export const Register = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="показать пароль"
+                        aria-label={t('register.showPassword')}
                         onClick={() => setShowConfirmPassword((v) => !v)}
                         edge="end"
                       >
@@ -188,8 +196,8 @@ export const Register = () => {
                 helperText={
                   confirmPassword
                     ? passwordsMatch
-                      ? 'Пароли совпадают'
-                      : 'Пароли должны совпадать'
+                      ? t('register.passwordMatchOk')
+                      : t('register.passwordMatchBad')
                     : ''
                 }
                 FormHelperTextProps={{
@@ -208,14 +216,14 @@ export const Register = () => {
                   }
                   label={
                     <Typography variant="body2" color="text.primary">
-                      Я принимаю{' '}
-                      <MuiLink component={Link} to="/privacy">
-                        политику конфиденциальности
-                      </MuiLink>{' '}
-                      и{' '}
-                      <MuiLink component={Link} to="/terms">
-                        правила использования
-                      </MuiLink>
+                      <Trans
+                        i18nKey="register.policyAccept"
+                        ns="auth"
+                        components={{
+                          privacy: <MuiLink component={Link} to={localizedPath('/privacy')} />,
+                          terms: <MuiLink component={Link} to={localizedPath('/terms')} />,
+                        }}
+                      />
                     </Typography>
                   }
                 />
@@ -234,7 +242,7 @@ export const Register = () => {
                 sx={{ mt: 3 }}
                 disabled={isPending}
               >
-                {isPending ? 'Регистрация...' : 'Зарегистрироваться'}
+                {isPending ? t('register.submitting') : t('register.submit')}
               </Button>
             </form>
 
@@ -243,9 +251,9 @@ export const Register = () => {
 
             <Box sx={{ mt: 2, textAlign: 'center' }}>
               <Typography variant="body2">
-                Уже есть аккаунт?{' '}
-                <MuiLink component={Link} to="/login">
-                  Войти
+                {t('register.hasAccount')}{' '}
+                <MuiLink component={Link} to={localizedPath('/login')}>
+                  {t('register.loginLink')}
                 </MuiLink>
               </Typography>
             </Box>
