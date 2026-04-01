@@ -49,6 +49,8 @@ export const env = {
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
   smtpFrom: process.env.SMTP_FROM || 'no-reply@example.com',
+  /** Имя хоста в EHLO/HELO; на VPS Ubuntu os.hostname() часто режут антиспамом. Если пусто — домен из SMTP_FROM / SMTP_USER. */
+  smtpEhloName: (process.env.SMTP_EHLO_NAME || '').trim(),
   /** If set, overrides port-based default (465 → implicit TLS, else plain + STARTTLS on 587). */
   smtpSecure:
     process.env.SMTP_SECURE === undefined || process.env.SMTP_SECURE === ''
@@ -63,8 +65,14 @@ export const env = {
       : parseEnvBool('SMTP_REQUIRE_TLS', true),
   smtpTlsRejectUnauthorized: parseEnvBool('SMTP_TLS_REJECT_UNAUTHORIZED', true),
   smtpConnectionTimeoutMs: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 60_000),
-  /** Prefer A record over AAAA when resolving SMTP host (helps some EDNS / IPv6 timeouts). */
-  smtpDnsIpv4First: parseEnvBool('SMTP_DNS_IPV4_FIRST', false),
+  /**
+   * Prefer A record over AAAA when resolving SMTP host.
+   * Default: true on Linux/macOS (частые проблемы с IPv6 к почте), false на Windows — явно задайте переменную при необходимости.
+   */
+  smtpDnsIpv4First:
+    process.env.SMTP_DNS_IPV4_FIRST === undefined || process.env.SMTP_DNS_IPV4_FIRST === ''
+      ? process.platform !== 'win32'
+      : parseEnvBool('SMTP_DNS_IPV4_FIRST', false),
   /** Nodemailer DNS resolve timeout (ms). Default 90s — Windows/EDNS sometimes needs more than 30s. */
   smtpDnsTimeoutMs: Number(process.env.SMTP_DNS_TIMEOUT_MS || 90_000),
   verificationCodeTtlMinutes: Number(process.env.VERIFICATION_CODE_TTL_MINUTES || 15),

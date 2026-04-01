@@ -16,6 +16,30 @@ function hostLooksLikeIp(host: string): boolean {
   return Boolean(h && net.isIP(h));
 }
 
+function domainFromEnvelopeAddress(raw: string): string | undefined {
+  const s = raw.trim();
+  if (!s) return undefined;
+  const angle = s.match(/<([^>]+@[^>]+)>/);
+  const addr = (angle ? angle[1] : s).trim();
+  const at = addr.lastIndexOf('@');
+  if (at <= 0 || at === addr.length - 1) return undefined;
+  const d = addr.slice(at + 1).toLowerCase();
+  return d || undefined;
+}
+
+/** EHLO/HELO имя: на Ubuntu/VPS дефолтный os.hostname() часто отклоняют. */
+function smtpHeloName(): string | undefined {
+  if (env.smtpEhloName) return env.smtpEhloName;
+  const fromDomain = domainFromEnvelopeAddress(env.smtpFrom);
+  if (fromDomain) return fromDomain;
+  const userDomain = domainFromEnvelopeAddress(env.smtpUser);
+  if (userDomain) return userDomain;
+  if (env.smtpHost && !hostLooksLikeIp(env.smtpHost)) {
+    return env.smtpHost.toLowerCase();
+  }
+  return undefined;
+}
+
 function smtpTransportOptions(): SMTPTransport.Options {
   const port = env.smtpPort;
   const secure = env.smtpSecure !== undefined ? env.smtpSecure : port === 465;
@@ -39,6 +63,8 @@ function smtpTransportOptions(): SMTPTransport.Options {
     servername = logicalHost;
   }
 
+  const helo = smtpHeloName();
+
   return {
     host: connectHost,
     port,
@@ -49,6 +75,7 @@ function smtpTransportOptions(): SMTPTransport.Options {
     greetingTimeout: env.smtpConnectionTimeoutMs,
     socketTimeout: env.smtpConnectionTimeoutMs,
     ...(servername ? { servername } : {}),
+    ...(helo ? { name: helo } : {}),
     auth: env.smtpUser
       ? {
           user: env.smtpUser,
@@ -57,6 +84,7 @@ function smtpTransportOptions(): SMTPTransport.Options {
       : undefined,
     tls: {
       rejectUnauthorized: env.smtpTlsRejectUnauthorized,
+      minVersion: 'TLSv1.2',
     },
   };
 }
