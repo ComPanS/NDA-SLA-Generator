@@ -31,6 +31,7 @@ import {
   useGuestGenerateContract,
   useGuestClarifyContract,
 } from '@/features/contracts/hooks/useContracts';
+import { useSystemTemplateCatalog, useTemplate } from '@/features/templates/hooks/useTemplates';
 import { AxiosError } from 'axios';
 import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 import { useGeoHint } from '@/shared/hooks/useGeoHint';
@@ -49,6 +50,7 @@ export const GuestContract = () => {
   const { t: tCommon } = useTranslation('common');
   const { data: geo } = useGeoHint();
   const countryTouchedRef = useRef(false);
+  const outputLanguageTouchedRef = useRef(false);
   const navigate = useLocalizedNavigate();
 
   const defaultFromI18n = useMemo((): ContractSectionInput[] => {
@@ -61,6 +63,7 @@ export const GuestContract = () => {
     }));
   }, [tc]);
 
+  const [templateId, setTemplateId] = useState('');
   const [prompt, setPrompt] = useState('');
   const [riskCheck, setRiskCheck] = useState(false);
   const [fields, setFields] = useState<ContractFieldInput[]>([]);
@@ -83,6 +86,12 @@ export const GuestContract = () => {
   const { mutate: guestGenerate, isPending: isGenerating } = useGuestGenerateContract();
   const { mutate: guestExport, isPending: isExporting } = useGuestExportContract();
   const { mutate: guestClarify, isPending: isClarifying } = useGuestClarifyContract();
+  const {
+    data: catalog,
+    isLoading: catalogLoading,
+    error: catalogError,
+  } = useSystemTemplateCatalog();
+  const { data: selectedTemplate } = useTemplate(templateId || undefined);
 
   const derivedTitle = useMemo(
     () => (prompt.trim() ? prompt.trim().slice(0, 80) : t('defaultTitle')),
@@ -95,6 +104,7 @@ export const GuestContract = () => {
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved);
+      setTemplateId(typeof parsed.templateId === 'string' ? parsed.templateId : '');
       setPrompt(parsed.prompt || '');
       setRiskCheck(!!parsed.riskCheck);
       setFields(parsed.fields || []);
@@ -133,6 +143,7 @@ export const GuestContract = () => {
 
   useEffect(() => {
     const snapshot = {
+      templateId,
       prompt,
       riskCheck,
       fields,
@@ -149,6 +160,7 @@ export const GuestContract = () => {
     };
     sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
   }, [
+    templateId,
     prompt,
     riskCheck,
     fields,
@@ -165,11 +177,58 @@ export const GuestContract = () => {
   ]);
 
   useEffect(() => {
+    if (!templateId) {
+      setFields([]);
+      setSections(defaultFromI18n);
+      setSectionsEnabled(false);
+      return;
+    }
+    if (!selectedTemplate) return;
+
+    const nextFields: ContractFieldInput[] = selectedTemplate.groups.flatMap((group) =>
+      group.fields.map((field) => ({
+        template_field_id: field.id,
+        group_label: group.label,
+        group_order: group.order,
+        label: field.label,
+        key: field.key,
+        value: field.default_value || '',
+        order: field.order,
+      })),
+    );
+    setFields(nextFields);
+    setPrompt(selectedTemplate.content);
+    const nextSections: ContractSectionInput[] = selectedTemplate.sections.map((s) => ({
+      template_section_id: s.id,
+      section_uid: s.id,
+      title: s.title,
+      order: s.order,
+    }));
+    setSections(nextSections);
+    setSectionsEnabled(false);
+  }, [templateId, selectedTemplate, defaultFromI18n]);
+
+  useEffect(() => {
+    if (selectedTemplate?.default_country_code) {
+      setCountryCode(selectedTemplate.default_country_code);
+      countryTouchedRef.current = false;
+      return;
+    }
     if (countryTouchedRef.current) return;
     if (geo?.countryCode) {
       setCountryCode(geo.countryCode);
     }
-  }, [geo?.countryCode]);
+  }, [selectedTemplate?.id, selectedTemplate?.default_country_code, geo?.countryCode]);
+
+  useEffect(() => {
+    if (selectedTemplate?.default_output_language) {
+      setOutputLanguage(normalizeOutputLanguageTag(selectedTemplate.default_output_language));
+      outputLanguageTouchedRef.current = false;
+      return;
+    }
+    if (outputLanguageTouchedRef.current) return;
+    setOutputLanguage(normalizeOutputLanguageTag(i18n.language));
+  }, [selectedTemplate?.id, selectedTemplate?.default_output_language, i18n.language]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,6 +251,7 @@ export const GuestContract = () => {
       {
         title: derivedTitle,
         prompt,
+        template_id: templateId.startsWith('system-') ? templateId : undefined,
         risk_check: riskCheck,
         country_code: countryCode,
         output_language: outputLanguage,
@@ -255,6 +315,11 @@ export const GuestContract = () => {
           {t('hint')}
         </Typography>
 
+        {catalogError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {t('templateCatalogError')}
+          </Alert>
+        )}
         {errorMessage && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {errorMessage}
@@ -270,21 +335,25 @@ export const GuestContract = () => {
           <Card>
             <CardContent>
               <form onSubmit={handleSubmit}>
-              <Tooltip title={t('templateDisabled')}>
-                <span>
-                  <FormControl fullWidth margin="normal" disabled>
-                    <InputLabel>{t('templateLabel')}</InputLabel>
-                    <Select
-                      value=""
-                      label={t('templateLabel')}
-                      MenuProps={{ disablePortal: true }}
-                    >
-                      <MenuItem value="">{t('templateGuest')}</MenuItem>
-                    </Select>
-                  </FormControl>
-                </span>
-              </Tooltip>
-              <Typography variant="caption" color="text.secondary">
+              <FormControl fullWidth margin="normal" disabled={isGenerating || catalogLoading}>
+                <InputLabel>{t('templateLabel')}</InputLabel>
+                <Select
+                  value={templateId}
+                  label={t('templateLabel')}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                  MenuProps={{ disablePortal: true, PaperProps: { sx: { maxHeight: 320 } } }}
+                >
+                  <MenuItem value="">
+                    <em>{tc('new.noTemplate')}</em>
+                  </MenuItem>
+                  {(catalog ?? []).map((tpl) => (
+                    <MenuItem key={tpl.id} value={tpl.id}>
+                      {tpl.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                 {t('templateNote')}
               </Typography>
 
@@ -295,7 +364,10 @@ export const GuestContract = () => {
                   countryTouchedRef.current = true;
                   setCountryCode(c);
                 }}
-                onOutputLanguageChange={setOutputLanguage}
+                onOutputLanguageChange={(lang) => {
+                  outputLanguageTouchedRef.current = true;
+                  setOutputLanguage(lang);
+                }}
                 outputLanguageError={showValidation && !isValidOutputLanguageTag(outputLanguage)}
                 disabled={isGenerating}
               />
@@ -451,6 +523,7 @@ export const GuestContract = () => {
                   size="large"
                   disabled={isGenerating}
                   onClick={() => {
+                    setTemplateId('');
                     setPrompt('');
                     setFields([]);
                     setSections(defaultFromI18n);

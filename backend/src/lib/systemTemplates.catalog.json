@@ -1,0 +1,274 @@
+[
+  {
+    "id": "system-nda-mutual",
+    "sort_order": 10,
+    "name": "Соглашение о конфиденциальности (NDA, двустороннее)",
+    "description": "Взаимные обязательства неразглашения коммерческой и технической информации.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь двустороннее соглашение о неразглашении конфиденциальной информации (NDA) в соответствии с законодательством РФ: обмен данными в рамках переговоров или проекта, чётко определи состав конфиденциальной информации, срок действия обязательств, ответственность и порядок возврата/уничтожения материалов.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Наименование стороны 1", "key": "party_a_name", "default_value": "", "order": 0 },
+          { "label": "Наименование стороны 2", "key": "party_b_name", "default_value": "", "order": 1 },
+          { "label": "Предмет обмена информацией (кратко)", "key": "exchange_subject", "default_value": "", "order": 2 },
+          { "label": "Срок действия соглашения (лет)", "key": "term_years", "default_value": "3", "order": 3 },
+          { "label": "Подсудность / город", "key": "dispute_city", "default_value": "Москва", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-nda-one-way",
+    "sort_order": 20,
+    "name": "NDA (одностороннее — получатель обязуется)",
+    "description": "Один получатель обязуется сохранять тайну информации раскрывающей стороны.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь одностороннее соглашение о неразглашении: одна сторона (раскрывающая) передаёт информацию, вторая (получатель) обязуется её не разглашать; исключения по закону, срок, штрафы или убытки, применимое право РФ.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Раскрывающая сторона", "key": "disclosing_party", "default_value": "", "order": 0 },
+          { "label": "Получатель (физ./юр. лицо)", "key": "recipient_party", "default_value": "", "order": 1 },
+          { "label": "Цель раскрытия", "key": "disclosure_purpose", "default_value": "", "order": 2 },
+          { "label": "Срок конфиденциальности (месяцев)", "key": "confidentiality_months", "default_value": "36", "order": 3 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-services",
+    "sort_order": 30,
+    "name": "Договор оказания услуг",
+    "description": "Услуги с актом оказанных услуг и оплатой.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь договор возмездного оказания услуг по ГК РФ: предмет и объём услуг, сроки, стоимость и порядок оплаты, приёмка по акту, ответственность, расторжение, форс-мажор, разрешение споров.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Заказчик", "key": "customer_name", "default_value": "", "order": 0 },
+          { "label": "Исполнитель", "key": "contractor_name", "default_value": "", "order": 1 },
+          { "label": "Перечень услуг (кратко)", "key": "services_summary", "default_value": "", "order": 2 },
+          { "label": "Стоимость (руб., с НДС/без)", "key": "price_rub", "default_value": "", "order": 3 },
+          { "label": "Срок договора / этапы", "key": "term_or_stages", "default_value": "", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-sla",
+    "sort_order": 40,
+    "name": "Соглашение об уровне услуг (SLA)",
+    "description": "IT/сервис: метрики, время реакции, штрафы или кредит.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь соглашение об уровне услуг (SLA): описание услуги, целевые показатели доступности и времени реакции на инциденты, классы приоритетов, отчётность, неустойка или сервисный кредит, порядок изменения SLA.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Заказчик", "key": "sla_customer", "default_value": "", "order": 0 },
+          { "label": "Поставщик услуг", "key": "sla_provider", "default_value": "", "order": 1 },
+          { "label": "Целевая доступность (%, цель)", "key": "uptime_target_pct", "default_value": "99,5", "order": 2 },
+          { "label": "Время реакции P1 (мин.)", "key": "response_p1_min", "default_value": "60", "order": 3 },
+          { "label": "Период отчётности", "key": "reporting_period", "default_value": "месяц", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-lease",
+    "sort_order": 50,
+    "name": "Договор аренды нежилого помещения",
+    "description": "Сдача помещения юр./физ. лицу с арендной платой.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь договор аренды нежилого помещения: стороны, адрес и площадь, срок, размер аренды и индексация, коммунальные и эксплуатационные платежи, субаренда, ремонт, возврат, ответственность, расторжение.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Арендодатель", "key": "lessor_name", "default_value": "", "order": 0 },
+          { "label": "Арендатор", "key": "lessee_name", "default_value": "", "order": 1 },
+          { "label": "Адрес и площадь (кв. м)", "key": "premise_address_sqm", "default_value": "", "order": 2 },
+          { "label": "Арендная плата в месяц (руб.)", "key": "monthly_rent_rub", "default_value": "", "order": 3 },
+          { "label": "Срок аренды", "key": "lease_term", "default_value": "", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-work-contract",
+    "sort_order": 60,
+    "name": "Договор подряда (работы)",
+    "description": "Выполнение работ с результатом и сдачей по акту.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь договор подряда на выполнение работ по ГК РФ: техническое задание или описание работ, сроки, цена и порядок оплаты, приёмка по акту, гарантийные обязательства, ответственность сторон.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Заказчик", "key": "work_customer", "default_value": "", "order": 0 },
+          { "label": "Подрядчик", "key": "work_contractor", "default_value": "", "order": 1 },
+          { "label": "Наименование и объём работ", "key": "work_scope", "default_value": "", "order": 2 },
+          { "label": "Цена договора", "key": "work_price", "default_value": "", "order": 3 },
+          { "label": "Срок выполнения", "key": "work_deadline", "default_value": "", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-sale-goods",
+    "sort_order": 70,
+    "name": "Договор поставки товара",
+    "description": "Поставка партиями, качество, цена и ответственность.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь договор поставки товара по ГК РФ: номенклатура и количество, цена и порядок оплаты, поставка и передаточные документы, качество и претензии, ответственность за просрочку, форс-мажор.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Поставщик", "key": "supplier_name", "default_value": "", "order": 0 },
+          { "label": "Покупатель", "key": "buyer_name", "default_value": "", "order": 1 },
+          { "label": "Товар (номенклатура)", "key": "goods_items", "default_value": "", "order": 2 },
+          { "label": "Сумма договора", "key": "supply_total_price", "default_value": "", "order": 3 },
+          { "label": "Срок поставки", "key": "delivery_term", "default_value": "", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-employment",
+    "sort_order": 80,
+    "name": "Трудовой договор (общая форма)",
+    "description": "Приём работника, должность, оплата, режим (без юр.совета).",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь типовой трудовой договор по ТК РФ: работодатель и работник, должность, место работы, дата начала, оплата труда, режим ради, отпуск, конфиденциальность, расторжение; укажи, что работник должен согласовать текст с кадровой службой.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Работодатель", "key": "employer_name", "default_value": "", "order": 0 },
+          { "label": "Работник (ФИО)", "key": "employee_name", "default_value": "", "order": 1 },
+          { "label": "Должность", "key": "job_title", "default_value": "", "order": 2 },
+          { "label": "Оклад (руб./мес.)", "key": "salary_rub", "default_value": "", "order": 3 },
+          { "label": "Продолжительность испытательного срока", "key": "probation_text", "default_value": "3 месяца", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-agency",
+    "sort_order": 90,
+    "name": "Агентский договор",
+    "description": "Посреднические действия за вознаграждение.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь агентский договор по ГК РФ: предмет агентских действий, права и обязанности, размер и порядок выплаты вознаграждения, отчёт агента, срок, ответственность, расторжение.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Принципал", "key": "principal_name", "default_value": "", "order": 0 },
+          { "label": "Агент", "key": "agent_name", "default_value": "", "order": 1 },
+          { "label": "Предмет (что совершает агент)", "key": "agency_subject", "default_value": "", "order": 2 },
+          { "label": "Вознаграждение (%) или фикс", "key": "agency_fee", "default_value": "", "order": 3 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-loan",
+    "sort_order": 100,
+    "name": "Договор займа (простая форма между физлицами/ИП)",
+    "description": "Возврат суммы и проценты/без процентов — оговорить явно.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь договор займа (как между сторонами гражданско-правового договора): займодавец и заёмщик, сумма, валюта, срок возврата, проценты если есть, порядок платежей, ответственность за просрочку, претензионный порядок.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Займодавец", "key": "lender_name", "default_value": "", "order": 0 },
+          { "label": "Заёмщик", "key": "borrower_name", "default_value": "", "order": 1 },
+          { "label": "Сумма займа", "key": "loan_amount", "default_value": "", "order": 2 },
+          { "label": "Срок возврата", "key": "repayment_date", "default_value": "", "order": 3 },
+          { "label": "Проценты (если есть)", "key": "interest_terms", "default_value": "без процентов", "order": 4 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-distribution",
+    "sort_order": 110,
+    "name": "Договор дистрибьюции / поставка для перепродажи",
+    "description": "Регион, exclusivity, условия поставки.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь договор о дистрибьюции или отделении поставки товара дистрибьютору: территория, минимальные объёмы закупки, цены и скидки, маркетинговая поддержка, запрет конкурирующих брендов если уместно, ответственность, расторжение.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Производитель / правообладатель", "key": "dist_maker", "default_value": "", "order": 0 },
+          { "label": "Дистрибьютор", "key": "dist_partner", "default_value": "", "order": 1 },
+          { "label": "Территория", "key": "dist_territory", "default_value": "", "order": 2 },
+          { "label": "Марка / товарная группа", "key": "dist_product_line", "default_value": "", "order": 3 }
+        ]
+      }
+    ],
+    "sections": []
+  },
+  {
+    "id": "system-franchise-light",
+    "sort_order": 120,
+    "name": "Предварительные условия коммерческой концессии (франшиза, упрощённо)",
+    "description": "Каркас оговорок без замены полного пакета франчайзинга.",
+    "default_country_code": "RU",
+    "default_output_language": "ru",
+    "content": "Составь упрощённый каркас договора коммерческой концессии: правообладатель и пользователь, объект (комплекс прав), территория, период, вознаграждение (роялти/паушальный взнос если есть), обязанности сторон, защита коммерческой тайны; оговори, что требуется детальный бизнес-план и приложения.",
+    "groups": [
+      {
+        "label": "Поля",
+        "order": 0,
+        "fields": [
+          { "label": "Правообладатель (франчайзер)", "key": "f_licensor", "default_value": "", "order": 0 },
+          { "label": "Пользователь (франчайзи)", "key": "f_licensee", "default_value": "", "order": 1 },
+          { "label": "Объект (бренд, система)", "key": "f_brand", "default_value": "", "order": 2 },
+          { "label": "Территория эксклюзива", "key": "f_territory", "default_value": "", "order": 3 }
+        ]
+      }
+    ],
+    "sections": []
+  }
+]

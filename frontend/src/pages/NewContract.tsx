@@ -20,6 +20,7 @@ import {
   Chip,
   Snackbar,
   CircularProgress,
+  ListSubheader,
 } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
 import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
@@ -81,6 +82,13 @@ export const NewContract = () => {
   const promptRef = useRef<HTMLInputElement | null>(null);
 
   const { data: templates, isLoading: templatesLoading, error: templatesError } = useTemplates();
+  const { userTemplates, systemTemplates } = useMemo(() => {
+    const list = templates ?? [];
+    return {
+      userTemplates: list.filter((tpl) => !tpl.is_system),
+      systemTemplates: list.filter((tpl) => tpl.is_system),
+    };
+  }, [templates]);
   const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(
     templateId || undefined
   );
@@ -170,7 +178,7 @@ export const NewContract = () => {
       }))
     );
     setFields(nextFields);
-    setPrompt((prev) => (prev.trim().length ? prev : selectedTemplate.content));
+    setPrompt(selectedTemplate.content);
     const nextSections: ContractSectionInput[] = selectedTemplate.sections.map((s) => ({
       template_section_id: s.id,
       section_uid: s.id,
@@ -332,7 +340,15 @@ export const NewContract = () => {
                     <MenuItem value="">
                       <em>{t('new.noTemplate')}</em>
                     </MenuItem>
-                    {templates?.map((template) => (
+                    {userTemplates.map((template) => (
+                      <MenuItem key={template.id} value={template.id}>
+                        {template.name}
+                      </MenuItem>
+                    ))}
+                    {systemTemplates.length > 0 && (
+                      <ListSubheader>{t('new.systemTemplatesGroup')}</ListSubheader>
+                    )}
+                    {systemTemplates.map((template) => (
                       <MenuItem key={template.id} value={template.id}>
                         {template.name}
                       </MenuItem>

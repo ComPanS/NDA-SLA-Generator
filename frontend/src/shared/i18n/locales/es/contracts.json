@@ -50,6 +50,7 @@
     "titleHelper": "El título es solo para su comodidad; no afecta el texto generado. Los detalles para la IA van en “Descripción / parámetros”.",
     "templateLabel": "Plantilla",
     "noTemplate": "Sin plantilla",
+    "systemTemplatesGroup": "Plantillas del sistema",
     "countryLabel": "País (jurisdicción)",
     "outputLanguageLabel": "Idioma del texto generado",
     "outputLanguageOption": {

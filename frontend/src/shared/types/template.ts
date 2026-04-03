@@ -29,6 +29,8 @@ export interface Template {
   description: string | null;
   content: string;
   is_active: boolean;
+  /** Системные шаблоны из файла на бэкенде; пользовательские — обычно без поля (falsy). */
+  is_system?: boolean;
   default_country_code?: string | null;
   default_output_language?: string | null;
   created_at: string;

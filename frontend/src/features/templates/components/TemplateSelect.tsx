@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   FormControl,
   InputLabel,
@@ -19,6 +20,10 @@ interface TemplateSelectProps {
 export const TemplateSelect = ({ value, onChange, error, required }: TemplateSelectProps) => {
   const { t } = useTranslation('templates');
   const { data: templates, isLoading, error: loadError } = useTemplates();
+  const userTemplates = useMemo(
+    () => (templates ?? []).filter((tpl) => !tpl.is_system),
+    [templates],
+  );
 
   return (
     <FormControl fullWidth error={!!error} required={required}>
@@ -34,7 +39,7 @@ export const TemplateSelect = ({ value, onChange, error, required }: TemplateSel
         <MenuItem value="">
           <em>{t('noTemplateOption')}</em>
         </MenuItem>
-        {templates?.map((template) => (
+        {userTemplates.map((template) => (
           <MenuItem key={template.id} value={template.id}>
             {template.name}
           </MenuItem>

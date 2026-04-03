@@ -50,6 +50,7 @@
     "titleHelper": "The title is for your convenience only; it does not affect generated text. Put details for the AI in “Description / parameters” below.",
     "templateLabel": "Template",
     "noTemplate": "No template",
+    "systemTemplatesGroup": "System templates",
     "countryLabel": "Country (jurisdiction)",
     "outputLanguageLabel": "Output language",
     "outputLanguageOption": {

@@ -26,6 +26,16 @@ import {
   normalizeOutputLanguage,
 } from '../lib/contractPrompts';
 import { logContractPipelineError } from '../lib/contractPipelineLog';
+import {
+  contractFieldDraftsFromSystemRecord,
+  contractSectionDraftsFromSystemRecord,
+  getSystemTemplateRecordById,
+  isSystemTemplateId,
+  systemRecordDefaults,
+  userPromptWithTemplateBase,
+} from '../lib/systemTemplates';
+import { mergeIncomingFieldsIntoDrafts, mergeIncomingSectionsIntoDrafts } from '../lib/mergeContractDrafts';
+import { siteUiLanguageFromRequest } from '../lib/siteLocale';
 
 const router = Router();
 
@@ -451,7 +461,7 @@ const createSectionSchema = contractSectionSchema.omit({ id: true });
 
 const generateSchema = z.object({
   title: z.string().min(1),
-  template_id: z.string().uuid().optional(),
+  template_id: z.string().optional(),
   prompt: z.string().min(1),
   format_mode: z.string().optional(),
   risk_check: z.boolean().optional(),
@@ -472,6 +482,11 @@ const refineSchema = z.object({
 const guestGenerateSchema = z.object({
   title: z.string().min(1),
   prompt: z.string().min(1),
+  /** Только `system-*` id из файла каталога. */
+  template_id: z
+    .string()
+    .optional()
+    .refine((v) => !v || isSystemTemplateId(v), 'Guests may only use system templates'),
   risk_check: z.boolean().optional(),
   country_code: isoCountryCodeSchema.optional(),
   output_language: outputLanguageSchema.optional(),
@@ -589,37 +604,43 @@ router.post('/guest/generate', async (req, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
 
-  const { title, prompt, fields: incomingFields, sections: incomingSections } = parsed.data;
+  const {
+    title,
+    prompt,
+    fields: incomingFields,
+    sections: incomingSections,
+    template_id: guestTemplateId,
+  } = parsed.data;
+
+  let guestSystemRecord = null as ReturnType<typeof getSystemTemplateRecordById>;
+  if (guestTemplateId) {
+    const guestLang = siteUiLanguageFromRequest(req);
+    guestSystemRecord = getSystemTemplateRecordById(guestTemplateId, guestLang);
+    if (!guestSystemRecord) {
+      return res.status(404).json({ detail: 'Template not found' });
+    }
+  }
+
+  const guestSysDefaults = guestSystemRecord ? systemRecordDefaults(guestSystemRecord) : null;
   const promptCtx = makePromptContext(
-    parsed.data.country_code ?? null,
-    parsed.data.output_language ?? null,
+    parsed.data.country_code ?? guestSysDefaults?.countryCode ?? null,
+    parsed.data.output_language ?? guestSysDefaults?.outputLanguage ?? null,
   );
 
-  const fieldCopies: ContractFieldDraft[] = [];
-  if (incomingFields && incomingFields.length) {
-    for (const [idx, field] of incomingFields.entries()) {
-      fieldCopies.push({
-        templateFieldId: field.template_field_id,
-        groupLabel: field.group_label,
-        groupOrder: field.group_order ?? idx,
-        label: field.label,
-        key: field.key,
-        value: field.value ?? '',
-        order: field.order ?? idx,
-      });
-    }
-  }
+  const userPrompt = guestSystemRecord
+    ? userPromptWithTemplateBase(guestSystemRecord.content, prompt)
+    : prompt;
 
-  const sectionCopies: ContractSectionDraft[] = [];
-  if (incomingSections && incomingSections.length) {
-    for (const [idx, section] of incomingSections.entries()) {
-      sectionCopies.push({
-        templateSectionId: section.template_section_id,
-        title: section.title,
-        order: section.order ?? idx,
-      });
-    }
-  }
+  const fieldCopies: ContractFieldDraft[] = guestSystemRecord
+    ? contractFieldDraftsFromSystemRecord(guestSystemRecord)
+    : [];
+
+  const sectionCopies: ContractSectionDraft[] = guestSystemRecord
+    ? contractSectionDraftsFromSystemRecord(guestSystemRecord)
+    : [];
+
+  mergeIncomingFieldsIntoDrafts(fieldCopies, incomingFields);
+  mergeIncomingSectionsIntoDrafts(sectionCopies, incomingSections);
 
   let content: string;
   let exportTitle: string;
@@ -631,7 +652,7 @@ router.post('/guest/generate', async (req, res) => {
       title,
       fieldCopies,
       sectionCopies,
-      prompt,
+      userPrompt,
     );
     const rawContent = await generateText(finalPrompt);
     logColumnsDebug('guest-generate raw', rawContent);
@@ -900,77 +921,63 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
   const hasSectionsAccess = await checkFeatureAccess(req.userId, 'sections');
   const hasRiskCheckAccess = await checkFeatureAccess(req.userId, 'riskCheck');
 
-  const template = template_id
-    ? await prisma.template.findFirst({
+  let prismaTemplate: TemplateWithFields | null = null;
+  let systemRecord = null as ReturnType<typeof getSystemTemplateRecordById>;
+
+  if (template_id) {
+    if (isSystemTemplateId(template_id)) {
+      const genLang = siteUiLanguageFromRequest(req);
+      systemRecord = getSystemTemplateRecordById(template_id, genLang);
+      if (!systemRecord) {
+        return res.status(404).json({ detail: 'Template not found' });
+      }
+    } else if (z.string().uuid().safeParse(template_id).success) {
+      prismaTemplate = await prisma.template.findFirst({
         where: { id: template_id, createdById: req.userId, isActive: true },
         include: {
           groups: { include: { fields: true }, orderBy: { order: 'asc' } },
           sections: { orderBy: { order: 'asc' } },
         },
-      })
-    : null;
-
-  if (template_id && !template) {
-    return res.status(404).json({ detail: 'Template not found' });
+      });
+      if (!prismaTemplate) {
+        return res.status(404).json({ detail: 'Template not found' });
+      }
+    } else {
+      return res.status(400).json({ detail: 'Invalid template_id' });
+    }
   }
 
-  const userPrompt = template ? `${template.content}\n\n${prompt}` : prompt;
+  const userPrompt =
+    prismaTemplate != null
+      ? `${prismaTemplate.content}\n\n${prompt}`
+      : systemRecord != null
+        ? userPromptWithTemplateBase(systemRecord.content, prompt)
+        : prompt;
+
+  const sysDefaults = systemRecord ? systemRecordDefaults(systemRecord) : null;
   const promptCtx = makePromptContext(
-    parsed.data.country_code ?? template?.defaultCountryCode ?? null,
-    parsed.data.output_language ?? null,
+    parsed.data.country_code ??
+      prismaTemplate?.defaultCountryCode ??
+      sysDefaults?.countryCode ??
+      null,
+    parsed.data.output_language ?? sysDefaults?.outputLanguage ?? null,
   );
 
-  const fieldCopies: ContractFieldDraft[] = template ? contractFieldsFromTemplate(template) : [];
-  // Only allow sections if user has access
+  const fieldCopies: ContractFieldDraft[] = prismaTemplate
+    ? contractFieldsFromTemplate(prismaTemplate)
+    : systemRecord
+      ? contractFieldDraftsFromSystemRecord(systemRecord)
+      : [];
+
   const sectionCopies: ContractSectionDraft[] =
-    hasSectionsAccess && template ? contractSectionsFromTemplate(template) : [];
+    hasSectionsAccess && prismaTemplate
+      ? contractSectionsFromTemplate(prismaTemplate)
+      : hasSectionsAccess && systemRecord
+        ? contractSectionDraftsFromSystemRecord(systemRecord)
+        : [];
 
-  if (incomingFields && incomingFields.length) {
-    for (const [idx, field] of incomingFields.entries()) {
-      const existingIdx = fieldCopies.findIndex(
-        (f) =>
-          (field.template_field_id && f.templateFieldId === field.template_field_id) ||
-          f.key === field.key,
-      );
-
-      const normalized = {
-        templateFieldId: field.template_field_id,
-        groupLabel: field.group_label,
-        groupOrder: field.group_order ?? idx,
-        label: field.label,
-        key: field.key,
-        value: field.value ?? '',
-        order: field.order ?? idx,
-      };
-
-      if (existingIdx >= 0) {
-        fieldCopies[existingIdx] = { ...fieldCopies[existingIdx], ...normalized };
-      } else {
-        fieldCopies.push(normalized);
-      }
-    }
-  }
-
-  // Only process incoming sections if user has access
-  if (hasSectionsAccess && incomingSections && incomingSections.length) {
-    for (const [idx, section] of incomingSections.entries()) {
-      const existingIdx = sectionCopies.findIndex(
-        (s) =>
-          (section.template_section_id && s.templateSectionId === section.template_section_id) ||
-          s.title === section.title,
-      );
-      const normalized = {
-        templateSectionId: section.template_section_id,
-        title: section.title,
-        order: section.order ?? idx,
-      };
-      if (existingIdx >= 0) {
-        sectionCopies[existingIdx] = { ...sectionCopies[existingIdx], ...normalized };
-      } else {
-        sectionCopies.push(normalized);
-      }
-    }
-  }
+  mergeIncomingFieldsIntoDrafts(fieldCopies, incomingFields);
+  mergeIncomingSectionsIntoDrafts(sectionCopies, hasSectionsAccess ? incomingSections : undefined);
 
   const sectionsSource = sectionCopies;
 
@@ -1003,7 +1010,7 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
       data: {
         title,
         ownerId: req.userId,
-        templateId: template?.id,
+        templateId: prismaTemplate?.id ?? null,
         jurisdictionCountry: promptCtx.countryCode,
         outputLanguage: promptCtx.outputLanguage,
         status: 'draft',
@@ -1022,12 +1029,24 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
         },
         fields: fieldCopies.length
           ? {
-              create: fieldCopies,
+              create: fieldCopies.map((f) => ({
+                groupLabel: f.groupLabel,
+                groupOrder: f.groupOrder,
+                label: f.label,
+                key: f.key,
+                value: f.value,
+                order: f.order,
+                templateFieldId: prismaTemplate ? f.templateFieldId ?? null : null,
+              })),
             }
           : undefined,
         sections: sectionsSource.length
           ? {
-              create: sectionsSource,
+              create: sectionsSource.map((s) => ({
+                title: s.title,
+                order: s.order,
+                templateSectionId: prismaTemplate ? s.templateSectionId ?? null : null,
+              })),
             }
           : undefined,
       },

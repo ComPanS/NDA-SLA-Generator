@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import { authStore, waitForHydration } from '@/features/auth/store/authStore';
+import i18n from '@/shared/i18n/i18n';
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -17,6 +18,8 @@ export const apiClient: AxiosInstance = axios.create({
   timeout: 30_000,
 });
 
+const SITE_LANGS = new Set(['ru', 'en', 'es', 'th']);
+
 apiClient.interceptors.request.use(
   async (config) => {
     // Wait for auth store to hydrate before making requests
@@ -25,6 +28,11 @@ apiClient.interceptors.request.use(
     const token = authStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const raw = i18n.language || 'en';
+    const primary = raw.split('-')[0] ?? 'en';
+    if (SITE_LANGS.has(primary)) {
+      config.headers['Accept-Language'] = `${primary},en;q=0.9`;
     }
     return config;
   },

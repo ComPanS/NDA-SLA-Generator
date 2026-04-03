@@ -109,6 +109,8 @@ export interface ContractSectionInput {
 export interface GuestGenerateRequest {
   title: string;
   prompt: string;
+  /** Только `system-*`; UUID пользовательских шаблонов в гостевом API не допускаются. */
+  template_id?: string;
   risk_check?: boolean;
   country_code?: string;
   output_language?: string;

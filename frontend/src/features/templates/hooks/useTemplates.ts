@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { templatesApi, TemplatePayload } from '@/shared/api';
 import { Template } from '@/shared/types';
 import { authStore } from '@/features/auth/store/authStore';
 
 export const useTemplates = () => {
+  const { i18n } = useTranslation();
+  const langKey = i18n.resolvedLanguage ?? i18n.language;
   const isAuthenticated = authStore((state) => state.isAuthenticated);
   const hasHydrated = authStore((state) => state._hasHydrated);
   const isEnabled = hasHydrated && isAuthenticated;
 
   return useQuery({
-    queryKey: ['templates'],
+    queryKey: ['templates', langKey],
     queryFn: () => {
       return templatesApi.getAll();
     },
@@ -18,9 +21,24 @@ export const useTemplates = () => {
   });
 };
 
-export const useTemplate = (id?: string) => {
+/** Публичный список системных шаблонов (`GET /templates/catalog`), без авторизации. */
+export const useSystemTemplateCatalog = () => {
+  const { i18n } = useTranslation();
+  const langKey = i18n.resolvedLanguage ?? i18n.language;
+
   return useQuery({
-    queryKey: ['template', id],
+    queryKey: ['templates', 'catalog', langKey],
+    queryFn: () => templatesApi.getCatalog(),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useTemplate = (id?: string) => {
+  const { i18n } = useTranslation();
+  const langKey = i18n.resolvedLanguage ?? i18n.language;
+
+  return useQuery({
+    queryKey: ['template', id, langKey],
     queryFn: () => templatesApi.getById(id as string),
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
@@ -33,7 +51,7 @@ export const useCreateTemplate = () => {
     mutationFn: (payload: TemplatePayload) => templatesApi.create(payload),
     onSuccess: (template: Template) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
-      queryClient.setQueryData(['template', template.id], template);
+      queryClient.invalidateQueries({ queryKey: ['template', template.id] });
     },
   });
 };
@@ -45,7 +63,7 @@ export const useUpdateTemplate = () => {
       templatesApi.update(id, payload),
     onSuccess: (template: Template) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
-      queryClient.setQueryData(['template', template.id], template);
+      queryClient.invalidateQueries({ queryKey: ['template', template.id] });
     },
   });
 };

@@ -1,0 +1,465 @@
+{
+  "en": {
+    "system-nda-mutual": {
+      "name": "Non-disclosure agreement (NDA, mutual)",
+      "description": "Mutual obligations to protect commercial and technical information.",
+      "content": "Draft a mutual non-disclosure agreement (NDA) under the laws of the Russian Federation: exchange of information in negotiations or a project; clearly define confidential information; duration of obligations; liability; return or destruction of materials.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Party 1 legal name" },
+        { "label": "Party 2 legal name" },
+        { "label": "Purpose of information exchange (brief)" },
+        { "label": "Agreement term (years)", "default_value": "3" },
+        { "label": "Venue / city", "default_value": "Moscow" }
+      ]
+    },
+    "system-nda-one-way": {
+      "name": "NDA (one-way — recipient undertakes)",
+      "description": "The recipient undertakes to keep the disclosing party's information confidential.",
+      "content": "Draft a one-way non-disclosure agreement: the disclosing party provides information and the recipient must not disclose it; statutory exceptions, term, penalties or damages, applicable law of the Russian Federation.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Disclosing party" },
+        { "label": "Recipient (individual or legal entity)" },
+        { "label": "Purpose of disclosure" },
+        { "label": "Confidentiality period (months)", "default_value": "36" }
+      ]
+    },
+    "system-services": {
+      "name": "Services agreement",
+      "description": "Services with acceptance certificate and payment terms.",
+      "content": "Draft a paid services agreement under the Russian Civil Code: scope and volume of services, deadlines, price and payment, acceptance by act, liability, termination, force majeure, dispute resolution.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Customer" },
+        { "label": "Contractor" },
+        { "label": "Services (summary)" },
+        { "label": "Price (RUB, incl./excl. VAT)" },
+        { "label": "Contract term / milestones" }
+      ]
+    },
+    "system-sla": {
+      "name": "Service level agreement (SLA)",
+      "description": "IT/service: metrics, response time, penalties or credits.",
+      "content": "Draft a service level agreement (SLA): service description, availability and incident response targets, priority classes, reporting, liquidated damages or service credits, SLA change process.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Customer" },
+        { "label": "Service provider" },
+        { "label": "Target availability (%)", "default_value": "99.5" },
+        { "label": "P1 response time (minutes)", "default_value": "60" },
+        { "label": "Reporting period", "default_value": "month" }
+      ]
+    },
+    "system-lease": {
+      "name": "Non-residential premises lease",
+      "description": "Lease of premises to a legal entity or individual for rent.",
+      "content": "Draft a non-residential premises lease: parties, address and area, term, rent and indexation, utilities and operating costs, sublease, repair, handback, liability, termination.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Lessor" },
+        { "label": "Lessee" },
+        { "label": "Address and area (sq m)" },
+        { "label": "Monthly rent (RUB)" },
+        { "label": "Lease term" }
+      ]
+    },
+    "system-work-contract": {
+      "name": "Work contract (contract for work)",
+      "description": "Performance of work with a deliverable and acceptance act.",
+      "content": "Draft a work contract under the Russian Civil Code: specification or scope of work, deadlines, price and payment, acceptance by act, warranty, liability.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Customer" },
+        { "label": "Contractor" },
+        { "label": "Work title and scope" },
+        { "label": "Contract price" },
+        { "label": "Completion deadline" }
+      ]
+    },
+    "system-sale-goods": {
+      "name": "Goods supply agreement",
+      "description": "Delivery in batches, quality, price and liability.",
+      "content": "Draft a goods supply agreement under the Russian Civil Code: nomenclature and quantity, price and payment, delivery and handover documents, quality and claims, delay liability, force majeure.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Supplier" },
+        { "label": "Buyer" },
+        { "label": "Goods (nomenclature)" },
+        { "label": "Total contract amount" },
+        { "label": "Delivery period" }
+      ]
+    },
+    "system-employment": {
+      "name": "Employment contract (general form)",
+      "description": "Hiring, position, pay, working hours (not legal advice).",
+      "content": "Draft a standard employment contract under the Russian Labour Code: employer and employee, position, place of work, start date, remuneration, working time, leave, confidentiality, termination; state that the employee should agree the text with HR.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Employer" },
+        { "label": "Employee (full name)" },
+        { "label": "Position" },
+        { "label": "Salary (RUB/month)" },
+        { "label": "Probation period", "default_value": "3 months" }
+      ]
+    },
+    "system-agency": {
+      "name": "Agency agreement",
+      "description": "Intermediary activities for a fee.",
+      "content": "Draft an agency agreement under the Russian Civil Code: subject of agency, rights and duties, fee amount and payment, agent reports, term, liability, termination.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Principal" },
+        { "label": "Agent" },
+        { "label": "Subject (what the agent does)" },
+        { "label": "Fee (percent or fixed)" }
+      ]
+    },
+    "system-loan": {
+      "name": "Loan agreement (simple form, individuals/IE)",
+      "description": "Repayment and interest — specify explicitly.",
+      "content": "Draft a loan agreement between civil-law parties: lender and borrower, amount, currency, repayment date, interest if any, payment schedule, default liability, claims procedure.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Lender" },
+        { "label": "Borrower" },
+        { "label": "Loan amount" },
+        { "label": "Repayment date" },
+        { "label": "Interest (if any)", "default_value": "interest-free" }
+      ]
+    },
+    "system-distribution": {
+      "name": "Distribution / supply for resale",
+      "description": "Territory, exclusivity, supply terms.",
+      "content": "Draft a distribution or supply agreement for resale to a distributor: territory, minimum purchase volumes, prices and discounts, marketing support, non-compete brands where appropriate, liability, termination.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Manufacturer / rights holder" },
+        { "label": "Distributor" },
+        { "label": "Territory" },
+        { "label": "Brand / product line" }
+      ]
+    },
+    "system-franchise-light": {
+      "name": "Commercial concession (franchise) — simplified heads of terms",
+      "description": "Skeleton clauses — not a full franchise package.",
+      "content": "Draft a simplified framework for a commercial concession agreement: licensor and licensee, object (bundle of rights), territory, term, remuneration (royalty/lump sum if any), duties, trade-secret protection; note that a detailed business plan and schedules are required.",
+      "groupLabels": ["Fields"],
+      "fields": [
+        { "label": "Rights holder (franchisor)" },
+        { "label": "Franchisee" },
+        { "label": "Object (brand, system)" },
+        { "label": "Exclusive territory" }
+      ]
+    }
+  },
+  "es": {
+    "system-nda-mutual": {
+      "name": "Acuerdo de confidencialidad (NDA bilateral)",
+      "description": "Obligaciones mutuas de no divulgar información comercial y técnica.",
+      "content": "Redacta un acuerdo bilateral de confidencialidad (NDA) conforme a la legislación de la Federación Rusa: intercambio en negociaciones o un proyecto; define el alcance de la información confidencial; plazo de las obligaciones; responsabilidad; devolución o destrucción de materiales.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Denominación de la parte 1" },
+        { "label": "Denominación de la parte 2" },
+        { "label": "Objeto del intercambio de información (breve)" },
+        { "label": "Plazo del acuerdo (años)", "default_value": "3" },
+        { "label": "Fuero / ciudad", "default_value": "Moscú" }
+      ]
+    },
+    "system-nda-one-way": {
+      "name": "NDA unilateral — el destinatario se obliga",
+      "description": "Un destinatario guarda la confidencialidad de la información de la parte divulgadora.",
+      "content": "Redacta un NDA unilateral: una parte divulga información y la otra no debe revelarla; excepciones legales, plazo, penalizaciones o daños, derecho aplicable de la Federación Rusa.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Parte divulgadora" },
+        { "label": "Destinatario (persona física/jurídica)" },
+        { "label": "Finalidad de la divulgación" },
+        { "label": "Plazo de confidencialidad (meses)", "default_value": "36" }
+      ]
+    },
+    "system-services": {
+      "name": "Contrato de prestación de servicios",
+      "description": "Servicios con acta de prestación y pago.",
+      "content": "Redacta un contrato de prestación de servicios remunerados según el Código Civil de la Federación Rusa: objeto y volumen, plazos, precio y pago, aceptación por acta, responsabilidad, resolución, fuerza mayor, litigios.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Cliente" },
+        { "label": "Contratista" },
+        { "label": "Relación de servicios (breve)" },
+        { "label": "Precio (RUB, con/sin IVA)" },
+        { "label": "Plazo del contrato / fases" }
+      ]
+    },
+    "system-sla": {
+      "name": "Acuerdo de nivel de servicio (SLA)",
+      "description": "TI/servicio: métricas, tiempo de respuesta, penalizaciones.",
+      "content": "Redacta un SLA: descripción del servicio, objetivos de disponibilidad y respuesta a incidentes, clases de prioridad, informes, penalización o crédito de servicio, cambios del SLA.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Cliente" },
+        { "label": "Proveedor del servicio" },
+        { "label": "Disponibilidad objetivo (%)", "default_value": "99,5" },
+        { "label": "Tiempo de respuesta P1 (min)", "default_value": "60" },
+        { "label": "Periodo de informes", "default_value": "mes" }
+      ]
+    },
+    "system-lease": {
+      "name": "Arrendamiento de locales no residenciales",
+      "description": "Arrendamiento a persona jurídica o física.",
+      "content": "Redacta un contrato de arrendamiento de local no residencial: partes, dirección y superficie, plazo, renta e indexación, suministros y gastos, subarrendamiento, reparación, devolución, responsabilidad, resolución.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Arrendador" },
+        { "label": "Arrendatario" },
+        { "label": "Dirección y superficie (m²)" },
+        { "label": "Renta mensual (RUB)" },
+        { "label": "Plazo del arrendamiento" }
+      ]
+    },
+    "system-work-contract": {
+      "name": "Contrato de obra (trabajos)",
+      "description": "Ejecución de trabajos con resultado y acta de recepción.",
+      "content": "Redacta un contrato de obra según el Código Civil de la Federación Rusa: especificación u objeto, plazos, precio y pago, recepción por acta, garantía, responsabilidad.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Cliente" },
+        { "label": "Contratista" },
+        { "label": "Denominación y alcance de los trabajos" },
+        { "label": "Precio del contrato" },
+        { "label": "Plazo de ejecución" }
+      ]
+    },
+    "system-sale-goods": {
+      "name": "Contrato de suministro de mercancías",
+      "description": "Entregas por lotes, calidad, precio y responsabilidad.",
+      "content": "Redacta un contrato de suministro según el Código Civil de la Federación Rusa: nomenclatura y cantidad, precio y pago, entrega y documentos, calidad y reclamaciones, mora, fuerza mayor.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Proveedor" },
+        { "label": "Comprador" },
+        { "label": "Mercancía (nomenclatura)" },
+        { "label": "Importe total del contrato" },
+        { "label": "Plazo de entrega" }
+      ]
+    },
+    "system-employment": {
+      "name": "Contrato de trabajo (forma general)",
+      "description": "Contratación, puesto, remuneración, jornada (no es asesoría legal).",
+      "content": "Redacta un contrato de trabajo tipo según el Código Laboral de la Federación Rusa: empleador y trabajador, puesto, lugar de trabajo, fecha de inicio, salario, jornada, vacaciones, confidencialidad, extinción; indica que el trabajador debe acordar el texto con RR. HH.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Empleador" },
+        { "label": "Trabajador (nombre completo)" },
+        { "label": "Puesto" },
+        { "label": "Salario (RUB/mes)" },
+        { "label": "Periodo de prueba", "default_value": "3 meses" }
+      ]
+    },
+    "system-agency": {
+      "name": "Contrato de agencia",
+      "description": "Actividades de intermediación por comisión.",
+      "content": "Redacta un contrato de agencia según el Código Civil de la Federación Rusa: objeto, derechos y obligaciones, comisión y pago, cuentas del agente, plazo, responsabilidad, resolución.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Principal" },
+        { "label": "Agente" },
+        { "label": "Objeto (qué realiza el agente)" },
+        { "label": "Comisión (% o fija)" }
+      ]
+    },
+    "system-loan": {
+      "name": "Contrato de préstamo (forma simple entre particulares/IE)",
+      "description": "Reembolso e intereses — especificar claramente.",
+      "content": "Redacta un contrato de préstamo entre partes: prestamista y prestatario, importe, moneda, fecha de reembolso, intereses si los hay, calendario de pagos, mora, reclamaciones.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Prestamista" },
+        { "label": "Prestatario" },
+        { "label": "Importe del préstamo" },
+        { "label": "Fecha de reembolso" },
+        { "label": "Intereses (si los hay)", "default_value": "sin intereses" }
+      ]
+    },
+    "system-distribution": {
+      "name": "Distribución / suministro para reventa",
+      "description": "Territorio, exclusividad, condiciones de suministro.",
+      "content": "Redacta un contrato de distribución o suministro para un distribuidor: territorio, volúmenes mínimos, precios y descuentos, apoyo de marketing, marcas competidoras si aplica, responsabilidad, resolución.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Fabricante / titular" },
+        { "label": "Distribuidor" },
+        { "label": "Territorio" },
+        { "label": "Marca / línea de producto" }
+      ]
+    },
+    "system-franchise-light": {
+      "name": "Concesión comercial (franquicia) — términos simplificados",
+      "description": "Estructura básica — no reemplaza un paquete completo de franquicia.",
+      "content": "Redacta un esquema simplificado de concesión comercial: concedente y cesionario, objeto (conjunto de derechos), territorio, plazo, contraprestación (regalía/cuota si hay), obligaciones, secreto comercial; indica que hacen falta plan de negocio y anexos.",
+      "groupLabels": ["Campos"],
+      "fields": [
+        { "label": "Titular (franquiciante)" },
+        { "label": "Franquiciado" },
+        { "label": "Objeto (marca, sistema)" },
+        { "label": "Territorio exclusivo" }
+      ]
+    }
+  },
+  "th": {
+    "system-nda-mutual": {
+      "name": "ข้อตกลงเก็บข้อมูลเป็นความลับ (NDA สองฝ่าย)",
+      "description": "ทั้งสองฝ่ายตกลงไม่เปิดเผยข้อมูลทางการค้าและเทคนิค",
+      "content": "จัดทำข้อตกลงไม่เปิดเผยความลับ (NDA) แบบสองฝ่ายตามกฎหมายรัสเซีย: แลกเปลี่ยนข้อมูลในการเจรจาหรือโครงการ กำหนดขอบเขตความลับอย่างชัดเจน ระยะเวลาผูกพัน ความรับผิด การคืนหรือทำลายเอกสาร",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ชื่อนิติบุคคลฝ่ายที่ 1" },
+        { "label": "ชื่อนิติบุคคลฝ่ายที่ 2" },
+        { "label": "วัตถุประสงค์การแลกเปลี่ยนข้อมูล (ย่อ)" },
+        { "label": "ระยะเวลาข้อตกลง (ปี)", "default_value": "3" },
+        { "label": "สถานที่พิจารณาคดี / เมือง", "default_value": "มอสโก" }
+      ]
+    },
+    "system-nda-one-way": {
+      "name": "NDA แบบฝ่ายเดียว — ผู้รับรับผิดชอบรักษาความลับ",
+      "description": "ผู้รับข้อมูลต้องรักษาความลับของฝ่ายเปิดเผย",
+      "content": "จัดทำ NDA แบบฝ่ายเดียว: ฝ่ายเปิดเผยให้ข้อมูล ฝ่ายรับห้ามเปิดเผย ข้อยกเว้นตามกฎหมาย ระยะเวลา ค่าปรับหรือค่าเสียหาย กฎหมายที่ใช้บังคับของรัสเซีย",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ฝ่ายเปิดเผยข้อมูล" },
+        { "label": "ผู้รับ (บุคคลหรือนิติบุคคล)" },
+        { "label": "วัตถุประสงค์การเปิดเผย" },
+        { "label": "ระยะเวลาความลับ (เดือน)", "default_value": "36" }
+      ]
+    },
+    "system-services": {
+      "name": "สัญญารับทำบริการ",
+      "description": "บริการพร้อมใบรับรองการให้บริการและเงื่อนไขการชำระเงิน",
+      "content": "จัดทำสัญญารับทำบริการมีค่าตอบแทนตามประมวลกฎหมายแพ่งรัสเซีย: วัตถุและขอบเขตบริการ กำหนดเวลา ราคาและการชำระเงิน การตรวจรับตามใบรับ ความรับผิด การบอกเลิก เหตุสุดวิสัย การระงับข้อพิพาท",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ว่าจ้าง" },
+        { "label": "ผู้รับจ้าง" },
+        { "label": "รายการบริการ (ย่อ)" },
+        { "label": "ราคา (RUB รวม/ไม่รวม VAT)" },
+        { "label": "ระยะสัญญา / งวดงาน" }
+      ]
+    },
+    "system-sla": {
+      "name": "ข้อตกลงระดับการบริการ (SLA)",
+      "description": "ไอที/บริการ: ตัวชี้วัด เวลาตอบสนอง บทลงโทษ",
+      "content": "จัดทำ SLA: คำอธิบายบริการ เป้าหมายความพร้อมใช้และเวลาตอบสนองเหตุขัดข้อง ระดับความสำคัญ การรายงาน ค่าปรับหรือเครดิตบริการ กระบวนการเปลี่ยน SLA",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ว่าจ้าง" },
+        { "label": "ผู้ให้บริการ" },
+        { "label": "เป้าหมายความพร้อมใช้ (%)", "default_value": "99.5" },
+        { "label": "เวลาตอบสนอง P1 (นาที)", "default_value": "60" },
+        { "label": "รอบระยะรายงาน", "default_value": "เดือน" }
+      ]
+    },
+    "system-lease": {
+      "name": "สัญญาเช่าอาคารเพื่อการพาณิชย์",
+      "description": "ให้เช่าพื้นที่แก่นิติบุคคลหรือบุคคลธรรมดา",
+      "content": "จัดทำสัญญาเช่าอาคารเพื่อการพาณิชย์: คู่สัญญา ที่อยู่และพื้นที่ ระยะเวลา ค่าเช่าและการปรับราคา สาธารณูปโภคและค่าใช้จ่าย การให้เช่าช่วง การซ่อมแซม การส่งคืน ความรับผิด การบอกเลิก",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ให้เช่า" },
+        { "label": "ผู้เช่า" },
+        { "label": "ที่อยู่และพื้นที่ (ตร.ม.)" },
+        { "label": "ค่าเช่าต่อเดือน (RUB)" },
+        { "label": "ระยะเวลาเช่า" }
+      ]
+    },
+    "system-work-contract": {
+      "name": "สัญญาจ้างทำของ (งานก่อสร้าง/งานติดตั้ง)",
+      "description": "รับทำงานมีผลงานและใบรับงาน",
+      "content": "จัดทำสัญญาจ้างทำของตามประมวลกฎหมายแพ่งรัสเซีย: ข้อกำหนดหรือขอบเขตงาน กำหนดเวลา ราคาและการชำระเงิน การตรวจรับตามใบรับ การรับประกัน ความรับผิด",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ว่าจ้าง" },
+        { "label": "ผู้รับจ้าง" },
+        { "label": "ชื่องานและขอบเขต" },
+        { "label": "ราคาสัญญา" },
+        { "label": "กำหนดส่งมอบ" }
+      ]
+    },
+    "system-sale-goods": {
+      "name": "สัญญาส่งมอบสินค้า",
+      "description": "ส่งเป็นชุด คุณภาพ ราคาและความรับผิด",
+      "content": "จัดทำสัญญาส่งมอบสินค้าตามประมวลกฎหมายแพ่งรัสเซีย: รายการและจำนวน ราคาและการชำระเงิน การส่งมอบและเอกสาร คุณภาพและการเรียกร้อง ความรับผิดจากล่าช้า เหตุสุดวิสัย",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ขาย" },
+        { "label": "ผู้ซื้อ" },
+        { "label": "สินค้า (รายการ)" },
+        { "label": "มูลค่าสัญญารวม" },
+        { "label": "ระยะเวลาส่งมอบ" }
+      ]
+    },
+    "system-employment": {
+      "name": "สัญญาจ้างแรงงาน (แบบทั่วไป)",
+      "description": "รับเข้าทำงาน ตำแหน่ง ค่าจ้าง เวลาทำงาน (ไม่ใช่คำแนะนำทางกฎหมาย)",
+      "content": "จัดทำสัญญาจ้างตามกฎหมายแรงงานรัสเซีย: นายจ้างและลูกจ้าง ตำแหน่ง สถานที่ทำงาน วันเริ่มงาน ค่าจ้าง เวลาทำงาน การลาพักร้อน ความลับ การเลิกสัญญา ระบุว่องค์กรทรัพยากรบุคคลควรทบทวนข้อความ",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "นายจ้าง" },
+        { "label": "ลูกจ้าง (ชื่อนามสกุล)" },
+        { "label": "ตำแหน่ง" },
+        { "label": "เงินเดือน (RUB/เดือน)" },
+        { "label": "ระยะเวลาทดลองงาน", "default_value": "3 เดือน" }
+      ]
+    },
+    "system-agency": {
+      "name": "สัญญานายหน้า",
+      "description": "กิจการเป็นตัวแทนแลกค่าตอบแทน",
+      "content": "จัดทำสัญญานายหน้าตามประมวลกฎหมายแพ่งรัสเซีย: วัตถุแห่งการเป็นตัวแทน สิทธิและหน้าที่ ค่าตอบแทนและการจ่าย รายงานของตัวแทน ระยะเวลา ความรับผิด การบอกเลิก",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "หลัก (principal)" },
+        { "label": "ตัวแทน" },
+        { "label": "วัตถุ (ตัวแทนทำอะไร)" },
+        { "label": "ค่าตอบแทน (เปอร์เซ็นต์หรือคงที่)" }
+      ]
+    },
+    "system-loan": {
+      "name": "สัญญากู้ยืม (แบบง่ายระหว่างบุคคล/ผู้ประกอบการ)",
+      "description": "การคืนเงินและดอกเบี้ย — ระบุให้ชัด",
+      "content": "จัดทำสัญญากู้ยืมระหว่างคู่สัญญาพลเรือน: ผู้ให้กู้และผู้กู้ จำนวนเงิน สกุลเงิน วันครบกำหนดคืน ดอกเบี้ย (ถ้ามี) ตารางชำระ ความรับผิดเมื่อผิดนัด ขั้นตอนเรียกร้อง",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ให้กู้" },
+        { "label": "ผู้กู้" },
+        { "label": "จำนวนเงินกู้" },
+        { "label": "วันครบกำหนดคืน" },
+        { "label": "ดอกเบี้ย (ถ้ามี)", "default_value": "ปลอดดอกเบี้ย" }
+      ]
+    },
+    "system-distribution": {
+      "name": "สัญญาจัดจำหน่าย / ส่งสินค้าเพื่อขายต่อ",
+      "description": "เขตพื้นที่ เอกสิทธิ์ เงื่อนไขการส่ง",
+      "content": "จัดทำสัญญาจัดจำหน่ายหรือส่งสินค้าให้ตัวแทนจำหน่าย: เขตพื้นที่ ปริมาณซื้อขั้นต่ำ ราคาและส่วนลด การสนับสนุนการตลาด ข้อห้ามแข่งแบรนด์ที่เกี่ยวข้อง ความรับผิด การบอกเลิก",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "ผู้ผลิต / เจ้าของสิทธิ" },
+        { "label": "ตัวแทนจำหน่าย" },
+        { "label": "เขตพื้นที่" },
+        { "label": "แบรนด์ / กลุ่มสินค้า" }
+      ]
+    },
+    "system-franchise-light": {
+      "name": "สัมปทานเชิงพาณิชย์ (แฟรนไชส์) — หัวข้อย่อ",
+      "description": "โครงข้อความเบื้องต้น — ไม่แทนชุดสัญญาแฟรนไชส์เต็มรูปแบบ",
+      "content": "จัดทำกรอบสัมปทานเชิงพาณิชย์แบบย่อ: เจ้าของสิทธิและผู้ใช้สิทธิ วัตถุ (ชุดสิทธิ) เขตพื้นที่ ระยะเวลา ค่าตอบแทน (royalty/ค่าธรรมเนียมแรกเข้าหากมี) หน้าที่ การคุ้มครองความลับทางการค้า ระบุว่าต้องมีแผนธุรกิจและภาคผนวกโดยละเอียด",
+      "groupLabels": ["ฟิลด์"],
+      "fields": [
+        { "label": "เจ้าของสิทธิ (แฟรนไชเซอร์)" },
+        { "label": "ผู้รับสิทธิ (แฟรนไชซี)" },
+        { "label": "วัตถุ (แบรนด์ ระบบ)" },
+        { "label": "เขตเอกสิทธิ" }
+      ]
+    }
+  }
+}
+

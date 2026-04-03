@@ -50,6 +50,7 @@
     "titleHelper": "Название — только для вашего удобства, на текст генерации не влияет. Описание для ИИ укажите ниже в поле “Описание / Параметры”.",
     "templateLabel": "Шаблон",
     "noTemplate": "Без шаблона",
+    "systemTemplatesGroup": "Системные шаблоны",
     "countryLabel": "Страна (юрисдикция)",
     "outputLanguageLabel": "Язык генерируемого текста",
     "outputLanguageOption": {

@@ -4,6 +4,13 @@ import { prisma } from '../config/prisma';
 import { toTemplate } from '../lib/mappers';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { checkTemplateLimit } from '../lib/limits';
+import {
+  getSystemTemplateRecordById,
+  isSystemTemplateId,
+  listSystemTemplatesApi,
+  recordToApiDto,
+} from '../lib/systemTemplates';
+import { siteUiLanguageFromRequest } from '../lib/siteLocale';
 
 const router = Router();
 
@@ -49,30 +56,68 @@ const templateInput = z.object({
   sections: z.array(sectionInput).default([]),
 });
 
+/** Public: системные шаблоны из файла (без БД). */
+router.get('/catalog', (req, res) => {
+  try {
+    const lang = siteUiLanguageFromRequest(req);
+    return res.json(listSystemTemplatesApi(lang));
+  } catch (error) {
+    console.error('System templates catalog error', error);
+    return res.status(500).json({ detail: 'Failed to load system templates' });
+  }
+});
+
+/** Public: одна системная шаблон-карточка по `system-*` id. */
+router.get('/catalog/:id', (req, res) => {
+  const id = String(req.params.id);
+  const lang = siteUiLanguageFromRequest(req);
+  const rec = getSystemTemplateRecordById(id, lang);
+  if (!rec) {
+    return res.status(404).json({ detail: 'Template not found' });
+  }
+  return res.json({ template: recordToApiDto(rec) });
+});
+
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
-  const templates = await prisma.template.findMany({
-    where: { isActive: true, createdById: req.userId },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      groups: {
-        orderBy: { order: 'asc' },
-        include: { fields: { orderBy: { order: 'asc' } } },
+  try {
+    const templates = await prisma.template.findMany({
+      where: { isActive: true, createdById: req.userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        groups: {
+          orderBy: { order: 'asc' },
+          include: { fields: { orderBy: { order: 'asc' } } },
+        },
+        sections: { orderBy: { order: 'asc' } },
       },
-      sections: { orderBy: { order: 'asc' } },
-    },
-  });
-  return res.json(templates.map(toTemplate));
+    });
+    const lang = siteUiLanguageFromRequest(req);
+    const system = listSystemTemplatesApi(lang);
+    return res.json([...templates.map(toTemplate), ...system]);
+  } catch (error) {
+    console.error('List templates error', error);
+    return res.status(500).json({ detail: 'Failed to load templates' });
+  }
 });
 
 router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+  const id = String(req.params.id);
+  if (isSystemTemplateId(id)) {
+    const lang = siteUiLanguageFromRequest(req);
+    const rec = getSystemTemplateRecordById(id, lang);
+    if (!rec) {
+      return res.status(404).json({ detail: 'Template not found' });
+    }
+    return res.json({ template: recordToApiDto(rec) });
+  }
   const tpl = await prisma.template.findFirst({
-    where: { id: String(req.params.id), createdById: req.userId },
+    where: { id, createdById: req.userId },
     include: {
       groups: {
         orderBy: { order: 'asc' },
@@ -193,11 +238,14 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!req.userId) {
     return res.status(401).json({ detail: 'Unauthorized' });
   }
+  const templateId = String(req.params.id);
+  if (isSystemTemplateId(templateId)) {
+    return res.status(404).json({ detail: 'Template not found' });
+  }
   const parsed = templateInput.partial().safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
-  const templateId = String(req.params.id);
   const {
     name,
     description,
@@ -309,6 +357,9 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 
   const templateId = String(req.params.id);
+  if (isSystemTemplateId(templateId)) {
+    return res.status(404).json({ detail: 'Template not found' });
+  }
   const existing = await prisma.template.findFirst({
     where: { id: templateId, createdById: req.userId },
   });

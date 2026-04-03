@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -28,8 +28,18 @@ export const Templates = () => {
   const { t } = useTranslation('templates');
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const { data: templates, isLoading, error } = useTemplates();
+  const userTemplates = useMemo(
+    () => (templates ?? []).filter((tpl) => !tpl.is_system),
+    [templates],
+  );
   const { data: selectedTemplate, isLoading: loadingTemplate } = useTemplate(selectedId);
   const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteTemplate();
+
+  useEffect(() => {
+    if (!selectedId || templates === undefined) return;
+    const stillUser = templates.some((t) => t.id === selectedId && !t.is_system);
+    if (!stillUser) setSelectedId(undefined);
+  }, [templates, selectedId]);
 
   if (isLoading) {
     return (
@@ -69,7 +79,7 @@ export const Templates = () => {
                 </Button>
               </Stack>
               <List dense>
-                {templates?.map((tpl) => (
+                {userTemplates.map((tpl) => (
                   <ListItem key={tpl.id} disablePadding>
                     <ListItemButton
                       selected={selectedId === tpl.id}

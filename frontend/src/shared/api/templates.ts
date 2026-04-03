@@ -30,7 +30,17 @@ export const templatesApi = {
     return response.data;
   },
 
+  /** Публичный каталог системных шаблонов (без логина). */
+  getCatalog: async (): Promise<Template[]> => {
+    const response = await apiClient.get<Template[]>('/templates/catalog');
+    return response.data;
+  },
+
   getById: async (id: string): Promise<Template> => {
+    if (id.startsWith('system-')) {
+      const response = await apiClient.get<{ template: Template }>(`/templates/catalog/${id}`);
+      return response.data.template;
+    }
     const response = await apiClient.get<{ template: Template }>(`/templates/${id}`);
     return response.data.template;
   },

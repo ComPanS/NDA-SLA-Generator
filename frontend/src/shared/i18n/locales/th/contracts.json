@@ -50,6 +50,7 @@
     "titleHelper": "ชื่อใช้เพื่อความสะดวกของคุณเท่านั้น ไม่ส่งผลต่อข้อความที่สร้าง รายละเอียดสำหรับ AI อยู่ในช่อง “คำอธิบาย / พารามิเตอร์”",
     "templateLabel": "เทมเพลต",
     "noTemplate": "ไม่มีเทมเพลต",
+    "systemTemplatesGroup": "เทมเพลตของระบบ",
     "countryLabel": "ประเทศ (เขตอำนาจศาล)",
     "outputLanguageLabel": "ภาษาของข้อความที่สร้าง",
     "outputLanguageOption": {
