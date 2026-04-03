@@ -228,6 +228,7 @@ export const ContractView = () => {
         document.sections.map((s) => ({
           id: s.id,
           template_section_id: s.template_section_id,
+          section_uid: s.id,
           title: s.title,
           order: s.order,
         }))
@@ -777,12 +778,14 @@ export const ContractView = () => {
                   sections={sections}
                   onChange={setSections}
                   title={t('view.sectionsTitle')}
+                  disabled={isUpdatingSections}
                   headerAddon={
                     <FormControlLabel
                       control={
                         <Switch
                           checked={sectionsEnabled}
                           onChange={(e) => setSectionsEnabled(e.target.checked)}
+                          disabled={isUpdatingSections}
                         />
                       }
                       label={t('new.enable')}

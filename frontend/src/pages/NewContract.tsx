@@ -63,7 +63,11 @@ export const NewContract = () => {
   const defaultFromI18n = useMemo((): ContractSectionInput[] => {
     const titles = t('sectionsDefault', { returnObjects: true }) as unknown;
     if (!Array.isArray(titles)) return [];
-    return titles.map((title, i) => ({ title: String(title), order: i + 1 }));
+    return titles.map((title, i) => ({
+      title: String(title),
+      order: i + 1,
+      section_uid: `default-section-${i}`,
+    }));
   }, [t]);
 
   const [sections, setSections] = useState<ContractSectionInput[]>(defaultFromI18n);
@@ -84,6 +88,7 @@ export const NewContract = () => {
   const { data: geo } = useGeoHint();
   const confirmPaymentMutation = useConfirmPayment();
   const countryUserTouchedRef = useRef(false);
+  const outputLanguageUserTouchedRef = useRef(false);
   const [countryCode, setCountryCode] = useState(() => defaultCountryFromAppLocale(i18n.language));
   const [outputLanguage, setOutputLanguage] = useState(() =>
     normalizeOutputLanguageTag(i18n.language),
@@ -145,33 +150,36 @@ export const NewContract = () => {
   const hasRiskCheckAccess = usage?.features?.hasRiskCheck ?? false;
 
   useEffect(() => {
-    if (selectedTemplate) {
-      const nextFields: ContractFieldInput[] = selectedTemplate.groups.flatMap((group) =>
-        group.fields.map((field) => ({
-          template_field_id: field.id,
-          group_label: group.label,
-          group_order: group.order,
-          label: field.label,
-          key: field.key,
-          value: field.default_value || '',
-          order: field.order,
-        }))
-      );
-      setFields(nextFields);
-      setPrompt((prev) => (prev.trim().length ? prev : selectedTemplate.content));
-      const nextSections: ContractSectionInput[] = selectedTemplate.sections.map((s) => ({
-        template_section_id: s.id,
-        title: s.title,
-        order: s.order,
-      }));
-      setSections(nextSections);
-      setSectionsEnabled(false);
-    } else {
+    if (!templateId) {
       setFields([]);
       setSections(defaultFromI18n);
       setSectionsEnabled(false);
+      return;
     }
-  }, [selectedTemplate, defaultFromI18n]);
+    if (!selectedTemplate) return;
+
+    const nextFields: ContractFieldInput[] = selectedTemplate.groups.flatMap((group) =>
+      group.fields.map((field) => ({
+        template_field_id: field.id,
+        group_label: group.label,
+        group_order: group.order,
+        label: field.label,
+        key: field.key,
+        value: field.default_value || '',
+        order: field.order,
+      }))
+    );
+    setFields(nextFields);
+    setPrompt((prev) => (prev.trim().length ? prev : selectedTemplate.content));
+    const nextSections: ContractSectionInput[] = selectedTemplate.sections.map((s) => ({
+      template_section_id: s.id,
+      section_uid: s.id,
+      title: s.title,
+      order: s.order,
+    }));
+    setSections(nextSections);
+    setSectionsEnabled(false);
+  }, [templateId, selectedTemplate, defaultFromI18n]);
 
   useEffect(() => {
     if (selectedTemplate?.default_country_code) {
@@ -184,6 +192,16 @@ export const NewContract = () => {
       setCountryCode(geo.countryCode);
     }
   }, [selectedTemplate?.id, selectedTemplate?.default_country_code, geo?.countryCode]);
+
+  useEffect(() => {
+    if (selectedTemplate?.default_output_language) {
+      setOutputLanguage(normalizeOutputLanguageTag(selectedTemplate.default_output_language));
+      outputLanguageUserTouchedRef.current = false;
+      return;
+    }
+    if (outputLanguageUserTouchedRef.current) return;
+    setOutputLanguage(normalizeOutputLanguageTag(i18n.language));
+  }, [selectedTemplate?.id, selectedTemplate?.default_output_language, i18n.language]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,9 +318,10 @@ export const NewContract = () => {
                   helperText={
                     showValidation && !title.trim() ? t('new.titleError') : t('new.titleHelper')
                   }
+                  disabled={isGenerating}
                 />
 
-                <FormControl fullWidth margin="normal">
+                <FormControl fullWidth margin="normal" disabled={isGenerating}>
                   <InputLabel>{t('new.templateLabel')}</InputLabel>
                   <Select
                     value={templateId}
@@ -328,7 +347,10 @@ export const NewContract = () => {
                     countryUserTouchedRef.current = true;
                     setCountryCode(c);
                   }}
-                  onOutputLanguageChange={setOutputLanguage}
+                  onOutputLanguageChange={(lang) => {
+                    outputLanguageUserTouchedRef.current = true;
+                    setOutputLanguage(lang);
+                  }}
                   outputLanguageError={showValidation && !isValidOutputLanguageTag(outputLanguage)}
                   disabled={isGenerating}
                 />
@@ -347,6 +369,7 @@ export const NewContract = () => {
                   helperText={
                     showValidation && !prompt.trim() ? t('new.promptError') : t('new.promptHelper')
                   }
+                  disabled={isGenerating}
                 />
 
                 <FormControlLabel
@@ -354,7 +377,7 @@ export const NewContract = () => {
                     <Checkbox
                       checked={hasRiskCheckAccess ? riskCheck : false}
                       onChange={(e) => setRiskCheck(e.target.checked)}
-                      disabled={!hasRiskCheckAccess}
+                      disabled={!hasRiskCheckAccess || isGenerating}
                     />
                   }
                   label={
@@ -385,7 +408,11 @@ export const NewContract = () => {
 
                 {!loadingTemplate && (
                   <Box sx={{ mt: 2 }}>
-                    <ContractFieldsEditor fields={fields} onChange={setFields} />
+                    <ContractFieldsEditor
+                      fields={fields}
+                      onChange={setFields}
+                      disabled={isGenerating}
+                    />
                   </Box>
                 )}
 
@@ -396,12 +423,14 @@ export const NewContract = () => {
                         <ContractSectionsEditor
                           sections={sections}
                           onChange={setSections}
+                          disabled={isGenerating}
                           headerAddon={
                             <FormControlLabel
                               control={
                                 <Switch
                                   checked={sectionsEnabled}
                                   onChange={(e) => setSectionsEnabled(e.target.checked)}
+                                  disabled={isGenerating}
                                 />
                               }
                               label={t('new.enable')}
@@ -438,7 +467,7 @@ export const NewContract = () => {
                                   <Switch
                                     checked={hasSectionsAccess ? sectionsEnabled : false}
                                     onChange={(e) => setSectionsEnabled(e.target.checked)}
-                                    disabled={!hasSectionsAccess}
+                                    disabled={!hasSectionsAccess || isGenerating}
                                   />
                                 }
                                 label={t('new.enable')}

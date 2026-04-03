@@ -64,6 +64,7 @@ export function toTemplate(api: TemplateWithRelations) {
     content: api.content,
     is_active: api.isActive,
     default_country_code: api.defaultCountryCode || undefined,
+    default_output_language: api.defaultOutputLanguage || undefined,
     created_at: api.createdAt.toISOString(),
     updated_at: api.updatedAt.toISOString(),
     groups: (api.groups || []).map(toTemplateGroup).sort((a, b) => a.order - b.order),

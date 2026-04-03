@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Box,
   Button,
   Card,
   CardContent,
@@ -14,59 +15,143 @@ import {
   Switch,
   Tooltip,
 } from '@mui/material';
-import { Add, Delete, HelpOutline } from '@mui/icons-material';
-import { Template, TemplateGroup } from '@/shared/types';
+import { Add, Delete, DragIndicator, HelpOutline } from '@mui/icons-material';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Template } from '@/shared/types';
 import { useCreateTemplate, useUpdateTemplate } from '../hooks/useTemplates';
 import { TemplatePayload } from '@/shared/api';
 import { ContractJurisdictionFormFields } from '@/features/contracts/components/ContractJurisdictionFormFields';
+import { assignUniqueTemplateFieldKeys } from '@/shared/utils/templateFieldKey';
+import {
+  isValidOutputLanguageTag,
+  normalizeOutputLanguageTag,
+} from '@/shared/i18n/outputLanguageTag';
 
-type EditableGroup = Omit<
-  TemplateGroup,
-  'id' | 'created_at' | 'updated_at' | 'fields' | 'template_id'
-> & {
+type EditableField = {
   id?: string;
-  template_id?: string;
-  fields: Array<{
-    id?: string;
-    label: string;
-    key: string;
-    default_value?: string;
-    order?: number;
-  }>;
+  label: string;
+  key: string;
+  default_value?: string;
 };
 
 type EditableSection = {
-  id?: string;
+  id: string;
   title: string;
   order?: number;
 };
+
+function SortableTemplateSectionCard({
+  section,
+  disabled,
+  sectionTitleLabel,
+  onTitleChange,
+  onRemove,
+}: {
+  section: EditableSection;
+  disabled?: boolean;
+  sectionTitleLabel: string;
+  onTitleChange: (title: string) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: section.id,
+    disabled,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.85 : 1,
+  };
+
+  return (
+    <Card variant="outlined" ref={setNodeRef} sx={{ p: 2, ...style }}>
+      <Stack direction="row" spacing={1} alignItems="flex-start">
+        <IconButton
+          size="small"
+          aria-label="Reorder"
+          disabled={disabled}
+          sx={{ mt: 0.5, cursor: disabled ? 'default' : 'grab' }}
+          {...attributes}
+          {...listeners}
+        >
+          <DragIndicator fontSize="small" />
+        </IconButton>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            spacing={1}
+          >
+            <TextField
+              label={sectionTitleLabel}
+              value={section.title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              sx={{ flexGrow: 1 }}
+            />
+            <IconButton onClick={onRemove}>
+              <Delete />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Stack>
+    </Card>
+  );
+}
+
+function flattenTemplateFields(template: Template): EditableField[] {
+  const groups = [...(template.groups || [])].sort((a, b) => a.order - b.order);
+  const out: EditableField[] = [];
+  for (const g of groups) {
+    const fs = [...(g.fields || [])].sort((a, b) => a.order - b.order);
+    for (const f of fs) {
+      out.push({
+        id: f.id,
+        label: f.label,
+        key: f.key,
+        default_value: f.default_value,
+      });
+    }
+  }
+  return out;
+}
 
 interface TemplateBuilderProps {
   template?: Template;
 }
 
 export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
-  const { t } = useTranslation('templates');
+  const { t, i18n } = useTranslation('templates');
 
   const defaultSections = useMemo<EditableSection[]>(
     () =>
       Array.from({ length: 12 }, (_, i) => ({
+        id: `default-sec-${i}`,
         title: t(`builder.sec${i + 1}`),
         order: i + 1,
       })),
     [t]
   );
 
-  const defaultGroups = useMemo<EditableGroup[]>(
+  const defaultFields = useMemo<EditableField[]>(
     () => [
-      {
-        label: t('builder.groupParties'),
-        order: 0,
-        fields: [
-          { label: t('builder.partyExecutor'), key: 'executor_name' },
-          { label: t('builder.partyCustomer'), key: 'customer_name' },
-        ],
-      },
+      { label: t('builder.partyExecutor'), key: 'executor_name' },
+      { label: t('builder.partyCustomer'), key: 'customer_name' },
     ],
     [t]
   );
@@ -74,22 +159,8 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
   const [content, setContent] = useState(template?.content || '');
-  const [groups, setGroups] = useState<EditableGroup[]>(() =>
-    template?.groups?.length
-      ? template.groups.map((g) => ({
-          id: g.id,
-          template_id: g.template_id,
-          label: g.label,
-          order: g.order,
-          fields: g.fields.map((f) => ({
-            id: f.id,
-            label: f.label,
-            key: f.key,
-            default_value: f.default_value,
-            order: f.order,
-          })),
-        }))
-      : defaultGroups
+  const [fields, setFields] = useState<EditableField[]>(() =>
+    template?.groups?.length ? flattenTemplateFields(template) : defaultFields
   );
   const [sections, setSections] = useState<EditableSection[]>(() =>
     template?.sections?.length
@@ -104,6 +175,11 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
   const [defaultCountryCode, setDefaultCountryCode] = useState(
     () => template?.default_country_code || 'RU',
   );
+  const [defaultOutputLanguage, setDefaultOutputLanguage] = useState(() =>
+    normalizeOutputLanguageTag(
+      template?.default_output_language || i18n.language || 'ru',
+    ),
+  );
   const [error, setError] = useState('');
 
   const isEditing = useMemo(() => !!template?.id, [template]);
@@ -116,21 +192,7 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       setName(template.name);
       setDescription(template.description || '');
       setContent(template.content);
-      setGroups(
-        template.groups.map((g) => ({
-          id: g.id,
-          template_id: g.template_id,
-          label: g.label,
-          order: g.order,
-          fields: g.fields.map((f) => ({
-            id: f.id,
-            label: f.label,
-            key: f.key,
-            default_value: f.default_value,
-            order: f.order,
-          })),
-        }))
-      );
+      setFields(flattenTemplateFields(template));
       setSections(
         template.sections.map((s) => ({
           id: s.id,
@@ -140,114 +202,97 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       );
       setSectionsEnabled(!!template.sections.length);
       setDefaultCountryCode(template.default_country_code || 'RU');
+      setDefaultOutputLanguage(
+        normalizeOutputLanguageTag(template.default_output_language || i18n.language || 'ru'),
+      );
     } else {
       setName('');
       setDescription('');
       setContent('');
-      setGroups(defaultGroups);
+      setFields(defaultFields);
       setSections(defaultSections);
       setSectionsEnabled(false);
       setDefaultCountryCode('RU');
+      setDefaultOutputLanguage(normalizeOutputLanguageTag(i18n.language || 'ru'));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `defaultGroups`/`defaultSections` when clearing `template` are read from that commit; language-only updates are handled in the next effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `defaultFields`/`defaultSections` when clearing `template` are read from that commit; language-only updates are handled in the next effect
   }, [template]);
 
   useEffect(() => {
     if (!template) {
-      setGroups(defaultGroups);
+      setFields(defaultFields);
       setSections(defaultSections);
     }
-  }, [template, defaultGroups, defaultSections]);
+  }, [template, defaultFields, defaultSections]);
 
-  const handleAddGroup = () => {
-    setGroups((prev) => [
+  const handleAddField = () => {
+    setFields((prev) => [
       ...prev,
       {
-        label: t('builder.groupNamed', { n: prev.length + 1 }),
-        order: prev.length,
-        template_id: template?.id,
-        fields: [],
+        label: t('builder.fieldNamed', { n: prev.length + 1 }),
+        key: '',
+        default_value: '',
       },
     ]);
   };
 
-  const handleRemoveGroup = (index: number) => {
-    setGroups((prev) => prev.filter((_, i) => i !== index));
+  const handleFieldChange = (index: number, key: keyof EditableField, value: string) => {
+    setFields((prev) =>
+      prev.map((field, i) => (i === index ? { ...field, [key]: value } : field))
+    );
+  };
+
+  const handleRemoveField = (index: number) => {
+    setFields((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddSection = () => {
     if (!sectionsEnabled) return;
     setSections((prev) => [
       ...prev,
-      { title: `Раздел ${prev.length + 1}`, order: prev.length + 1 },
+      {
+        id: crypto.randomUUID(),
+        title: t('builder.sectionNamed', { n: prev.length + 1 }),
+        order: prev.length + 1,
+      },
     ]);
   };
 
   const handleSectionChange = (
-    index: number,
+    sectionId: string,
     key: keyof EditableSection,
     value: string | number
   ) => {
     if (!sectionsEnabled) return;
     setSections((prev) =>
-      prev.map((section, i) => (i === index ? { ...section, [key]: value } : section))
+      prev.map((section) => (section.id === sectionId ? { ...section, [key]: value } : section))
     );
   };
 
-  const handleRemoveSection = (index: number) => {
+  const handleRemoveSection = (sectionId: string) => {
     if (!sectionsEnabled) return;
-    setSections((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleGroupChange = (index: number, key: keyof EditableGroup, value: string | number) => {
-    setGroups((prev) => prev.map((group, i) => (i === index ? { ...group, [key]: value } : group)));
-  };
-
-  const handleAddField = (groupIndex: number) => {
-    setGroups((prev) =>
-      prev.map((group, i) =>
-        i === groupIndex
-          ? {
-              ...group,
-              fields: [
-                ...group.fields,
-                {
-                  label: t('builder.fieldNamed', { n: group.fields.length + 1 }),
-                  key: `field_${Date.now()}`,
-                },
-              ],
-            }
-          : group
-      )
+    setSections((prev) =>
+      prev
+        .filter((s) => s.id !== sectionId)
+        .map((s, i) => ({ ...s, order: i + 1 }))
     );
   };
 
-  const handleFieldChange = (
-    groupIndex: number,
-    fieldIndex: number,
-    key: 'label' | 'key' | 'default_value',
-    value: string
-  ) => {
-    setGroups((prev) =>
-      prev.map((group, i) => {
-        if (i !== groupIndex) return group;
-        return {
-          ...group,
-          fields: group.fields.map((field, fi) =>
-            fi === fieldIndex ? { ...field, [key]: value } : field
-          ),
-        };
-      })
-    );
-  };
+  const sectionSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-  const handleRemoveField = (groupIndex: number, fieldIndex: number) => {
-    setGroups((prev) =>
-      prev.map((group, i) => {
-        if (i !== groupIndex) return group;
-        return { ...group, fields: group.fields.filter((_, fi) => fi !== fieldIndex) };
-      })
-    );
+  const onSectionDragEnd = (event: DragEndEvent) => {
+    if (!sectionsEnabled) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const sorted = sections.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const oldIndex = sorted.findIndex((s) => s.id === active.id);
+    const newIndex = sorted.findIndex((s) => s.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const moved = arrayMove(sorted, oldIndex, newIndex);
+    setSections(moved.map((s, i) => ({ ...s, order: i + 1 })));
   };
 
   const handleSave = () => {
@@ -257,6 +302,22 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       return;
     }
 
+    const trimmedFields = fields.map((f) => ({
+      id: f.id,
+      label: f.label.trim(),
+      key: f.key,
+      default_value: f.default_value,
+    }));
+
+    for (const f of trimmedFields) {
+      if (!f.label.length) {
+        setError(t('builder.validationFieldLabel'));
+        return;
+      }
+    }
+
+    const keys = assignUniqueTemplateFieldKeys(trimmedFields);
+
     const payload: TemplatePayload = {
       name: name.trim(),
       description: description || undefined,
@@ -264,21 +325,29 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
       default_country_code: /^[A-Z]{2}$/i.test(defaultCountryCode)
         ? defaultCountryCode.toUpperCase()
         : null,
-      groups: groups.map((group, gIdx) => ({
-        label: group.label.trim(),
-        order: group.order ?? gIdx,
-        fields: group.fields.map((field, fIdx) => ({
-          label: field.label.trim(),
-          key: field.key.trim(),
-          default_value: field.default_value,
-          order: field.order ?? fIdx,
-        })),
-      })),
+      default_output_language: isValidOutputLanguageTag(defaultOutputLanguage)
+        ? normalizeOutputLanguageTag(defaultOutputLanguage)
+        : null,
+      groups: [
+        {
+          label: t('builder.fieldsGroupLabel'),
+          order: 0,
+          fields: trimmedFields.map((f, fIdx) => ({
+            label: f.label,
+            key: keys[fIdx]!,
+            default_value: f.default_value,
+            order: fIdx,
+          })),
+        },
+      ],
       sections: sectionsEnabled
-        ? sections.map((section, sIdx) => ({
-            title: section.title.trim(),
-            order: Math.max(1, section.order ?? sIdx + 1),
-          }))
+        ? sections
+            .slice()
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map((section, sIdx) => ({
+              title: section.title.trim(),
+              order: sIdx + 1,
+            }))
         : [],
     };
 
@@ -318,14 +387,14 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
             minRows={2}
           />
           <Typography variant="subtitle2" sx={{ mt: 1 }}>
-            {t('builder.defaultCountrySection')}
+            {t('builder.templateDefaultsJurisdiction')}
           </Typography>
           <ContractJurisdictionFormFields
             countryCode={defaultCountryCode}
-            outputLanguage="ru"
+            outputLanguage={defaultOutputLanguage}
             onCountryChange={setDefaultCountryCode}
-            onOutputLanguageChange={() => {}}
-            showOutputLanguage={false}
+            onOutputLanguageChange={setDefaultOutputLanguage}
+            showOutputLanguage
           />
           <TextField
             label={t('builder.contentLabel')}
@@ -340,103 +409,56 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
             spacing={1}
             rowGap={1}
           >
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              {t('builder.fieldGroups')}
+              {t('builder.fieldsTitle')}
             </Typography>
             <Button
               startIcon={<Add />}
-              onClick={handleAddGroup}
+              onClick={handleAddField}
               sx={{ width: { xs: '100%', sm: 'auto' } }}
             >
-              {t('builder.addGroup')}
+              {t('builder.addField')}
             </Button>
           </Stack>
 
-          <Stack spacing={2}>
-            {groups.map((group, groupIndex) => (
-              <Card variant="outlined" key={`${group.label}-${groupIndex}`}>
-                <CardContent>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    alignItems={{ xs: 'stretch', sm: 'center' }}
-                    spacing={1}
-                    sx={{ mb: 2 }}
-                  >
+          <Grid container spacing={2}>
+            {fields.map((field, fieldIndex) => (
+              <Grid item xs={12} md={6} key={field.id || `field-${fieldIndex}`}>
+                <Card variant="outlined" sx={{ p: 2 }}>
+                  <Stack spacing={1}>
                     <TextField
-                      label={t('builder.groupName')}
-                      value={group.label}
-                      onChange={(e) => handleGroupChange(groupIndex, 'label', e.target.value)}
-                      sx={{ flexGrow: 1 }}
+                      label={t('builder.fieldTitle')}
+                      value={field.label}
+                      onChange={(e) => handleFieldChange(fieldIndex, 'label', e.target.value)}
+                      required
                     />
-                    <IconButton onClick={() => handleRemoveGroup(groupIndex)}>
-                      <Delete />
-                    </IconButton>
+                    <TextField
+                      label={t('builder.fieldDefault')}
+                      value={field.default_value || ''}
+                      onChange={(e) =>
+                        handleFieldChange(fieldIndex, 'default_value', e.target.value)
+                      }
+                      multiline
+                      minRows={2}
+                    />
+                    <Button
+                      variant="text"
+                      color="error"
+                      startIcon={<Delete />}
+                      onClick={() => handleRemoveField(fieldIndex)}
+                      sx={{ alignSelf: 'flex-start' }}
+                    >
+                      {t('builder.removeField')}
+                    </Button>
                   </Stack>
-
-                  <Grid container spacing={2}>
-                    {group.fields.map((field, fieldIndex) => (
-                      <Grid item xs={12} md={6} key={`${field.key}-${fieldIndex}`}>
-                        <Card variant="outlined" sx={{ p: 2 }}>
-                          <Stack spacing={1}>
-                            <TextField
-                              label={t('builder.fieldTitle')}
-                              value={field.label}
-                              onChange={(e) =>
-                                handleFieldChange(groupIndex, fieldIndex, 'label', e.target.value)
-                              }
-                              required
-                            />
-                            <TextField
-                              label={t('builder.fieldKey')}
-                              value={field.key}
-                              onChange={(e) =>
-                                handleFieldChange(groupIndex, fieldIndex, 'key', e.target.value)
-                              }
-                              required
-                            />
-                            <TextField
-                              label={t('builder.fieldDefault')}
-                              value={field.default_value || ''}
-                              onChange={(e) =>
-                                handleFieldChange(
-                                  groupIndex,
-                                  fieldIndex,
-                                  'default_value',
-                                  e.target.value
-                                )
-                              }
-                              multiline
-                              minRows={2}
-                            />
-                            <Button
-                              variant="text"
-                              color="error"
-                              startIcon={<Delete />}
-                              onClick={() => handleRemoveField(groupIndex, fieldIndex)}
-                              sx={{ alignSelf: 'flex-start' }}
-                            >
-                              {t('builder.removeField')}
-                            </Button>
-                          </Stack>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-
-                  <Button
-                    startIcon={<Add />}
-                    onClick={() => handleAddField(groupIndex)}
-                    sx={{ mt: 2 }}
-                  >
-                    {t('builder.addField')}
-                  </Button>
-                </CardContent>
-              </Card>
+                </Card>
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
 
           {sectionsEnabled ? (
             <>
@@ -475,42 +497,38 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                 </Stack>
               </Stack>
 
-              <Stack spacing={2}>
-                {sections
-                  .slice()
-                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                  .map((section, idx) => (
-                    <Card variant="outlined" key={`section-${idx}`}>
-                      <CardContent>
-                        <Stack
-                          direction={{ xs: 'column', sm: 'row' }}
-                          alignItems={{ xs: 'stretch', sm: 'center' }}
-                          spacing={1}
-                        >
-                          <TextField
-                            label={t('builder.sectionTitle')}
-                            value={section.title}
-                            onChange={(e) => handleSectionChange(idx, 'title', e.target.value)}
-                            sx={{ flexGrow: 1 }}
-                          />
-                          <TextField
-                            label={t('builder.order')}
-                            type="number"
-                            value={section.order ?? idx + 1}
-                            onChange={(e) =>
-                              handleSectionChange(idx, 'order', Number(e.target.value))
-                            }
-                            sx={{ width: { xs: '100%', sm: 140 } }}
-                            inputProps={{ min: 1 }}
-                          />
-                          <IconButton onClick={() => handleRemoveSection(idx)}>
-                            <Delete />
-                          </IconButton>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                {t('builder.sectionsDragHint')}
+              </Typography>
+
+              <DndContext
+                sensors={sectionSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={onSectionDragEnd}
+              >
+                <SortableContext
+                  items={sections
+                    .slice()
+                    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                    .map((s) => s.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <Stack spacing={2}>
+                    {sections
+                      .slice()
+                      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                      .map((section) => (
+                        <SortableTemplateSectionCard
+                          key={section.id}
+                          section={section}
+                          sectionTitleLabel={t('builder.sectionTitle')}
+                          onTitleChange={(v) => handleSectionChange(section.id, 'title', v)}
+                          onRemove={() => handleRemoveSection(section.id)}
+                        />
+                      ))}
+                  </Stack>
+                </SortableContext>
+              </DndContext>
             </>
           ) : (
             <Card sx={{ mt: 3 }}>
@@ -538,9 +556,6 @@ export const TemplateBuilder = ({ template }: TemplateBuilderProps) => {
                       label={t('builder.enable')}
                     />
                   </Stack>
-                  {/* <Typography variant="body2" color="text.secondary">
-                    Порядок разделов всегда начинается с 1.
-                  </Typography> */}
                 </Stack>
               </CardContent>
             </Card>

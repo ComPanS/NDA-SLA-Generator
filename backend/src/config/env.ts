@@ -123,4 +123,9 @@ export const env = {
   yookassaReturnUrl:
     process.env.YOOKASSA_RETURN_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
   yookassaWebhookSecret: process.env.YOOKASSA_WEBHOOK_SECRET || '',
+  /**
+   * If true: guest /contracts/guest/generate does not enforce one-generation-per-IP (GuestAccess).
+   * If false: in non-production, loopback IPs still skip the cap so local dev is not stuck after one run.
+   */
+  guestContractDisableIpCap: parseEnvBool('GUEST_CONTRACT_DISABLE_IP_CAP', false),
 };

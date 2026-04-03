@@ -16,6 +16,7 @@
     "tooltip": "La estructura importa: el orden y los títulos afectan la generación y la exportación. Si está desactivado, la IA elige las secciones.",
     "addSection": "Añadir sección",
     "newSectionTitle": "Sección {{n}}",
+    "dragHint": "Arrastre el control para reordenar las secciones.",
     "labels": {
       "title": "Título de la sección",
       "order": "Orden"

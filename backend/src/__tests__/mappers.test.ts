@@ -10,6 +10,7 @@ describe('mappers', () => {
       content: 'base content',
       isActive: true,
       defaultCountryCode: null,
+      defaultOutputLanguage: null,
       createdById: null,
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-01-02'),

@@ -7,6 +7,7 @@ export interface TemplatePayload {
   content: string;
   is_active?: boolean;
   default_country_code?: string | null;
+  default_output_language?: string | null;
   groups: Array<{
     label: string;
     order?: number;

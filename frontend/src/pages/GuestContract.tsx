@@ -54,7 +54,11 @@ export const GuestContract = () => {
   const defaultFromI18n = useMemo((): ContractSectionInput[] => {
     const titles = tc('sectionsDefault', { returnObjects: true }) as unknown;
     if (!Array.isArray(titles)) return [];
-    return titles.map((title, i) => ({ title: String(title), order: i + 1 }));
+    return titles.map((title, i) => ({
+      title: String(title),
+      order: i + 1,
+      section_uid: `default-section-${i}`,
+    }));
   }, [tc]);
 
   const [prompt, setPrompt] = useState('');
@@ -94,7 +98,16 @@ export const GuestContract = () => {
       setPrompt(parsed.prompt || '');
       setRiskCheck(!!parsed.riskCheck);
       setFields(parsed.fields || []);
-      setSections(parsed.sections?.length ? parsed.sections : defaultFromI18n);
+      if (parsed.sections?.length) {
+        setSections(
+          parsed.sections.map((s: ContractSectionInput, i: number) => ({
+            ...s,
+            section_uid: s.section_uid || s.template_section_id || s.id || `restored-${i}`,
+          })),
+        );
+      } else {
+        setSections(defaultFromI18n);
+      }
       setSectionsEnabled(!!parsed.sectionsEnabled);
       setContent(parsed.content || '');
       setExportTitle(parsed.exportTitle || parsed.title || '');
@@ -306,6 +319,7 @@ export const GuestContract = () => {
                   isPromptMissing ? t('promptRequired') : tc('new.promptHelper')
                 }
                 error={isPromptMissing}
+                disabled={isGenerating}
                 sx={
                   isPromptMissing
                     ? {
@@ -321,7 +335,11 @@ export const GuestContract = () => {
 
               <FormControlLabel
                 control={
-                  <Checkbox checked={riskCheck} onChange={(e) => setRiskCheck(e.target.checked)} />
+                  <Checkbox
+                    checked={riskCheck}
+                    onChange={(e) => setRiskCheck(e.target.checked)}
+                    disabled={isGenerating}
+                  />
                 }
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
@@ -356,7 +374,11 @@ export const GuestContract = () => {
               )}
 
               <Box sx={{ mt: 2 }}>
-                <ContractFieldsEditor fields={fields} onChange={setFields} />
+                <ContractFieldsEditor
+                  fields={fields}
+                  onChange={setFields}
+                  disabled={isGenerating}
+                />
               </Box>
 
               <Box sx={{ mt: 2 }}>
@@ -364,12 +386,14 @@ export const GuestContract = () => {
                   <ContractSectionsEditor
                     sections={sections}
                     onChange={setSections}
+                    disabled={isGenerating}
                     headerAddon={
                       <FormControlLabel
                         control={
                           <Switch
                             checked={sectionsEnabled}
                             onChange={(e) => setSectionsEnabled(e.target.checked)}
+                            disabled={isGenerating}
                           />
                         }
                         label={tc('new.enable')}
@@ -392,6 +416,7 @@ export const GuestContract = () => {
                               <Switch
                                 checked={sectionsEnabled}
                                 onChange={(e) => setSectionsEnabled(e.target.checked)}
+                                disabled={isGenerating}
                               />
                             }
                             label={tc('new.enable')}

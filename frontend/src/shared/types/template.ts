@@ -30,6 +30,7 @@ export interface Template {
   content: string;
   is_active: boolean;
   default_country_code?: string | null;
+  default_output_language?: string | null;
   created_at: string;
   updated_at: string;
   groups: TemplateGroup[];

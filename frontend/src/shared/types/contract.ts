@@ -100,6 +100,8 @@ export interface ContractSection {
 export interface ContractSectionInput {
   id?: string;
   template_section_id?: string;
+  /** Stable client id for UI (e.g. drag-and-drop); omitted from persistence on the server. */
+  section_uid?: string;
   title: string;
   order?: number;
 }

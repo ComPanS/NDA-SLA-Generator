@@ -12,3 +12,9 @@ export function getClientIp(req: Request): string | null {
   // Убираем префикс ::ffff: и порт, если пришёл вместе с IP
   return raw.replace(/^::ffff:/, '').replace(/:\d+$/, '');
 }
+
+/** Loopback after ::ffff: strip — for dev-only guest limits, etc. */
+export function isLoopbackIp(ip: string): boolean {
+  const n = ip.replace(/^::ffff:/, '').trim().toLowerCase();
+  return n === '127.0.0.1' || n === '::1' || n === '0:0:0:0:0:0:0:1';
+}

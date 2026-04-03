@@ -3,10 +3,11 @@ import { Router } from 'express';
 import { z } from 'zod';
 import sanitizeHtml, { Attributes, IFrame } from 'sanitize-html';
 import { prisma } from '../config/prisma';
+import { env } from '../config/env';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { toDocument } from '../lib/mappers';
 import { generateText } from '../lib/yandex';
-import { getClientIp } from '../lib/requestIp';
+import { getClientIp, isLoopbackIp } from '../lib/requestIp';
 import {
   checkContractLimit,
   checkClarificationLimit,
@@ -570,11 +571,17 @@ router.post('/guest/generate', async (req, res) => {
 
   const guestActor = `ip:${ip}`;
 
-  const existing = await prisma.guestAccess.findUnique({ where: { ip } });
-  if (existing) {
-    return res.status(429).json({
-      detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
-    });
+  const skipGuestIpCap =
+    env.guestContractDisableIpCap ||
+    (process.env.NODE_ENV !== 'production' && isLoopbackIp(ip));
+
+  if (!skipGuestIpCap) {
+    const existing = await prisma.guestAccess.findUnique({ where: { ip } });
+    if (existing) {
+      return res.status(429).json({
+        detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+      });
+    }
   }
 
   const parsed = guestGenerateSchema.safeParse(req.body);
@@ -646,22 +653,24 @@ router.post('/guest/generate', async (req, res) => {
     return res.status(500).json({ detail: 'Не удалось сгенерировать договор' });
   }
 
-  try {
-    await prisma.guestAccess.create({
-      data: {
-        ip,
-        userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
-      },
-    });
-  } catch (error: unknown) {
-    const maybePrismaError = error as { code?: string };
-    if (maybePrismaError?.code === 'P2002') {
-      return res.status(429).json({
-        detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+  if (!skipGuestIpCap) {
+    try {
+      await prisma.guestAccess.create({
+        data: {
+          ip,
+          userAgent: (req.headers['user-agent'] as string | undefined) ?? null,
+        },
       });
+    } catch (error: unknown) {
+      const maybePrismaError = error as { code?: string };
+      if (maybePrismaError?.code === 'P2002') {
+        return res.status(429).json({
+          detail: 'Лимит бесплатного договора использован. Зарегистрируйтесь для продолжения.',
+        });
+      }
+      logContractPipelineError('guest-generate', guestActor, '11_guest_access_create', error);
+      return res.status(500).json({ detail: 'Не удалось зафиксировать попытку' });
     }
-    logContractPipelineError('guest-generate', guestActor, '11_guest_access_create', error);
-    return res.status(500).json({ detail: 'Не удалось зафиксировать попытку' });
   }
 
   return res.json({ content, title: exportTitle, risk_assessment: riskAssessmentText });

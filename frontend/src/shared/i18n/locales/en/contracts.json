@@ -16,6 +16,7 @@
     "tooltip": "Structure matters: order and titles affect generation and export. If disabled, the AI picks sections.",
     "addSection": "Add section",
     "newSectionTitle": "Section {{n}}",
+    "dragHint": "Drag the handle to reorder sections.",
     "labels": {
       "title": "Section title",
       "order": "Order"

@@ -31,12 +31,20 @@ const isoCountry = z
   .transform((s) => s.toUpperCase())
   .refine((s) => /^[A-Z]{2}$/.test(s), 'Invalid country code');
 
+const outputLangTag = z
+  .string()
+  .min(2)
+  .max(35)
+  .optional()
+  .nullable();
+
 const templateInput = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   content: z.string().min(1),
   is_active: z.boolean().optional(),
   default_country_code: isoCountry.optional().nullable(),
+  default_output_language: outputLangTag,
   groups: z.array(groupInput).default([]),
   sections: z.array(sectionInput).default([]),
 });
@@ -101,7 +109,15 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   if (!parsed.success) {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
-  const { name, description, content, is_active, default_country_code, groups } = parsed.data;
+  const {
+    name,
+    description,
+    content,
+    is_active,
+    default_country_code,
+    default_output_language,
+    groups,
+  } = parsed.data;
 
   try {
     const template = await prisma.$transaction(async (tx) => {
@@ -112,6 +128,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
           content,
           isActive: is_active ?? true,
           defaultCountryCode: default_country_code ?? null,
+          defaultOutputLanguage: default_output_language?.trim() || null,
           createdById: req.userId,
         },
       });
@@ -181,8 +198,16 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ detail: parsed.error.flatten() });
   }
   const templateId = String(req.params.id);
-  const { name, description, content, is_active, default_country_code, groups, sections } =
-    parsed.data;
+  const {
+    name,
+    description,
+    content,
+    is_active,
+    default_country_code,
+    default_output_language,
+    groups,
+    sections,
+  } = parsed.data;
   const shouldReplaceGroups = Array.isArray(groups);
   const shouldReplaceSections = Array.isArray(sections);
 
@@ -205,6 +230,10 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
             default_country_code === undefined
               ? existing.defaultCountryCode
               : default_country_code,
+          defaultOutputLanguage:
+            default_output_language === undefined
+              ? existing.defaultOutputLanguage
+              : default_output_language?.trim() || null,
           isActive: is_active ?? existing.isActive,
         },
       });
