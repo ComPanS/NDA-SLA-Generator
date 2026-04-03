@@ -35,7 +35,6 @@ import {
   useCancelSubscription,
   useReactivateSubscription,
   useConfirmPayment,
-  useFxRates,
 } from '@/features/billing/hooks/useBilling';
 import { SubscriptionPlan } from '@/shared/types';
 import { useQueryClient } from '@tanstack/react-query';
@@ -43,7 +42,13 @@ import { authStore } from '@/features/auth/store/authStore';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@/shared/ui';
 import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 import { useBillingDisplayCurrency } from '@/shared/money/useBillingDisplayCurrency';
-import { formatRubAmountForUi, BillingDisplayCurrency } from '@/shared/money/billingCurrency';
+import { BillingDisplayCurrency } from '@/shared/money/billingCurrency';
+import {
+  formatPlanDisplayAmount,
+  formatSingleContractDisplay,
+  planDisplayDiscountPercent,
+  planHasDisplayDiscount,
+} from '@/shared/money/planDisplayMoney';
 
 function planFeatureList(t: (key: string, opts?: { returnObjects?: boolean }) => unknown, planId: SubscriptionPlan) {
   const v = t(`plans.${planId}.features`, { returnObjects: true });
@@ -54,8 +59,12 @@ export const Billing = () => {
   const { t, i18n } = useTranslation('billing');
   const locale = icuLocaleFor(i18n.language);
   const { currency, setCurrency, currencies, isPaymentEnabled } = useBillingDisplayCurrency();
-  const { data: fxData, isError: fxError } = useFxRates();
-  const rates = fxData?.rates;
+  const legacyFx = {
+    rates: undefined as Partial<Record<BillingDisplayCurrency, number>> | undefined,
+    fxFailed: true,
+    locale,
+    freeLabel: t('free'),
+  };
 
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -353,12 +362,6 @@ export const Billing = () => {
               {t('currency.helper')}
             </Typography>
 
-            {fxError && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                {t('fxStale')}
-              </Alert>
-            )}
-
             {!isPaymentEnabled && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 {t('paymentNonRub')}
@@ -371,26 +374,11 @@ export const Billing = () => {
                 const isHighlighted = plan.id === 'basic';
                 const isFreePlan = plan.id === 'freemium';
                 const disableFreeWhileActive = isFreePlan && currentPlan !== 'freemium';
-                const hasDiscount =
-                  !!plan.first_month_discount_available &&
-                  plan.first_month_price !== null &&
-                  plan.first_month_price !== undefined &&
-                  plan.price > 0 &&
-                  plan.first_month_price < plan.price;
-                const discountPercent = hasDiscount
-                  ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
-                  : null;
+                const hasDiscount = planHasDisplayDiscount(plan, currency);
+                const discountPercent = planDisplayDiscountPercent(plan, currency);
 
-                const priceLabel = hasDiscount ? plan.first_month_price : plan.price;
                 const payBlocked = !isPaymentEnabled && plan.price > 0;
                 const features = planFeatureList(t, plan.id);
-                const priceOpts = {
-                  currency,
-                  rates,
-                  fxFailed: fxError,
-                  locale,
-                  freeLabel: t('free'),
-                };
 
                 return (
                   <Card
@@ -416,7 +404,9 @@ export const Billing = () => {
                       <CardTitle className="text-xl mb-2">{t(`plans.${plan.id}.title`)}</CardTitle>
                       <div className="mb-2">
                         <span className="text-4xl font-bold">
-                          {formatRubAmountForUi(priceLabel, priceOpts)}
+                          {hasDiscount
+                            ? formatPlanDisplayAmount(plan, 'first_month', currency, legacyFx)
+                            : formatPlanDisplayAmount(plan, 'monthly', currency, legacyFx)}
                         </span>
                         {plan.price > 0 && <span className="text-gray-600 ml-2">{t('perMonth')}</span>}
                       </div>
@@ -424,7 +414,7 @@ export const Billing = () => {
                         <div className="text-sm text-gray-700 space-y-1">
                           <div>
                             <span className="line-through text-gray-400">
-                              {formatRubAmountForUi(plan.price, priceOpts)}
+                              {formatPlanDisplayAmount(plan, 'monthly', currency, legacyFx)}
                             </span>{' '}
                             <span className="font-semibold text-green-700">
                               {discountPercent !== null ? `-${discountPercent}%` : ''}
@@ -477,7 +467,9 @@ export const Billing = () => {
             </div>
 
             <Alert severity="info" sx={{ mt: 4 }}>
-              {t('extraInfo', { price: plansData?.single_contract_price || 99 })}
+              {t('extraInfo', {
+                price: formatSingleContractDisplay(plansData, currency, legacyFx),
+              })}
             </Alert>
           </Box>
         )}

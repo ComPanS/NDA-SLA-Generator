@@ -16,7 +16,7 @@ import {
   incrementContractUsage,
   incrementClarificationUsage,
 } from '../lib/limits';
-import { SINGLE_CONTRACT_PRICE } from '../config/subscriptions';
+import { SINGLE_CONTRACT_PRICE, singleContractPricesToApi } from '../config/subscriptions';
 import {
   buildRiskPrompt,
   buildRefinePrompt,
@@ -797,6 +797,7 @@ router.post('/guest/import', requireAuth, async (req: AuthRequest, res) => {
       limit: limitCheck.limit,
       upgrade_options: limitCheck.upgradeOptions,
       single_contract_price: SINGLE_CONTRACT_PRICE,
+      single_contract_prices_by_currency: singleContractPricesToApi(),
     });
   }
 
@@ -902,6 +903,7 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
       limit: limitCheck.limit,
       upgrade_options: limitCheck.upgradeOptions,
       single_contract_price: SINGLE_CONTRACT_PRICE,
+      single_contract_prices_by_currency: singleContractPricesToApi(),
     });
   }
 

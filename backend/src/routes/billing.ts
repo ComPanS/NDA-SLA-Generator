@@ -10,6 +10,8 @@ import {
   SubscriptionPlanType,
   SUBSCRIPTION_NAMES,
   SUBSCRIPTION_FEATURES,
+  pricesByCurrencyToApi,
+  singleContractPricesToApi,
 } from '../config/subscriptions';
 import {
   createSubscriptionPayment,
@@ -149,6 +151,7 @@ router.get('/plans', async (_req, res) => {
     first_month_discount_available:
       firstMonthDiscountAvailable && config.firstMonthPrice !== undefined,
     features: SUBSCRIPTION_FEATURES[key as SubscriptionPlanType],
+    prices_by_currency: pricesByCurrencyToApi(config),
     limits: {
       contracts_per_month: config.contractsPerMonth,
       max_templates: config.maxTemplates,
@@ -160,7 +163,11 @@ router.get('/plans', async (_req, res) => {
       has_priority_support: config.hasPrioritySupport,
     },
   }));
-  return res.json({ plans, single_contract_price: SINGLE_CONTRACT_PRICE });
+  return res.json({
+    plans,
+    single_contract_price: SINGLE_CONTRACT_PRICE,
+    single_contract_prices_by_currency: singleContractPricesToApi(),
+  });
 });
 
 /**

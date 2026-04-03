@@ -25,7 +25,7 @@
   "btnTryFree": "Try for free",
   "btnChoose": "Choose plan",
   "btnComingSoon": "Coming soon",
-  "extraInfo": "When you hit the contract limit you can buy extra contracts at {{price}} RUB each.",
+  "extraInfo": "When you hit the contract limit you can buy extra contracts for {{price}} each.",
   "cancelTitle": "Cancel subscription?",
   "cancelBody": "Your subscription stays active until the end of the paid period, then switches to free.",
   "cancelConfirm": "Cancel subscription",

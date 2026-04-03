@@ -16,9 +16,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import { PlanInfo, SubscriptionPlan } from '@/shared/types';
 import { icuLocaleFor } from '@/shared/i18n/icuLocale';
-import { useFxRates } from '@/features/billing/hooks/useBilling';
 import { useBillingDisplayCurrency } from '@/shared/money/useBillingDisplayCurrency';
-import { formatRubAmountForUi, BillingDisplayCurrency } from '@/shared/money/billingCurrency';
+import { BillingDisplayCurrency } from '@/shared/money/billingCurrency';
+import {
+  formatPlanDisplayAmount,
+  planDisplayDiscountPercent,
+  planHasDisplayDiscount,
+} from '@/shared/money/planDisplayMoney';
 import {
   Accordion,
   AccordionContent,
@@ -372,12 +376,9 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
   const { t: tb } = useTranslation('billing');
   const localeTag = icuLocaleFor(i18n.language);
   const { currency, setCurrency, currencies } = useBillingDisplayCurrency();
-  const { data: fxData, isError: fxError } = useFxRates();
-  const rates = fxData?.rates;
-  const priceOpts = {
-    currency,
-    rates,
-    fxFailed: fxError,
+  const legacyFx = {
+    rates: undefined as Partial<Record<BillingDisplayCurrency, number>> | undefined,
+    fxFailed: true,
     locale: localeTag,
     freeLabel: tb('free'),
   };
@@ -407,9 +408,6 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
             </select>
           </div>
         )}
-        {fxError && (
-          <p className="text-center text-amber-700 text-sm mb-6">{tb('fxStale')}</p>
-        )}
 
         {loading ? (
           <div className="text-center text-gray-600">{t('pricing.loading')}</div>
@@ -419,15 +417,8 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {plans.map((plan) => {
               const highlighted = plan.id === 'basic';
-              const hasDiscount =
-                !!plan.first_month_discount_available &&
-                plan.first_month_price !== null &&
-                plan.first_month_price !== undefined &&
-                plan.price > 0 &&
-                plan.first_month_price < plan.price;
-              const discountPercent = hasDiscount
-                ? Math.round((1 - (plan.first_month_price as number) / plan.price) * 100)
-                : null;
+              const hasDiscount = planHasDisplayDiscount(plan, currency);
+              const discountPercent = planDisplayDiscountPercent(plan, currency);
               const features = landingPlanFeatures(tb, plan.id);
 
               return (
@@ -450,8 +441,8 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
                     <div className="mb-2">
                       <span className="text-4xl font-bold">
                         {hasDiscount
-                          ? formatRubAmountForUi(plan.first_month_price, priceOpts)
-                          : formatRubAmountForUi(plan.price, priceOpts)}
+                          ? formatPlanDisplayAmount(plan, 'first_month', currency, legacyFx)
+                          : formatPlanDisplayAmount(plan, 'monthly', currency, legacyFx)}
                       </span>
                       {plan.price > 0 && (
                         <span className="text-gray-600 ml-2">{t('pricing.perMonth')}</span>
@@ -461,7 +452,7 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
                       <div className="text-sm text-gray-700 space-y-1">
                         <div>
                           <span className="line-through text-gray-400">
-                            {formatRubAmountForUi(plan.price, priceOpts)}
+                            {formatPlanDisplayAmount(plan, 'monthly', currency, legacyFx)}
                           </span>{' '}
                           <span className="font-semibold text-green-700">
                             {discountPercent !== null ? `-${discountPercent}%` : ''}

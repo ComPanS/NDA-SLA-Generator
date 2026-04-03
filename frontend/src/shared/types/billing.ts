@@ -46,6 +46,8 @@ export interface UpgradeOption {
   newLimit: number;
 }
 
+export type PlanDisplayCurrencyCode = 'RUB' | 'USD' | 'EUR' | 'GBP' | 'THB';
+
 export interface LimitReachedError {
   detail: string;
   code: 'LIMIT_REACHED';
@@ -54,6 +56,7 @@ export interface LimitReachedError {
   limit: number;
   upgrade_options: UpgradeOption[];
   single_contract_price?: number;
+  single_contract_prices_by_currency?: Partial<Record<PlanDisplayCurrencyCode, number>>;
 }
 
 export interface PlanLimits {
@@ -67,6 +70,12 @@ export interface PlanLimits {
   has_priority_support: boolean;
 }
 
+/** Backend GET /billing/plans — keys RUB | USD | EUR | GBP | THB */
+export interface PlanPricesByCurrencyRow {
+  monthly: number;
+  first_month: number | null;
+}
+
 export interface PlanInfo {
   id: SubscriptionPlan;
   name: string;
@@ -75,11 +84,14 @@ export interface PlanInfo {
   first_month_discount_available?: boolean;
   features: string[];
   limits: PlanLimits;
+  /** Explicit list prices from backend (display only; checkout in RUB). */
+  prices_by_currency?: Partial<Record<PlanDisplayCurrencyCode, PlanPricesByCurrencyRow>>;
 }
 
 export interface PlansResponse {
   plans: PlanInfo[];
   single_contract_price: number;
+  single_contract_prices_by_currency?: Partial<Record<PlanDisplayCurrencyCode, number>>;
 }
 
 /** GET /billing/fx-rates — rates[currency] = foreign units per 1 RUB */

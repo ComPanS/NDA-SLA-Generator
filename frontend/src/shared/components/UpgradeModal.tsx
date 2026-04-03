@@ -25,13 +25,17 @@ import {
   useSubscribe,
   usePurchaseSingleContract,
   usePlans,
-  useFxRates,
 } from '@/features/billing/hooks/useBilling';
 import { UpgradeOption, SubscriptionPlan } from '@/shared/types';
-import { SINGLE_CONTRACT_PRICE } from '@/shared/constants/subscriptions';
 import { icuLocaleFor } from '@/shared/i18n/icuLocale';
 import { useBillingDisplayCurrency } from '@/shared/money/useBillingDisplayCurrency';
-import { formatRubAmountForUi } from '@/shared/money/billingCurrency';
+import { BillingDisplayCurrency } from '@/shared/money/billingCurrency';
+import {
+  formatPlanDisplayAmount,
+  formatSingleContractDisplay,
+  planDisplayDiscountPercent,
+  planHasDisplayDiscount,
+} from '@/shared/money/planDisplayMoney';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -64,21 +68,17 @@ export const UpgradeModal = ({
   const { i18n } = useTranslation();
   const locale = icuLocaleFor(i18n.language);
   const { currency, isPaymentEnabled } = useBillingDisplayCurrency();
-  const { data: fxData, isError: fxError } = useFxRates();
-  const rates = fxData?.rates;
+  const legacyFx = {
+    rates: undefined as Partial<Record<BillingDisplayCurrency, number>> | undefined,
+    fxFailed: true,
+    locale,
+    freeLabel: t('free'),
+  };
 
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const subscribeMutation = useSubscribe();
   const purchaseSingleMutation = usePurchaseSingleContract();
   const { data: plansData } = usePlans();
-
-  const priceOpts = {
-    currency,
-    rates,
-    fxFailed: fxError,
-    locale,
-    freeLabel: t('free'),
-  };
 
   const limitUnitKey =
     limitType === 'contracts'
@@ -167,7 +167,7 @@ export const UpgradeModal = ({
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography variant="h5" color="primary">
-                      {formatRubAmountForUi(SINGLE_CONTRACT_PRICE, priceOpts)}
+                      {formatSingleContractDisplay(plansData, currency, legacyFx)}
                     </Typography>
                     <Tooltip title={!isPaymentEnabled ? t('upgradeModal.singleUnavailableNonRub') : ''}>
                       <span>
@@ -202,19 +202,12 @@ export const UpgradeModal = ({
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           {upgradeOptions.map((option) => {
             const planFromApi = plansData?.plans?.find((p) => p.id === option.plan);
-            const hasDiscount =
-              !!planFromApi?.first_month_discount_available &&
-              planFromApi.first_month_price !== null &&
-              planFromApi.first_month_price !== undefined &&
-              option.price > 0 &&
-              (planFromApi.first_month_price as number) < option.price;
-            const discountPercent = hasDiscount
-              ? Math.round((1 - (planFromApi?.first_month_price as number) / option.price) * 100)
+            const hasDiscount = planFromApi
+              ? planHasDisplayDiscount(planFromApi, currency)
+              : false;
+            const discountPercent = planFromApi
+              ? planDisplayDiscountPercent(planFromApi, currency)
               : null;
-            const displayPriceRub =
-              hasDiscount && planFromApi?.first_month_price !== null
-                ? planFromApi.first_month_price
-                : option.price;
 
             const allFeatures = planFeaturesTb(t, option.plan);
             const preview = allFeatures.slice(0, 4);
@@ -245,15 +238,19 @@ export const UpgradeModal = ({
                     {t(`plans.${option.plan}.title`)}
                   </Typography>
                   <Typography variant="h4" color="primary" gutterBottom>
-                    {formatRubAmountForUi(displayPriceRub, priceOpts)}
+                    {planFromApi
+                      ? hasDiscount
+                        ? formatPlanDisplayAmount(planFromApi, 'first_month', currency, legacyFx)
+                        : formatPlanDisplayAmount(planFromApi, 'monthly', currency, legacyFx)
+                      : `${option.price} ₽`}
                     <Typography component="span" variant="body2" color="text.secondary">
                       {' '}
                       {t('perMonth')}
                     </Typography>
-                    {hasDiscount && (
+                    {hasDiscount && planFromApi && (
                       <Typography variant="body2" color="text.secondary" component="div">
                         <span style={{ textDecoration: 'line-through' }}>
-                          {formatRubAmountForUi(option.price, priceOpts)}
+                          {formatPlanDisplayAmount(planFromApi, 'monthly', currency, legacyFx)}
                         </span>{' '}
                         {discountPercent !== null ? `-${discountPercent}%` : ''}
                         <Typography variant="caption" color="text.secondary" component="div">
