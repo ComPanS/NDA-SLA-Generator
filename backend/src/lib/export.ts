@@ -15,7 +15,7 @@ import {
 } from 'docx';
 import puppeteer from 'puppeteer';
 import { load, CheerioAPI, Cheerio } from 'cheerio';
-import type { AnyNode } from 'domhandler';
+import type { AnyNode, Element as DhElement, Text as DhText } from 'domhandler';
 
 /**
  * Экспорт HTML в DOCX с сохранением форматирования (заголовки, списки, колонки, размеры текста).
@@ -80,17 +80,11 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
   const logColumnsDebug = process.env.DOCX_COLUMNS_DEBUG === 'true';
   const logColumns = (label: string, payload: Record<string, unknown>) => {
     if (logColumnsDebug) {
-      // eslint-disable-next-line no-console
       console.log(`[docx-columns] ${label}`, payload);
     }
   };
 
   type AlignmentValue = (typeof AlignmentType)[keyof typeof AlignmentType];
-
-  const parseFontSize = (_style?: string) => {
-    // Фиксируем шрифт 14px (28 half-points) для всего текста
-    return 28;
-  };
 
   const pageMarginsTwips = {
     top: Math.round(20 * 56.6929), // 20mm
@@ -118,14 +112,13 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
     }
   };
 
-  const collectTextRuns = (nodes: Cheerio<any>, base: StyleCtx): TextRun[] => {
+  const collectTextRuns = (nodes: Cheerio<AnyNode>, base: StyleCtx): TextRun[] => {
     const runs: TextRun[] = [];
 
     nodes.each((_, node) => {
-      const n: any = node as any;
-      const tag = n?.tagName?.toLowerCase?.();
+      const n = node as AnyNode;
       if (n.type === 'text') {
-        const text = (n.data || '').replace(/\s+/g, ' ');
+        const text = ((n as DhText).data || '').replace(/\s+/g, ' ');
         if (text.trim().length > 0) {
           runs.push(
             new TextRun({
@@ -142,28 +135,29 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
         return;
       }
 
+      if (n.type !== 'tag') return;
+
+      const tag = ((n as DhElement).tagName || '').toLowerCase();
       if (tag === 'br') {
         runs.push(new TextRun({ break: 1 }));
         return;
       }
 
-      if (n.type === 'tag') {
-        const $node = $(node as AnyNode);
-        const next: StyleCtx = { ...base };
+      const $node = $(node as AnyNode);
+      const next: StyleCtx = { ...base };
 
-        if (['strong', 'b'].includes(tag)) {
-          next.bold = true;
-        }
-        if (['em', 'i'].includes(tag)) {
-          next.italics = true;
-        }
-        if (tag === 'u') {
-          next.underline = true;
-        }
-        // игнорируем font-size в span — размер фиксирован
-
-        runs.push(...collectTextRuns($node.contents() as any, next));
+      if (['strong', 'b'].includes(tag)) {
+        next.bold = true;
       }
+      if (['em', 'i'].includes(tag)) {
+        next.italics = true;
+      }
+      if (tag === 'u') {
+        next.underline = true;
+      }
+      // игнорируем font-size в span — размер фиксирован
+
+      runs.push(...collectTextRuns($node.contents() as Cheerio<AnyNode>, next));
     });
 
     return runs;
@@ -195,7 +189,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
 
     const baseFontSize = 28;
 
-    const runs = collectTextRuns($el.contents() as any, {
+    const runs = collectTextRuns($el.contents() as Cheerio<AnyNode>, {
       bold: isHeading,
       italics: false,
       underline: false,
@@ -253,7 +247,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
       const nestedLists = $li.children('ul,ol').toArray() as DomElement[];
       const inlineHtml = $li.clone().children('ul,ol').remove().end().html() || '';
       const $inline = load(`<wrapper>${inlineHtml}</wrapper>`)('wrapper');
-      const runs = collectTextRuns($inline.contents() as any, {
+      const runs = collectTextRuns($inline.contents() as Cheerio<AnyNode>, {
         bold: false,
         italics: false,
         underline: false,
@@ -311,7 +305,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
   const emptyParagraph = () =>
     new Paragraph({ children: [new TextRun({ text: '', font: 'Times New Roman', size: 28 })] });
 
-  const collectColumnParagraphs = (parent: any): Paragraph[] => {
+  const collectColumnParagraphs = (parent: AnyNode): Paragraph[] => {
     const result: Paragraph[] = [];
 
     $(parent)
@@ -344,8 +338,8 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
           result.push(...processList(child as DomElement, 0, sa === 'dash' ? 'dash' : 'bulleted'));
           return;
         }
-        if ((child as any).type === 'text') {
-          const text = ((child as any).data || '').trim();
+        if ((child as AnyNode).type === 'text') {
+          const text = (((child as AnyNode) as DhText).data || '').trim();
           if (text) {
             result.push(
               new Paragraph({
@@ -365,9 +359,9 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
   };
 
   // Рекурсивная функция обработки любого узла DOM → SectionChild[]
-  const processNode = (node: any): void => {
+  const processNode = (node: AnyNode): void => {
     if (node.type === 'text') {
-      const text = ((node as any).data || '').trim();
+      const text = ((node as DhText).data || '').trim();
       if (text) {
         appendToCurrentSection([
           new Paragraph({
@@ -411,8 +405,6 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
         })
         .toArray() as DomElement[];
 
-      const spanElements = $(node).children('[data-span-columns]').toArray();
-
       let cellContents: Paragraph[][];
 
       if (explicitColumns.length > 0) {
@@ -434,7 +426,7 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
         // Шаг 1: собираем параграфы, разбивая по column-break
         const groups: Paragraph[][] = [[]];
 
-        const walkColumnChildren = (parent: any) => {
+        const walkColumnChildren = (parent: AnyNode) => {
           $(parent)
             .contents()
             .each((_, child) => {
@@ -467,8 +459,8 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
                 );
                 return;
               }
-              if (child.type === 'text') {
-                const text = ((child as any).data || '').trim();
+              if ((child as AnyNode).type === 'text') {
+                const text = (((child as AnyNode) as DhText).data || '').trim();
                 if (text) {
                   groups[groups.length - 1].push(
                     new Paragraph({
@@ -616,7 +608,8 @@ export async function exportToDocx(html: string, title: string): Promise<Buffer>
   }
 
   const doc = new Document({
-    numbering: numbering as any, // docx types are restrictive; structure matches expected shape
+    // docx numbering type is stricter than our config; runtime shape is valid
+    numbering: numbering as unknown as ConstructorParameters<typeof Document>[0]['numbering'],
     styles: {
       default: {
         document: {

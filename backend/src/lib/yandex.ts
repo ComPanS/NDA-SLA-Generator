@@ -1,5 +1,3 @@
-import axios from 'axios';
-import { env } from '../config/env';
 import { generateText as neuroapiGenerateText } from './neuroapi';
 
 // Используем NeuroAPI
