@@ -1,0 +1,137 @@
+{
+  "meta": {
+    "title": "ContractAI para despachos — plantillas, borradores con IA, exportación DOCX/PDF",
+    "description": "Agilice lo repetitivo: NDA, SLA, servicios y más. Plantillas propias, campos, primeros borradores con IA y contexto para acuerdos bajo Derecho ruso, exportación DOCX/PDF. Herramienta de productividad, no sustituto del criterio jurídico.",
+    "keywords": "automatización de contratos abogados, plantillas NDA SLA, redacción contratos IA, productividad jurídica, acuerdos Rusia"
+  },
+  "hero": {
+    "title": "Menos horas en contratos tipo. Más foco en los asuntos complejos.",
+    "subtitle": "ContractAI ayuda a preparar la estructura y un primer texto de NDAs, SLAs, prestación de servicios y más, con plantillas, campos configurables e IA, más exportación DOCX/PDF.",
+    "ctaPrimary": "Crear cuenta",
+    "ctaSecondary": "Probar sin registro",
+    "ctaSecondaryHint": "Modo invitado: un borrador en el navegador"
+  },
+  "benefits": {
+    "title": "Por qué lo usan abogados y firmas",
+    "subtitle": "El servicio cubre trabajo repetible sobre plantillas sin sustituir su criterio ni la responsabilidad sobre el texto definitivo.",
+    "items": [
+      {
+        "title": "Mayor velocidad en lo estándar",
+        "description": "Plantillas del sistema y propias, campos guiados y estructura generada en minutos."
+      },
+      {
+        "title": "Estilo de firma uniforme",
+        "description": "Guarde sus modelos con campos y secciones; menos versiones dispersas."
+      },
+      {
+        "title": "Exportación lista para el cliente",
+        "description": "DOCX y PDF para acabar en su editor y compartir con contrapartes."
+      },
+      {
+        "title": "Contexto RF y tipos frecuentes",
+        "description": "Arranques para NDA, SLA, servicios, etc., orientados al marco ruso; usted revisa y adapta."
+      },
+      {
+        "title": "Historial en la cuenta",
+        "description": "Documentos y estados centralizados; delegue el primer borrador con control."
+      },
+      {
+        "title": "Modelo por suscripción",
+        "description": "Límites previsibles según el plan; escale con su flujo de contratos tipo."
+      }
+    ]
+  },
+  "how": {
+    "title": "Cómo encaja en el flujo",
+    "subtitle": "De los datos al primer borrador en pocos pasos; usted añade el juicio jurídico final.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Plantilla o modelo propio",
+        "description": "Elija una plantilla del sistema o cree la suya con campos y secciones."
+      },
+      {
+        "number": "02",
+        "title": "Hechos e instrucciones",
+        "description": "Complete partes y condiciones; use el prompt para matices del expediente."
+      },
+      {
+        "number": "03",
+        "title": "Generar y depurar",
+        "description": "Revise en el editor, refine con IA si procede y aplique su control de calidad."
+      },
+      {
+        "number": "04",
+        "title": "Exportar y entregar",
+        "description": "Descargue DOCX/PDF para visto bueno interno o cliente; guarde copia en la cuenta."
+      }
+    ]
+  },
+  "trust": {
+    "title": "La responsabilidad profesional sigue siendo suya",
+    "body": "ContractAI acelera la redacción. Usted garantiza exactitud, cumplimiento y riesgos del instrumento final, como con cualquier flujo de plantillas.",
+    "bannerTitle": "Claro con el cliente",
+    "bannerBody": "Comunique el uso de herramientas de borrador manteniendo sus estándares y la firma final."
+  },
+  "guarantees": {
+    "title": "Garantías para la práctica jurídica",
+    "subtitle": "Compromisos claros sobre seguridad y tratamiento de su material.",
+    "items": [
+      {
+        "title": "Confidencialidad — cifrado robusto",
+        "description": "Tráfico protegido con HTTPS/TLS; datos en reposo cifrados por el proveedor con estándares del sector, incluido AES-256."
+      },
+      {
+        "title": "Plantillas propias con su consentimiento",
+        "description": "Las plantillas y documentos que crea se almacenan en su cuenta según Términos y Privacidad; usted controla el contenido."
+      },
+      {
+        "title": "Exportación sin marcas de agua",
+        "description": "DOCX y PDF se generan a partir de su texto, sin marcas de agua del servicio ni publicidad superpuesta."
+      },
+      {
+        "title": "Límites de acceso a la cuenta",
+        "description": "Acceso con contraseña y sesiones seguras; active la autenticación en dos pasos cuando esté disponible."
+      },
+      {
+        "title": "Entregables limpios para clientes y registros",
+        "description": "El archivo final refleja su edición, apto para control de calidad interno y entrega bajo sus políticas."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas frecuentes",
+    "items": [
+      {
+        "q": "¿Sustituye asesoramiento jurídico?",
+        "a": "No. Asiste en la redacción según sus datos y plantillas; la estrategia y el texto definitivo son suyos."
+      },
+      {
+        "q": "¿Plantillas propias de la firma?",
+        "a": "Sí, puede crear y mantener modelos en la cuenta además de los del sistema."
+      },
+      {
+        "q": "¿NDA/SLA al estilo ruso?",
+        "a": "Las bases están orientadas al derecho civil ruso; debe validar cada cláusula y el prompt."
+      },
+      {
+        "q": "¿Formatos de exportación?",
+        "a": "DOCX y PDF generados a partir del documento para edición posterior."
+      },
+      {
+        "q": "¿Prueba sin cuenta?",
+        "a": "Modo invitado con límites; la cuenta desbloquea plantillas e historial."
+      },
+      {
+        "q": "¿Ética y transparencia?",
+        "a": "Cumpla las normas colegiales y contractuales; supervise y proteja la confidencialidad."
+      }
+    ]
+  },
+  "finalCta": {
+    "title": "Pruébelo con un asunto típico",
+    "subtitle": "Regístrese o use el modo invitado y valore el ahorro de tiempo.",
+    "ctaPrimary": "Empezar",
+    "ctaSecondary": "Contrato invitado"
+  }
+}

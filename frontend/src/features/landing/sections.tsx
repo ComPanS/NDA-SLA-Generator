@@ -407,14 +407,8 @@ export const PricingSection = ({ plans, loading, onSelectPlan }: PricingSectionP
             </select>
           </div>
         )}
-        <p className="text-center text-sm text-gray-500 mb-8 max-w-2xl mx-auto">{tb('currency.helper')}</p>
         {fxError && (
           <p className="text-center text-amber-700 text-sm mb-6">{tb('fxStale')}</p>
-        )}
-        {currency !== 'RUB' && (
-          <p className="text-center text-blue-800 text-sm mb-8 max-w-xl mx-auto bg-blue-50 border border-blue-100 rounded-lg py-3 px-4">
-            {tb('paymentNonRub')}
-          </p>
         )}
 
         {loading ? (

@@ -117,6 +117,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to={localizedPath('/lawyers')} className="hover:text-white transition-colors">
+                  {t('footer.forLawyers')}
+                </Link>
+              </li>
+              <li>
                 <a
                   href="mailto:support@dogovarai.ru"
                   className="hover:text-white transition-colors"

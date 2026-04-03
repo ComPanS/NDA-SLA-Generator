@@ -13,6 +13,10 @@ import ruLanding from './locales/ru/landing';
 import enLanding from './locales/en/landing';
 import esLanding from './locales/es/landing';
 import thLanding from './locales/th/landing';
+import ruLawyers from './locales/ru/lawyers.json';
+import enLawyers from './locales/en/lawyers.json';
+import esLawyers from './locales/es/lawyers.json';
+import thLawyers from './locales/th/lawyers.json';
 import ruErrors from './locales/ru/errors.json';
 import enErrors from './locales/en/errors.json';
 import esErrors from './locales/es/errors.json';
@@ -58,6 +62,7 @@ const bundle = {
   common: { ru: ruCommon, en: enCommon, es: esCommon, th: thCommon },
   auth: { ru: ruAuth, en: enAuth, es: esAuth, th: thAuth },
   landing: { ru: ruLanding, en: enLanding, es: esLanding, th: thLanding },
+  lawyers: { ru: ruLawyers, en: enLawyers, es: esLawyers, th: thLawyers },
   errors: { ru: ruErrors, en: enErrors, es: esErrors, th: thErrors },
   dashboard: { ru: ruDashboard, en: enDashboard, es: esDashboard, th: thDashboard },
   contracts: { ru: ruContracts, en: enContracts, es: esContracts, th: thContracts },

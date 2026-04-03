@@ -458,6 +458,9 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # После `npm run build` пререндер кладёт HTML в dist/lawyers/index.html, dist/en/lawyers/index.html и т.д.
+    # При `try_files $uri $uri/ ...` запрос /lawyers отдаёт lawyers/index.html без отдельного location.
+
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";

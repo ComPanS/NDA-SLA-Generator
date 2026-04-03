@@ -18,6 +18,7 @@ import { YandexSuggestToken } from '@/pages/YandexSuggestToken';
 import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
 import { TermsOfUse } from '@/pages/TermsOfUse';
 import { NotFound } from '@/pages/NotFound';
+import { Lawyers } from '@/pages/Lawyers';
 import { Admin } from '@/pages/Admin';
 import { LocaleLayout } from './LocaleLayout';
 import { ADMIN_ROUTE } from '@/shared/constants';
@@ -32,6 +33,7 @@ export const localeChildRouteObjects: RouteObject[] = [
   { path: 'verify-email', element: <VerifyEmail /> },
   { path: 'privacy', element: <PrivacyPolicy /> },
   { path: 'terms', element: <TermsOfUse /> },
+  { path: 'lawyers', element: <Lawyers /> },
   { path: 'dashboard', element: <Dashboard /> },
   { path: 'guest-contract', element: <GuestContract /> },
   { path: 'new-contract', element: <NewContract /> },

@@ -1,0 +1,137 @@
+{
+  "meta": {
+    "title": "ContractAI for law firms — templates, AI drafts, DOCX/PDF export | ContractAI",
+    "description": "Speed up routine: NDA, SLA, services & more. Custom templates, client fields, AI-first drafts with Russian-law context, DOCX/PDF export. A practice tool—not a substitute for legal judgment.",
+    "keywords": "contract automation for lawyers, NDA SLA templates, AI contract drafting, law firm productivity, Russia-focused agreements, legal document builder"
+  },
+  "hero": {
+    "title": "Less grind on standard agreements. More time for high-complexity work.",
+    "subtitle": "ContractAI helps you draft structure and first versions of NDAs, SLAs, service agreements and more—using templates, configurable fields, and AI—with export to DOCX/PDF.",
+    "ctaPrimary": "Create an account",
+    "ctaSecondary": "Try without signup",
+    "ctaSecondaryHint": "Guest mode: one draft in the browser"
+  },
+  "benefits": {
+    "title": "Why lawyers and firms use this",
+    "subtitle": "The product targets repeatable template work—without claiming to replace your expertise or liability for the final text.",
+    "items": [
+      {
+        "title": "Faster turnaround on boilerplate",
+        "description": "System and firm templates, guided fields, and generated structure in minutes instead of hunting old Word copies."
+      },
+      {
+        "title": "Consistent house styles",
+        "description": "Store your own forms with fields and sections—fewer version splits across drives and inboxes."
+      },
+      {
+        "title": "Client-ready export",
+        "description": "DOCX and PDF for polish in your editor and sharing with counterparties."
+      },
+      {
+        "title": "RF context & common types",
+        "description": "Built-in starters (NDA, SLA, services, etc.) tuned for Russian-law wording—you still control prompts and review."
+      },
+      {
+        "title": "Account history",
+        "description": "Documents and statuses in one place—easier to delegate first drafts to paralegals."
+      },
+      {
+        "title": "Subscription model",
+        "description": "Predictable limits—scale usage with your pipeline of template-heavy matters."
+      }
+    ]
+  },
+  "how": {
+    "title": "How it fits your workflow",
+    "subtitle": "From intake to first draft in a few steps—you add legal judgment and final wording.",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Pick or build a template",
+        "description": "Start from a system template or create your own with the fields and sections you need."
+      },
+      {
+        "number": "02",
+        "title": "Facts and instructions",
+        "description": "Enter party details and deal terms; add nuance in the prompt so the draft reflects the file."
+      },
+      {
+        "number": "03",
+        "title": "Generate and refine",
+        "description": "Review the output in the editor, iterate with AI if useful, then run your standard QC."
+      },
+      {
+        "number": "04",
+        "title": "Export and deliver",
+        "description": "Download DOCX/PDF for internal sign-off or the client; keep a copy in the account."
+      }
+    ]
+  },
+  "trust": {
+    "title": "Professional responsibility stays with you",
+    "body": "ContractAI is a drafting accelerator. You remain responsible for accuracy, compliance, and risk on the final instrument—same as any template workflow.",
+    "bannerTitle": "Clear with clients",
+    "bannerBody": "Position the tool as part of your stack for first drafts while your standards and sign-off stay in place."
+  },
+  "guarantees": {
+    "title": "Guarantees for legal practice",
+    "subtitle": "Clear commitments on data security and how we handle your materials.",
+    "items": [
+      {
+        "title": "Data confidentiality — strong encryption",
+        "description": "Traffic is protected with HTTPS/TLS; data at rest is encrypted by the infrastructure provider using industry standards, including AES-256."
+      },
+      {
+        "title": "Your custom templates stay under your consent",
+        "description": "Templates and documents you create are stored in your account under the Terms of Service and Privacy Policy—you remain in control of the content."
+      },
+      {
+        "title": "Exports without watermarks",
+        "description": "DOCX and PDF are built from your text—no service branding watermarks or third-party promo overlays."
+      },
+      {
+        "title": "Account access boundaries",
+        "description": "Password-protected sign-in and secure sessions; enable two-factor authentication wherever it is available."
+      },
+      {
+        "title": "Clean deliverables for clients and filings",
+        "description": "The final file reflects your edits—suited for internal QC and handoff under your own policies."
+      }
+    ]
+  },
+  "faq": {
+    "title": "FAQ for legal teams",
+    "items": [
+      {
+        "q": "Is this legal advice?",
+        "a": "No. It assists with drafting based on your inputs and templates; strategy and final counsel remain with licensed professionals."
+      },
+      {
+        "q": "Can we use firm-specific templates?",
+        "a": "Yes—create and maintain your own templates in the account alongside optional system starters."
+      },
+      {
+        "q": "Does it work for RF-style NDAs/SLAs?",
+        "a": "Starters are oriented to Russian civil-law framing; you tailor prompts and must validate every clause."
+      },
+      {
+        "q": "What export formats exist?",
+        "a": "DOCX and PDF from the generated document for downstream edits and distribution."
+      },
+      {
+        "q": "Is there a guest trial?",
+        "a": "Yes, with limits; accounts unlock templates, history, and team-friendly use."
+      },
+      {
+        "q": "Ethics and transparency?",
+        "a": "Disclose tool use where your rules require it; keep your supervision and confidentiality policies."
+      }
+    ]
+  },
+  "finalCta": {
+    "title": "Test it on a typical matter",
+    "subtitle": "Sign up or run a guest draft—see if the velocity fits your practice.",
+    "ctaPrimary": "Get started",
+    "ctaSecondary": "Guest contract"
+  }
+}

@@ -8,6 +8,7 @@ export const LOCALE_USER_CHOICE_KEY = 'contractai.localeUserChoice';
 export const I18N_NAMESPACES = [
   'common',
   'landing',
+  'lawyers',
   'auth',
   'errors',
   'dashboard',

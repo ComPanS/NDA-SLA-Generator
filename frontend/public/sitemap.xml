@@ -6,6 +6,7 @@
   <url><loc>https://dogovarai.ru/forgot-password</loc></url>
   <url><loc>https://dogovarai.ru/privacy</loc></url>
   <url><loc>https://dogovarai.ru/terms</loc></url>
+  <url><loc>https://dogovarai.ru/lawyers</loc></url>
   <url><loc>https://dogovarai.ru/guest-contract</loc></url>
   <url><loc>https://dogovarai.ru/en</loc></url>
   <url><loc>https://dogovarai.ru/en/login</loc></url>
@@ -13,6 +14,7 @@
   <url><loc>https://dogovarai.ru/en/forgot-password</loc></url>
   <url><loc>https://dogovarai.ru/en/privacy</loc></url>
   <url><loc>https://dogovarai.ru/en/terms</loc></url>
+  <url><loc>https://dogovarai.ru/en/lawyers</loc></url>
   <url><loc>https://dogovarai.ru/en/guest-contract</loc></url>
   <url><loc>https://dogovarai.ru/es</loc></url>
   <url><loc>https://dogovarai.ru/es/login</loc></url>
@@ -27,5 +29,6 @@
   <url><loc>https://dogovarai.ru/th/forgot-password</loc></url>
   <url><loc>https://dogovarai.ru/th/privacy</loc></url>
   <url><loc>https://dogovarai.ru/th/terms</loc></url>
+  <url><loc>https://dogovarai.ru/th/lawyers</loc></url>
   <url><loc>https://dogovarai.ru/th/guest-contract</loc></url>
 </urlset>

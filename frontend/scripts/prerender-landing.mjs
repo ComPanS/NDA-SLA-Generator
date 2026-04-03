@@ -88,6 +88,10 @@ async function main() {
       { path: '/en', out: path.join(dist, 'en', 'index.html'), lockRuLocale: false },
       { path: '/es', out: path.join(dist, 'es', 'index.html'), lockRuLocale: false },
       { path: '/th', out: path.join(dist, 'th', 'index.html'), lockRuLocale: false },
+      { path: '/lawyers', out: path.join(dist, 'lawyers', 'index.html'), lockRuLocale: true },
+      { path: '/en/lawyers', out: path.join(dist, 'en', 'lawyers', 'index.html'), lockRuLocale: false },
+      { path: '/es/lawyers', out: path.join(dist, 'es', 'lawyers', 'index.html'), lockRuLocale: false },
+      { path: '/th/lawyers', out: path.join(dist, 'th', 'lawyers', 'index.html'), lockRuLocale: false },
     ];
 
     for (const job of jobs) {
