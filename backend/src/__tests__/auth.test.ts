@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { MockInstance } from 'vitest';
 import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../index';
 import { prisma } from '../config/prisma';
@@ -70,16 +71,19 @@ describe('auth flow', () => {
 
 describe('password reset', () => {
   let lastResetLink: string | null = null;
+  let sendPasswordResetEmailSpy: MockInstance<(to: string, link: string) => Promise<void>>;
 
   beforeEach(() => {
     lastResetLink = null;
-    vi.spyOn(mailer, 'sendPasswordResetEmail').mockImplementation(async (_to, link) => {
-      lastResetLink = link;
-    });
+    sendPasswordResetEmailSpy = vi.spyOn(mailer, 'sendPasswordResetEmail').mockImplementation(
+      async (_to, link) => {
+        lastResetLink = link;
+      },
+    ) as MockInstance<(to: string, link: string) => Promise<void>>;
   });
 
   afterEach(() => {
-    vi.mocked(mailer.sendPasswordResetEmail).mockRestore();
+    sendPasswordResetEmailSpy.mockRestore();
   });
 
   it('sends reset link and allows login with new password', async () => {
