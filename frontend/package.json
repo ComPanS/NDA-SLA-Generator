@@ -7,7 +7,7 @@
     "build": "tsc && vite build && node scripts/prerender-landing.mjs",
     "build:skip-prerender": "tsc && vite build && node scripts/prerender-skip-env.mjs",
     "preview": "vite preview",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "node ./node_modules/eslint/bin/eslint.js src --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css,md}\"",
     "test": "vitest",
     "test:ui": "vitest --ui",

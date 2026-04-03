@@ -17,7 +17,7 @@ export function assignUniqueTemplateFieldKeys(
 ): string[] {
   const used = new Set<string>();
   return fields.map((f, idx) => {
-    let k = f.key.trim();
+    const k = f.key.trim();
     if (f.id && k.length >= 1) {
       let candidate = k;
       let n = 2;
@@ -27,7 +27,7 @@ export function assignUniqueTemplateFieldKeys(
       used.add(candidate);
       return candidate;
     }
-    let base = slugifyTemplateFieldKey(f.label, idx);
+    const base = slugifyTemplateFieldKey(f.label, idx);
     let candidate = base;
     let n = 2;
     while (used.has(candidate)) {
