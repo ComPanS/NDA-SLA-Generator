@@ -9,7 +9,7 @@ const landing = {
   },
   hero: {
     title:
-      'Protege tus ingresos frente a clientes conflictivos en minutos — sin depender siempre de un abogado',
+      'Constructor de contratos con IA: protege tus ingresos frente a clientes conflictivos — sin depender siempre de un abogado',
     subtitle:
       'ContractAI redacta NDAs, contratos de servicios y ofertas para freelancers y equipos pequeños. Exporta PDF/DOCX al instante.',
     ctaPrimary: 'Crear contrato gratis',

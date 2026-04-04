@@ -89,6 +89,7 @@ export const Register = () => {
         title={t('register.metaTitle')}
         description={t('register.metaDescription')}
         siteName={tc('brand.name')}
+        robots="noindex,nofollow"
       />
       <Box sx={{ mt: 8 }}>
         <Card>

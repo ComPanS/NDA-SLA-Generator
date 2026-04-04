@@ -1,7 +1,7 @@
 /**
- * Post-build prerender for public landing routes (/, /en, /es, /th).
+ * Post-build prerender for public routes (see scripts/seo-paths.mjs).
  * Serves the built app via vite preview, captures fully hydrated HTML in Chromium
- * (including PageMeta head updates), writes locale-specific files and index-shell.html.
+ * (including PageMeta head updates), writes per-route index.html files and index-shell.html.
  *
  * Set SKIP_PRERENDER=1 to skip (copies shell only; locale landings fall back to SPA shell).
  */
@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { getPrerenderPaths, pathToDistOut, lockRuLocale } from './seo-paths.mjs';
 
 const __dirnameMe = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirnameMe, '..');
@@ -21,6 +22,18 @@ const LOCALE_USER_CHOICE_KEY = 'contractai.localeUserChoice';
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Auth pages use noindex and skip hreflang — wait only for main h1. */
+function shouldWaitForHreflang(urlPath) {
+  const auth = ['login', 'register', 'forgot-password'];
+  if (auth.some((a) => urlPath === `/${a}`)) return false;
+  for (const loc of ['en', 'es', 'th']) {
+    for (const a of auth) {
+      if (urlPath === `/${loc}/${a}`) return false;
+    }
+  }
+  return true;
 }
 
 async function waitForOk(url, maxAttempts = 80) {
@@ -83,16 +96,11 @@ async function main() {
     const browser = await chromium.launch();
     const context = await browser.newContext();
 
-    const jobs = [
-      { path: '/', out: indexPath, lockRuLocale: true },
-      { path: '/en', out: path.join(dist, 'en', 'index.html'), lockRuLocale: false },
-      { path: '/es', out: path.join(dist, 'es', 'index.html'), lockRuLocale: false },
-      { path: '/th', out: path.join(dist, 'th', 'index.html'), lockRuLocale: false },
-      { path: '/lawyers', out: path.join(dist, 'lawyers', 'index.html'), lockRuLocale: true },
-      { path: '/en/lawyers', out: path.join(dist, 'en', 'lawyers', 'index.html'), lockRuLocale: false },
-      { path: '/es/lawyers', out: path.join(dist, 'es', 'lawyers', 'index.html'), lockRuLocale: false },
-      { path: '/th/lawyers', out: path.join(dist, 'th', 'lawyers', 'index.html'), lockRuLocale: false },
-    ];
+    const jobs = getPrerenderPaths().map((p) => ({
+      path: p,
+      out: pathToDistOut(dist, p),
+      lockRuLocale: lockRuLocale(p),
+    }));
 
     for (const job of jobs) {
       const page = await context.newPage();
@@ -104,10 +112,12 @@ async function main() {
 
       await page.goto(`${base}${job.path}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
       await page.waitForSelector('main h1', { timeout: 90_000 });
-      await page.waitForFunction(
-        () => document.querySelectorAll('link[rel="alternate"][hreflang]').length >= 5,
-        { timeout: 45_000 },
-      );
+      if (shouldWaitForHreflang(job.path)) {
+        await page.waitForFunction(
+          () => document.querySelectorAll('link[rel="alternate"][hreflang]').length >= 5,
+          { timeout: 45_000 },
+        );
+      }
       await sleep(400);
 
       let html = await page.content();

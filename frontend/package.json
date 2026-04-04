@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node scripts/prerender-landing.mjs",
-    "build:skip-prerender": "tsc && vite build && node scripts/prerender-skip-env.mjs",
+    "build": "node scripts/generate-sitemap.mjs && tsc && vite build && node scripts/prerender-landing.mjs",
+    "build:skip-prerender": "node scripts/generate-sitemap.mjs && tsc && vite build && node scripts/prerender-skip-env.mjs",
+    "verify:seo": "node scripts/verify-seo-baseline.mjs",
     "preview": "vite preview",
     "lint": "node ./node_modules/eslint/bin/eslint.js src --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css,md}\"",

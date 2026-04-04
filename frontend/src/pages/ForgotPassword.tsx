@@ -45,6 +45,7 @@ export const ForgotPassword = () => {
         title={t('forgot.metaTitle')}
         description={t('forgot.metaDescription')}
         siteName={tc('brand.name')}
+        robots="noindex,nofollow"
       />
       <Box sx={{ mt: 8 }}>
         <Card>

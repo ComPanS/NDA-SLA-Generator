@@ -9,7 +9,7 @@ const landing = {
   },
   hero: {
     title:
-      'Protect your income from difficult clients in minutes — without a lawyer on retainer',
+      'AI contract builder: protect your income from difficult clients — without a lawyer on retainer',
     subtitle:
       'ContractAI drafts NDAs, service agreements, and offers for freelancers and small teams. Export ready PDF/DOCX fast.',
     ctaPrimary: 'Create a contract free',

@@ -33,6 +33,7 @@ import {
 } from '@/features/contracts/hooks/useContracts';
 import { useSystemTemplateCatalog, useTemplate } from '@/features/templates/hooks/useTemplates';
 import { AxiosError } from 'axios';
+import { useLocation } from 'react-router-dom';
 import { useLocalizedNavigate } from '@/shared/i18n/useLocalizedPath';
 import { useGeoHint } from '@/shared/hooks/useGeoHint';
 import { defaultCountryFromAppLocale } from '@/shared/i18n/countryDefaults';
@@ -48,6 +49,7 @@ export const GuestContract = () => {
   const { t } = useTranslation('guest');
   const { t: tc, i18n } = useTranslation('contracts');
   const { t: tCommon } = useTranslation('common');
+  const location = useLocation();
   const { data: geo } = useGeoHint();
   const countryTouchedRef = useRef(false);
   const outputLanguageTouchedRef = useRef(false);
@@ -304,7 +306,7 @@ export const GuestContract = () => {
       <PageMeta
         title={t('metaTitle')}
         description={t('metaDesc')}
-        path="/guest-contract"
+        path={location.pathname}
         siteName={tCommon('brand.name')}
       />
       <Box sx={{ mt: 4 }}>

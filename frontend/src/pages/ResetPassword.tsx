@@ -86,6 +86,7 @@ export const ResetPassword = () => {
           title={t('reset.metaInvalidTitle')}
           description={t('reset.metaDescription')}
           siteName={tc('brand.name')}
+          robots="noindex,nofollow"
         />
         <Box sx={{ mt: 8 }}>
           <Card>
@@ -118,6 +119,7 @@ export const ResetPassword = () => {
         title={t('reset.metaNewTitle')}
         description={t('reset.metaDescription')}
         siteName={tc('brand.name')}
+        robots="noindex,nofollow"
       />
       <Box sx={{ mt: 8 }}>
         <Card>

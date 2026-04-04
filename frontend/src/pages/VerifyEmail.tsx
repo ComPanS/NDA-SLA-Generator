@@ -69,6 +69,7 @@ export const VerifyEmail = () => {
         title={t('verify.metaTitle')}
         description={t('verify.metaDescription')}
         siteName={tc('brand.name')}
+        robots="noindex,nofollow"
       />
       <Box sx={{ mt: 8 }}>
         <Card>

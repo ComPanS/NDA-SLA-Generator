@@ -19,6 +19,10 @@ interface PageMetaProps {
    * Optional preview image for social cards.
    */
   image?: string;
+  /**
+   * Search engine indexing. When noindex, hreflang alternates are omitted (avoid linking to noindexed URLs).
+   */
+  robots?: 'index,follow' | 'noindex,nofollow';
 }
 
 const ENV_SITE_URL = import.meta.env.VITE_SITE_URL?.trim();
@@ -81,10 +85,19 @@ function ensureLinkTag(rel: string, href: string) {
   link.href = href;
 }
 
-export const PageMeta = ({ title, siteName, description, keywords, path, image }: PageMetaProps) => {
+export const PageMeta = ({
+  title,
+  siteName,
+  description,
+  keywords,
+  path,
+  image,
+  robots = 'index,follow',
+}: PageMetaProps) => {
   useEffect(() => {
     document.title = title;
     const resolvedSiteName = siteName ?? DEFAULT_SITE_NAME;
+    const includeHreflang = robots === 'index,follow';
 
     const baseUrl = getBaseUrl();
     // Gracefully handle malformed env base URLs to avoid crashing the whole app
@@ -105,7 +118,7 @@ export const PageMeta = ({ title, siteName, description, keywords, path, image }
       ensureMetaTag('keywords', keywords);
     }
 
-    ensureMetaTag('robots', 'index,follow');
+    ensureMetaTag('robots', robots);
     ensurePropertyTag('og:title', title);
     ensurePropertyTag('og:type', 'website');
     ensurePropertyTag('og:url', url);
@@ -136,25 +149,27 @@ export const PageMeta = ({ title, siteName, description, keywords, path, image }
         }
       });
 
-    const sanitizedBase = baseUrl.replace(/\/+$/, '');
-    for (const lang of APP_LOCALES) {
-      const localizedPathname = toLocalizedPath(logicalPath, lang);
-      const href = absoluteFromPathname(localizedPathname, sanitizedBase);
-      const link = document.createElement('link');
-      link.rel = 'alternate';
-      link.hreflang = hreflangTagForLocale(lang);
-      link.href = href;
-      link.setAttribute(MANAGED_HEAD_ATTR, '');
-      document.head.appendChild(link);
+    if (includeHreflang) {
+      const sanitizedBase = baseUrl.replace(/\/+$/, '');
+      for (const lang of APP_LOCALES) {
+        const localizedPathname = toLocalizedPath(logicalPath, lang);
+        const href = absoluteFromPathname(localizedPathname, sanitizedBase);
+        const link = document.createElement('link');
+        link.rel = 'alternate';
+        link.hreflang = hreflangTagForLocale(lang);
+        link.href = href;
+        link.setAttribute(MANAGED_HEAD_ATTR, '');
+        document.head.appendChild(link);
+      }
+      const xDefaultHref = absoluteFromPathname(toLocalizedPath(logicalPath, 'ru'), sanitizedBase);
+      const xDefault = document.createElement('link');
+      xDefault.rel = 'alternate';
+      xDefault.hreflang = 'x-default';
+      xDefault.href = xDefaultHref;
+      xDefault.setAttribute(MANAGED_HEAD_ATTR, '');
+      document.head.appendChild(xDefault);
     }
-    const xDefaultHref = absoluteFromPathname(toLocalizedPath(logicalPath, 'ru'), sanitizedBase);
-    const xDefault = document.createElement('link');
-    xDefault.rel = 'alternate';
-    xDefault.hreflang = 'x-default';
-    xDefault.href = xDefaultHref;
-    xDefault.setAttribute(MANAGED_HEAD_ATTR, '');
-    document.head.appendChild(xDefault);
-  }, [title, siteName, description, keywords, path, image]);
+  }, [title, siteName, description, keywords, path, image, robots]);
 
   return null;
 };

@@ -2,6 +2,8 @@
   "notFound": {
     "title": "Página no encontrada",
     "hint": "Esta página no existe o se ha movido.",
-    "home": "Volver al inicio"
+    "home": "Volver al inicio",
+    "metaTitle": "Página no encontrada — ContractAI",
+    "metaDescription": "Esta URL no existe. Vuelve al inicio o usa el menú del sitio."
   }
 }

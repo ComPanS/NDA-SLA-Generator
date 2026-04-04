@@ -2,6 +2,8 @@
   "notFound": {
     "title": "Page not found",
     "hint": "This page does not exist or has been moved.",
-    "home": "Back to home"
+    "home": "Back to home",
+    "metaTitle": "Page not found — ContractAI",
+    "metaDescription": "This URL does not exist. Return to the home page or use the site menu."
   }
 }

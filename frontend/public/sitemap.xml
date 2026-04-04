@@ -1,34 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://dogovarai.ru/</loc></url>
-  <url><loc>https://dogovarai.ru/login</loc></url>
-  <url><loc>https://dogovarai.ru/register</loc></url>
-  <url><loc>https://dogovarai.ru/forgot-password</loc></url>
-  <url><loc>https://dogovarai.ru/privacy</loc></url>
-  <url><loc>https://dogovarai.ru/terms</loc></url>
   <url><loc>https://dogovarai.ru/lawyers</loc></url>
   <url><loc>https://dogovarai.ru/guest-contract</loc></url>
+  <url><loc>https://dogovarai.ru/privacy</loc></url>
+  <url><loc>https://dogovarai.ru/terms</loc></url>
   <url><loc>https://dogovarai.ru/en</loc></url>
-  <url><loc>https://dogovarai.ru/en/login</loc></url>
-  <url><loc>https://dogovarai.ru/en/register</loc></url>
-  <url><loc>https://dogovarai.ru/en/forgot-password</loc></url>
-  <url><loc>https://dogovarai.ru/en/privacy</loc></url>
-  <url><loc>https://dogovarai.ru/en/terms</loc></url>
   <url><loc>https://dogovarai.ru/en/lawyers</loc></url>
   <url><loc>https://dogovarai.ru/en/guest-contract</loc></url>
+  <url><loc>https://dogovarai.ru/en/privacy</loc></url>
+  <url><loc>https://dogovarai.ru/en/terms</loc></url>
   <url><loc>https://dogovarai.ru/es</loc></url>
-  <url><loc>https://dogovarai.ru/es/login</loc></url>
-  <url><loc>https://dogovarai.ru/es/register</loc></url>
-  <url><loc>https://dogovarai.ru/es/forgot-password</loc></url>
+  <url><loc>https://dogovarai.ru/es/lawyers</loc></url>
+  <url><loc>https://dogovarai.ru/es/guest-contract</loc></url>
   <url><loc>https://dogovarai.ru/es/privacy</loc></url>
   <url><loc>https://dogovarai.ru/es/terms</loc></url>
-  <url><loc>https://dogovarai.ru/es/guest-contract</loc></url>
   <url><loc>https://dogovarai.ru/th</loc></url>
-  <url><loc>https://dogovarai.ru/th/login</loc></url>
-  <url><loc>https://dogovarai.ru/th/register</loc></url>
-  <url><loc>https://dogovarai.ru/th/forgot-password</loc></url>
-  <url><loc>https://dogovarai.ru/th/privacy</loc></url>
-  <url><loc>https://dogovarai.ru/th/terms</loc></url>
   <url><loc>https://dogovarai.ru/th/lawyers</loc></url>
   <url><loc>https://dogovarai.ru/th/guest-contract</loc></url>
+  <url><loc>https://dogovarai.ru/th/privacy</loc></url>
+  <url><loc>https://dogovarai.ru/th/terms</loc></url>
 </urlset>
