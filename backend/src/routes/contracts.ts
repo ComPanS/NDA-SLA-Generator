@@ -430,9 +430,35 @@ function extractTitleFromHtml(html: string, fallback: string): string {
   return cleaned || fallback;
 }
 
+/** DB field ids are UUIDs; system catalog uses synthetic ids like `system-nda-mutual-f0-0` (see `recordToApiDto`). */
+function emptyIdToUndefined(v: unknown): unknown {
+  if (v === '' || v === null || v === undefined) return undefined;
+  return v;
+}
+
+const templateFieldIdValueSchema = z.union([
+  z.string().uuid(),
+  z.string().regex(/^system-[a-z0-9-]+-f\d+-\d+$/i),
+]);
+
+const templateSectionIdValueSchema = z.union([
+  z.string().uuid(),
+  z.string().regex(/^system-[a-z0-9-]+-s\d+$/i),
+]);
+
+const templateFieldIdSchema = z.preprocess(
+  emptyIdToUndefined,
+  templateFieldIdValueSchema.optional(),
+);
+
+const templateSectionIdSchema = z.preprocess(
+  emptyIdToUndefined,
+  templateSectionIdValueSchema.optional(),
+);
+
 const contractFieldSchema = z.object({
   id: z.string().uuid().optional(),
-  template_field_id: z.string().uuid().optional(),
+  template_field_id: templateFieldIdSchema,
   group_label: z.string().min(1),
   group_order: z.number().int().optional(),
   label: z.string().min(1),
@@ -443,7 +469,7 @@ const contractFieldSchema = z.object({
 
 const contractSectionSchema = z.object({
   id: z.string().uuid().optional(),
-  template_section_id: z.string().uuid().optional(),
+  template_section_id: templateSectionIdSchema,
   title: z.string().min(1),
   order: z.number().int().optional(),
 });
