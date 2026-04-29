@@ -62,12 +62,7 @@ function toLlmInvocationError(lastError: unknown): LlmInvocationError {
     const base = status
       ? `LLM API HTTP ${status}${snippet ? ` — ${snippet}` : ''}`
       : `LLM request failed: ${lastError.message}`;
-    return new LlmInvocationError(
-      base,
-      status,
-      lastError.code,
-      snippet,
-    );
+    return new LlmInvocationError(base, status, lastError.code, snippet);
   }
   if (lastError instanceof Error) {
     return new LlmInvocationError(lastError.message);
@@ -136,14 +131,14 @@ export async function generateText(prompt: string): Promise<string> {
           });
           await sleep(wait);
         } else {
-          console.warn('[neuroapi] immediate retry after empty response', { nextAttempt: attempt + 1 });
+          console.warn('[neuroapi] immediate retry after empty response', {
+            nextAttempt: attempt + 1,
+          });
         }
         continue;
       }
 
-      throw new LlmInvocationError(
-        'LLM returned empty message content after retries',
-      );
+      throw new LlmInvocationError('LLM returned empty message content after retries');
     } catch (err) {
       if (err instanceof LlmInvocationError) {
         throw err;
