@@ -6,7 +6,7 @@ import { prisma } from '../config/prisma';
 import { env } from '../config/env';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { toDocument } from '../lib/mappers';
-import { generateText } from '../lib/yandex';
+import { generateText, LlmInvocationError } from '../lib/yandex';
 import { getClientIp, isLoopbackIp } from '../lib/requestIp';
 import {
   checkContractLimit,
@@ -697,6 +697,13 @@ router.post('/guest/generate', async (req, res) => {
     }
   } catch (error) {
     logContractPipelineError('guest-generate', guestActor, 'llm_or_sanitize', error);
+    if (error instanceof LlmInvocationError) {
+      return res.status(502).json({
+        detail:
+          'Не удалось получить ответ от нейросети. Проверьте NEUROAPI_API_KEY, NEUROAPI_BASE_URL и NEUROAPI_MODEL на сервере.',
+        code: 'LLM_UNAVAILABLE',
+      });
+    }
     return res.status(500).json({ detail: 'Не удалось сгенерировать договор' });
   }
 
@@ -780,25 +787,37 @@ router.post('/guest/clarify', async (req, res) => {
   );
   const refinePrompt = buildRefinePrompt(clarifyCtx, baseContent, prompt);
 
-  const rawContent = await generateText(refinePrompt);
-  logColumnsDebug('guest-clarify raw', rawContent);
-  const updatedContent = sanitizeGeneratedHtml(rawContent, title);
-  logColumnsDebug('guest-clarify sanitized', updatedContent);
+  try {
+    const rawContent = await generateText(refinePrompt);
+    logColumnsDebug('guest-clarify raw', rawContent);
+    const updatedContent = sanitizeGeneratedHtml(rawContent, title);
+    logColumnsDebug('guest-clarify sanitized', updatedContent);
 
-  let riskAssessmentText: string | null = null;
-  if (risk_check) {
-    try {
-      const riskPrompt = buildRiskPrompt(clarifyCtx, title, updatedContent);
-      riskAssessmentText = (await generateText(riskPrompt)).trim();
-    } catch (error) {
-      console.error('Guest clarify risk assessment failed:', error);
+    let riskAssessmentText: string | null = null;
+    if (risk_check) {
+      try {
+        const riskPrompt = buildRiskPrompt(clarifyCtx, title, updatedContent);
+        riskAssessmentText = (await generateText(riskPrompt)).trim();
+      } catch (error) {
+        console.error('Guest clarify risk assessment failed:', error);
+      }
     }
-  }
 
-  return res.json({
-    content: updatedContent,
-    risk_assessment: riskAssessmentText,
-  });
+    return res.json({
+      content: updatedContent,
+      risk_assessment: riskAssessmentText,
+    });
+  } catch (error) {
+    if (error instanceof LlmInvocationError) {
+      return res.status(502).json({
+        detail:
+          'Не удалось получить ответ от нейросети. Проверьте NEUROAPI_API_KEY, NEUROAPI_BASE_URL и NEUROAPI_MODEL на сервере.',
+        code: 'LLM_UNAVAILABLE',
+      });
+    }
+    console.error('Guest clarify error:', error);
+    return res.status(500).json({ detail: 'Не удалось уточнить договор' });
+  }
 });
 
 router.post('/guest/import', requireAuth, async (req: AuthRequest, res) => {
@@ -1091,6 +1110,13 @@ router.post('/generate', requireAuth, async (req: AuthRequest, res) => {
     return res.json({ document: toDocument(document) });
   } catch (error) {
     logContractPipelineError('generate', genActor, 'pipeline', error);
+    if (error instanceof LlmInvocationError) {
+      return res.status(502).json({
+        detail:
+          'Не удалось получить ответ от нейросети. Проверьте NEUROAPI_API_KEY, NEUROAPI_BASE_URL и NEUROAPI_MODEL на сервере.',
+        code: 'LLM_UNAVAILABLE',
+      });
+    }
     return res.status(500).json({ detail: 'Не удалось создать договор' });
   }
 });
@@ -1156,49 +1182,60 @@ router.post('/:id/refine', requireAuth, async (req: AuthRequest, res) => {
   const refineCtx = makePromptContext(nextCountry, nextLang);
   const refinePrompt = buildRefinePrompt(refineCtx, baseContent, parsed.data.prompt);
 
-  const rawContent = await generateText(refinePrompt);
-  logColumnsDebug('contract-clarify raw', rawContent);
-  const content = sanitizeGeneratedHtml(rawContent, doc.title);
-  logColumnsDebug('contract-clarify sanitized', content);
-  let riskAssessmentText: string | null = null;
+  try {
+    const rawContent = await generateText(refinePrompt);
+    logColumnsDebug('contract-clarify raw', rawContent);
+    const content = sanitizeGeneratedHtml(rawContent, doc.title);
+    logColumnsDebug('contract-clarify sanitized', content);
+    let riskAssessmentText: string | null = null;
 
-  if (hasRiskCheckAccess && parsed.data.risk_check) {
-    try {
-      const riskPrompt = buildRiskPrompt(refineCtx, doc.title, content);
-      riskAssessmentText = (await generateText(riskPrompt)).trim();
-    } catch (error) {
-      console.error('Risk assessment generation failed (refine):', error);
+    if (hasRiskCheckAccess && parsed.data.risk_check) {
+      try {
+        const riskPrompt = buildRiskPrompt(refineCtx, doc.title, content);
+        riskAssessmentText = (await generateText(riskPrompt)).trim();
+      } catch (error) {
+        console.error('Risk assessment generation failed (refine):', error);
+      }
     }
-  }
-  const updated = (await prisma.document.update({
-    where: { id: doc.id },
-    data: {
-      jurisdictionCountry: nextCountry,
-      outputLanguage: nextLang,
-      versions: {
-        create: {
-          version: nextVersion,
-          content,
-          riskAssessment: riskAssessmentText
-            ? {
-                create: {
-                  summary: riskAssessmentText,
-                },
-              }
-            : undefined,
+    const updated = (await prisma.document.update({
+      where: { id: doc.id },
+      data: {
+        jurisdictionCountry: nextCountry,
+        outputLanguage: nextLang,
+        versions: {
+          create: {
+            version: nextVersion,
+            content,
+            riskAssessment: riskAssessmentText
+              ? {
+                  create: {
+                    summary: riskAssessmentText,
+                  },
+                }
+              : undefined,
+          },
         },
       },
-    },
-    include: {
-      template: { select: { id: true, name: true } },
-      versions: { include: { riskAssessment: true } },
-    },
-  })) as DocWithRelations;
+      include: {
+        template: { select: { id: true, name: true } },
+        versions: { include: { riskAssessment: true } },
+      },
+    })) as DocWithRelations;
 
-  // Increment clarification usage counter
-  await incrementClarificationUsage(req.userId, doc.id);
+    await incrementClarificationUsage(req.userId, doc.id);
 
-  return res.json({ document: toDocument(updated) });
+    return res.json({ document: toDocument(updated) });
+  } catch (error) {
+    if (error instanceof LlmInvocationError) {
+      return res.status(502).json({
+        detail:
+          'Не удалось получить ответ от нейросети. Проверьте NEUROAPI_API_KEY, NEUROAPI_BASE_URL и NEUROAPI_MODEL на сервере.',
+        code: 'LLM_UNAVAILABLE',
+      });
+    }
+    console.error('Contract refine error:', error);
+    return res.status(500).json({ detail: 'Не удалось обновить документ' });
+  }
 });
 
 router.put('/:id/fields', requireAuth, async (req: AuthRequest, res) => {

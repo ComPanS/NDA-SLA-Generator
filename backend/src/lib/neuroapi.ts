@@ -1,6 +1,20 @@
 import axios, { AxiosError } from 'axios';
 import { env } from '../config/env';
 
+/** LLM call failed after retries or non-recoverable HTTP error (e.g. 401). Catch in routes and return 502. */
+export class LlmInvocationError extends Error {
+  override readonly name = 'LlmInvocationError';
+
+  constructor(
+    message: string,
+    public readonly httpStatus?: number,
+    public readonly axiosCode?: string,
+    public readonly responseSnippet?: string,
+  ) {
+    super(message);
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -24,6 +38,41 @@ function axiosErrorSummary(err: unknown): string {
     return [code, status, ax.message].filter(Boolean).join(' ');
   }
   return err instanceof Error ? err.message : String(err);
+}
+
+function responseDataSnippet(err: unknown): string | undefined {
+  if (!axios.isAxiosError(err)) return undefined;
+  const data = err.response?.data;
+  if (data == null) return undefined;
+  if (typeof data === 'string') return data.slice(0, 500);
+  try {
+    return JSON.stringify(data).slice(0, 500);
+  } catch {
+    return undefined;
+  }
+}
+
+function toLlmInvocationError(lastError: unknown): LlmInvocationError {
+  if (lastError instanceof LlmInvocationError) {
+    return lastError;
+  }
+  if (axios.isAxiosError(lastError)) {
+    const status = lastError.response?.status;
+    const snippet = responseDataSnippet(lastError);
+    const base = status
+      ? `LLM API HTTP ${status}${snippet ? ` — ${snippet}` : ''}`
+      : `LLM request failed: ${lastError.message}`;
+    return new LlmInvocationError(
+      base,
+      status,
+      lastError.code,
+      snippet,
+    );
+  }
+  if (lastError instanceof Error) {
+    return new LlmInvocationError(lastError.message);
+  }
+  return new LlmInvocationError(String(lastError));
 }
 
 /**
@@ -92,8 +141,13 @@ export async function generateText(prompt: string): Promise<string> {
         continue;
       }
 
-      return `No content returned.\n\n${prompt}`;
+      throw new LlmInvocationError(
+        'LLM returned empty message content after retries',
+      );
     } catch (err) {
+      if (err instanceof LlmInvocationError) {
+        throw err;
+      }
       lastError = err;
       const summary = axiosErrorSummary(err);
       const retryable = isRetryableAxiosError(err);
@@ -103,6 +157,9 @@ export async function generateText(prompt: string): Promise<string> {
         retryable,
         summary,
         model: env.neuroapiModel,
+        url,
+        status: axios.isAxiosError(err) ? err.response?.status : undefined,
+        responseSnippet: responseDataSnippet(err),
       });
 
       if (retryable && attempt < maxAttempts) {
@@ -120,11 +177,13 @@ export async function generateText(prompt: string): Promise<string> {
     }
   }
 
-  const msg = lastError instanceof Error ? lastError.message : axiosErrorSummary(lastError);
-  console.error('[neuroapi] generateText failed after retries', {
-    attempts: maxAttempts,
-    msg,
+  console.error('[neuroapi] generateText giving up', {
+    configuredMaxAttempts: maxAttempts,
+    msg: axiosErrorSummary(lastError),
     model: env.neuroapiModel,
+    url,
+    status: axios.isAxiosError(lastError) ? lastError.response?.status : undefined,
+    responseSnippet: responseDataSnippet(lastError),
   });
-  return `LLM generation failed.\n\n${prompt}`;
+  throw toLlmInvocationError(lastError);
 }

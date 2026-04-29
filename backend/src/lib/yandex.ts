@@ -1,9 +1,11 @@
-import { generateText as neuroapiGenerateText } from './neuroapi';
+import { generateText as neuroapiGenerateText, LlmInvocationError } from './neuroapi';
 
 // Используем NeuroAPI
 export async function generateText(prompt: string): Promise<string> {
   return neuroapiGenerateText(prompt);
 }
+
+export { LlmInvocationError };
 
 /*
 // YandexGPT (закомментировано — используется NeuroAPI)
